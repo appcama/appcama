@@ -21,6 +21,18 @@ export default {
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
+				
+				// ReciclaSystem theme colors
+				'recycle-green': {
+					DEFAULT: 'hsl(var(--recycle-green))',
+					light: 'hsl(var(--recycle-green-light))',
+					dark: 'hsl(var(--recycle-green-dark))',
+				},
+				'eco-blue': 'hsl(var(--eco-blue))',
+				'eco-orange': 'hsl(var(--eco-orange))',
+				'earth-brown': 'hsl(var(--earth-brown))',
+				'progress-green': 'hsl(var(--progress-green))',
+				'stats-gray': 'hsl(var(--stats-gray))',
 				ring: 'hsl(var(--ring))',
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
