@@ -52,25 +52,85 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
       
-      console.log('Tentativa de login com:', { cpfCnpj, password: '***' });
+      console.log('=== INÍCIO DO PROCESSO DE LOGIN ===');
+      console.log('CPF/CNPJ fornecido:', cpfCnpj);
+      console.log('Senha fornecida:', password ? '***' : 'VAZIA');
       
-      // DEBUG: Chamar função para verificar dados no banco
-      console.log('=== DEBUG: Verificando dados no banco ===');
+      // Primeiro, vamos testar se conseguimos chamar uma função simples
+      console.log('=== TESTANDO CONEXÃO COM SUPABASE ===');
+      try {
+        const { data: testData, error: testError } = await supabase
+          .from('usuario')
+          .select('count')
+          .limit(1);
+        console.log('Teste de conexão:', { testData, testError });
+      } catch (err) {
+        console.error('Erro na conexão:', err);
+      }
       
-      const { data: debugData, error: debugError } = await supabase
-        .rpc('debug_user_data');
+      // DEBUG: Verificar dados específicos no banco
+      console.log('=== VERIFICANDO DADOS NO BANCO ===');
+      try {
+        const { data: allUsers, error: allUsersError } = await supabase
+          .from('usuario')
+          .select(`
+            id_usuario,
+            des_senha,
+            des_status,
+            des_locked,
+            entidade!inner (
+              num_cpf_cnpj,
+              nom_entidade
+            )
+          `)
+          .limit(5);
+        
+        console.log('Primeiros 5 usuários do banco:', { allUsers, allUsersError });
+        
+        // Buscar especificamente pela entidade com o CPF informado
+        const { data: specificEntity, error: entityError } = await supabase
+          .from('entidade')
+          .select('*')
+          .eq('num_cpf_cnpj', cpfCnpj);
+        
+        console.log('Entidade específica encontrada:', { specificEntity, entityError });
+        
+        if (specificEntity && specificEntity.length > 0) {
+          const { data: usersFromEntity, error: usersError } = await supabase
+            .from('usuario')
+            .select('*')
+            .eq('id_entidade', specificEntity[0].id_entidade);
+          
+          console.log('Usuários da entidade encontrada:', { usersFromEntity, usersError });
+        }
+        
+      } catch (err) {
+        console.error('Erro ao buscar dados do banco:', err);
+      }
       
-      console.log('Dados encontrados no banco:', { debugData, debugError });
+      // Agora testar as funções de debug
+      console.log('=== TESTANDO FUNÇÕES DE DEBUG ===');
+      try {
+        const { data: debugData, error: debugError } = await supabase
+          .rpc('debug_user_data');
+        console.log('Resultado debug_user_data:', { debugData, debugError });
+      } catch (err) {
+        console.error('Erro ao chamar debug_user_data:', err);
+      }
       
-      const { data: debugAuth, error: debugAuthError } = await supabase
-        .rpc('debug_authenticate_user', {
-          cpf_cnpj_param: cpfCnpj,
-          senha_param: password
-        });
+      try {
+        const { data: debugAuth, error: debugAuthError } = await supabase
+          .rpc('debug_authenticate_user', {
+            cpf_cnpj_param: cpfCnpj,
+            senha_param: password
+          });
+        console.log('Resultado debug_authenticate_user:', { debugAuth, debugAuthError });
+      } catch (err) {
+        console.error('Erro ao chamar debug_authenticate_user:', err);
+      }
       
-      console.log('Debug da autenticação step by step:', { debugAuth, debugAuthError });
-      
-      // Chamar função de autenticação customizada
+      // Chamar função de autenticação original
+      console.log('=== CHAMANDO FUNÇÃO DE AUTENTICAÇÃO ===');
       const { data, error } = await supabase
         .rpc('authenticate_user', {
           cpf_cnpj: cpfCnpj,
