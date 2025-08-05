@@ -155,14 +155,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const userData = data[0];
       console.log('Dados do usuário retornados:', userData);
-      
-      // Criar sessão fictícia para o Supabase (necessária para as políticas RLS)
-      const { error: signInError } = await supabase.auth.signInAnonymously();
-      
-      if (signInError) {
-        console.error('Erro ao criar sessão anônima:', signInError);
-        return { success: false, error: 'Erro ao criar sessão' };
-      }
 
       const authUser: AuthUser = {
         id: userData.user_id,
