@@ -52,8 +52,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
       
+      // Remover formatação do CPF/CNPJ (manter apenas números)
+      const cpfCnpjLimpo = cpfCnpj.replace(/[^\d]/g, '');
+      
       console.log('=== INÍCIO DO PROCESSO DE LOGIN ===');
       console.log('CPF/CNPJ fornecido:', cpfCnpj);
+      console.log('CPF/CNPJ limpo:', cpfCnpjLimpo);
       console.log('Senha fornecida:', password ? '***' : 'VAZIA');
       
       // Primeiro, vamos testar se conseguimos chamar uma função simples
@@ -121,7 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const { data: debugAuth, error: debugAuthError } = await supabase
           .rpc('debug_authenticate_user', {
-            cpf_cnpj_param: cpfCnpj,
+            cpf_cnpj_param: cpfCnpjLimpo,
             senha_param: password
           });
         console.log('Resultado debug_authenticate_user:', { debugAuth, debugAuthError });
@@ -133,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('=== CHAMANDO FUNÇÃO DE AUTENTICAÇÃO ===');
       const { data, error } = await supabase
         .rpc('authenticate_user', {
-          cpf_cnpj: cpfCnpj,
+          cpf_cnpj: cpfCnpjLimpo,
           senha: password
         });
 
