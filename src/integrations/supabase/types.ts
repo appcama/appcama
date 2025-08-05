@@ -1072,6 +1072,29 @@ export type Database = {
           email: string
         }[]
       }
+      debug_authenticate_user: {
+        Args: { cpf_cnpj_param: string; senha_param: string }
+        Returns: {
+          step: string
+          found_entities: number
+          found_users: number
+          cpf_cnpj_db: string
+          senha_db: string
+          status_db: string
+          locked_db: string
+        }[]
+      }
+      debug_user_data: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          cpf_cnpj: string
+          senha: string
+          status: string
+          locked: string
+          user_id: number
+          entity_id: number
+        }[]
+      }
       validate_user_password: {
         Args: { user_id: number; new_password: string }
         Returns: boolean

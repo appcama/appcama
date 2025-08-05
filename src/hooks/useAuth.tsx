@@ -54,6 +54,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       console.log('Tentativa de login com:', { cpfCnpj, password: '***' });
       
+      // DEBUG: Chamar função para verificar dados no banco
+      console.log('=== DEBUG: Verificando dados no banco ===');
+      
+      const { data: debugData, error: debugError } = await supabase
+        .rpc('debug_user_data');
+      
+      console.log('Dados encontrados no banco:', { debugData, debugError });
+      
+      const { data: debugAuth, error: debugAuthError } = await supabase
+        .rpc('debug_authenticate_user', {
+          cpf_cnpj_param: cpfCnpj,
+          senha_param: password
+        });
+      
+      console.log('Debug da autenticação step by step:', { debugAuth, debugAuthError });
+      
       // Chamar função de autenticação customizada
       const { data, error } = await supabase
         .rpc('authenticate_user', {
