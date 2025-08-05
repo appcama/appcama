@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
@@ -53,6 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true);
       
+      console.log('Tentativa de login com:', { cpfCnpj, password: '***' });
+      
       // Chamar função de autenticação customizada
       const { data, error } = await supabase
         .rpc('authenticate_user', {
@@ -60,20 +61,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           senha: password
         });
 
+      console.log('Resposta da função authenticate_user:', { data, error });
+
       if (error) {
+        console.error('Erro na função authenticate_user:', error);
         return { success: false, error: 'Erro interno do servidor' };
       }
 
       if (!data || data.length === 0) {
+        console.log('Nenhum usuário encontrado com as credenciais fornecidas');
         return { success: false, error: 'CPF/CNPJ ou senha inválidos' };
       }
 
       const userData = data[0];
+      console.log('Dados do usuário retornados:', userData);
       
       // Criar sessão fictícia para o Supabase (necessária para as políticas RLS)
       const { error: signInError } = await supabase.auth.signInAnonymously();
       
       if (signInError) {
+        console.error('Erro ao criar sessão anônima:', signInError);
         return { success: false, error: 'Erro ao criar sessão' };
       }
 
@@ -86,10 +93,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: userData.email
       };
 
+      console.log('Usuário autenticado com sucesso:', authUser);
       setUser(authUser);
 
       // Verificar se precisa validar senha
       if (userData.password_validated === 'D') {
+        console.log('Usuário precisa validar senha');
         return { success: true, needsValidation: true };
       }
 
