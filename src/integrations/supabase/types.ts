@@ -1061,7 +1061,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      authenticate_user: {
+        Args: { cpf_cnpj: string; senha: string }
+        Returns: {
+          user_id: number
+          entity_id: number
+          profile_id: number
+          password_validated: string
+          user_status: string
+          email: string
+        }[]
+      }
+      validate_user_password: {
+        Args: { user_id: number; new_password: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
