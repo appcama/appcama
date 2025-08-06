@@ -39,10 +39,10 @@ export function EntidadesList({ onAddNew }: EntidadesListProps) {
         .from('entidade')
         .select(`
           *,
-          tipo_entidade:id_tipo_entidade (
+          tipo_entidade!id_tipo_entidade (
             des_tipo_entidade
           ),
-          tipo_situacao:id_tipo_situacao (
+          tipo_situacao!id_tipo_situacao (
             des_tipo_situacao
           )
         `)
