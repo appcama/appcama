@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Dashboard } from "./Dashboard";
+import { EntidadesList } from "./EntidadesList";
+import { EntidadeForm } from "./EntidadeForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface ReciclaSystemLayoutProps {
@@ -9,27 +11,33 @@ interface ReciclaSystemLayoutProps {
 
 export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
   const [activeItem, setActiveItem] = useState("dashboard");
+  const [showEntidadeForm, setShowEntidadeForm] = useState(false);
 
   const renderContent = () => {
     switch (activeItem) {
       case "dashboard":
         return <Dashboard />;
       case "entidades":
+        if (showEntidadeForm) {
+          return (
+            <div className="p-6">
+              <EntidadeForm
+                onBack={() => setShowEntidadeForm(false)}
+                onSuccess={() => {
+                  setShowEntidadeForm(false);
+                  // Forçar refresh da lista
+                  setActiveItem("dashboard");
+                  setTimeout(() => setActiveItem("entidades"), 100);
+                }}
+              />
+            </div>
+          );
+        }
         return (
           <div className="p-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Cooperativas/Catadores</CardTitle>
-                <CardDescription>
-                  Gestão de cooperativas e catadores cadastrados no sistema
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Funcionalidade em desenvolvimento...
-                </p>
-              </CardContent>
-            </Card>
+            <EntidadesList
+              onAddNew={() => setShowEntidadeForm(true)}
+            />
           </div>
         );
       case "tipos-entidades":
