@@ -308,7 +308,7 @@ export type Database = {
           des_locked?: string
           des_logradouro: string
           des_status?: string
-          id_entidade: number
+          id_entidade?: number
           id_municipio: number
           id_tipo_entidade: number
           id_tipo_pessoa: number
@@ -353,8 +353,22 @@ export type Database = {
             referencedColumns: ["id_tipo_entidade"]
           },
           {
+            foreignKeyName: "entidade_id_tipo_situacao_fkey"
+            columns: ["id_tipo_situacao"]
+            isOneToOne: false
+            referencedRelation: "tipo_situacao"
+            referencedColumns: ["id_tipo_situacao"]
+          },
+          {
             foreignKeyName: "entidade_id_usuario_atualizador_fkey"
             columns: ["id_usuario_atualizador"]
+            isOneToOne: false
+            referencedRelation: "usuario"
+            referencedColumns: ["id_usuario"]
+          },
+          {
+            foreignKeyName: "entidade_id_usuario_criador_fkey"
+            columns: ["id_usuario_criador"]
             isOneToOne: false
             referencedRelation: "usuario"
             referencedColumns: ["id_usuario"]
