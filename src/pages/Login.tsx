@@ -114,7 +114,7 @@ export default function Login() {
              {/* <Leaf className="h-12 w-12 text-green-600 mr-2" /> */}
             <h1 className="text-3xl font-bold text-green-800"><img src="/logo.png" alt="Minha Logo" style={{ width: "250px" }} /></h1>
           </div>
-          <p className="text-gray-600">Sistema de Gestão de Reciclagem</p>
+          <p className="text-green-600 mr-2">Sistema de Gestão de Reciclagem</p>
         </div>
 
         <Tabs defaultValue="login" className="w-full">
