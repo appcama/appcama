@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Dashboard } from "./Dashboard";
+import { EntidadesList } from "./EntidadesList";
+import { EntidadeForm } from "./EntidadeForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CooperativasCatadores } from './CooperativasCatadores';
 
@@ -10,13 +12,35 @@ interface ReciclaSystemLayoutProps {
 
 export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
   const [activeItem, setActiveItem] = useState("dashboard");
+  const [showEntidadeForm, setShowEntidadeForm] = useState(false);
 
   const renderContent = () => {
     switch (activeItem) {
       case "dashboard":
         return <Dashboard />;
       case "entidades":
-        return <CooperativasCatadores />;
+        if (showEntidadeForm) {
+          return (
+            <div className="p-6">
+              <EntidadeForm
+                onBack={() => setShowEntidadeForm(false)}
+                onSuccess={() => {
+                  setShowEntidadeForm(false);
+                  // Forçar refresh da lista
+                  setActiveItem("dashboard");
+                  setTimeout(() => setActiveItem("entidades"), 100);
+                }}
+              />
+            </div>
+          );
+        }
+        return (
+          <div className="p-6">
+            <EntidadesList
+              onAddNew={() => setShowEntidadeForm(true)}
+            />
+          </div>
+        );
       case "tipos-entidades":
         return (
           <div className="p-6">
