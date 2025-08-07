@@ -19,9 +19,6 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
       case "dashboard":
         return <Dashboard />;
       case "entidades":
-<<<<<<< HEAD
-        return <CooperativasCatadores />;
-=======
         if (showEntidadeForm) {
           return (
             <div className="p-6">
@@ -44,7 +41,6 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
             />
           </div>
         );
->>>>>>> 29920d68ccbd3df78e7e5af0e888df0ccf0b6cef
       case "tipos-entidades":
         return (
           <div className="p-6">

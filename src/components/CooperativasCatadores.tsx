@@ -90,12 +90,11 @@ export function CooperativasCatadores() {
   if (showForm) {
     return (
       <EntidadeForm
-        entidade={editingEntidade}
-        onSuccess={handleFormSuccess}
-        onCancel={() => {
+        onBack={() => {
           setShowForm(false);
           setEditingEntidade(null);
         }}
+        onSuccess={handleFormSuccess}
       />
     );
   }
