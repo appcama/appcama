@@ -112,7 +112,7 @@ export default function Login() {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
             <Leaf className="h-12 w-12 text-green-600 mr-2" />
-            <h1 className="text-3xl font-bold text-green-800">ReciclaSystem</h1>
+            <h1 className="text-3xl font-bold text-green-800"><img src="/img/logo.png" alt="Minha Logo" style="width: 200px;" /></h1>
           </div>
           <p className="text-gray-600">Sistema de Gestão de Reciclagem</p>
         </div>
