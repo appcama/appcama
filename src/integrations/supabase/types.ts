@@ -1115,6 +1115,10 @@ export type Database = {
           entity_id: number
         }[]
       }
+      reset_user_password: {
+        Args: { user_id_param: number }
+        Returns: boolean
+      }
       validate_user_password: {
         Args: { user_id: number; new_password: string }
         Returns: boolean

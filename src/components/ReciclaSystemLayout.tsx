@@ -7,6 +7,8 @@ import { TipoEntidadeList } from "./TipoEntidadeList";
 import { TipoEntidadeForm } from "./TipoEntidadeForm";
 import { PerfilList } from "./PerfilList";
 import { PerfilForm } from "./PerfilForm";
+import { UsuariosList } from "./UsuariosList";
+import { UsuarioForm } from "./UsuarioForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CooperativasCatadores } from './CooperativasCatadores';
 
@@ -22,6 +24,8 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
   const [editingTipoEntidade, setEditingTipoEntidade] = useState(null);
   const [showPerfilForm, setShowPerfilForm] = useState(false);
   const [editingPerfil, setEditingPerfil] = useState(null);
+  const [showUsuarioForm, setShowUsuarioForm] = useState(false);
+  const [editingUsuario, setEditingUsuario] = useState(null);
 
   const renderContent = () => {
     switch (activeItem) {
@@ -119,6 +123,38 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
               onEdit={(perfil) => {
                 setEditingPerfil(perfil);
                 setShowPerfilForm(true);
+              }}
+            />
+          </div>
+        );
+      case "usuarios":
+        if (showUsuarioForm) {
+          return (
+            <div className="p-6">
+              <UsuarioForm
+                onBack={() => {
+                  setShowUsuarioForm(false);
+                  setEditingUsuario(null);
+                }}
+                onSuccess={() => {
+                  setShowUsuarioForm(false);
+                  setEditingUsuario(null);
+                  // Forçar refresh da lista
+                  setActiveItem("dashboard");
+                  setTimeout(() => setActiveItem("usuarios"), 100);
+                }}
+                editingUsuario={editingUsuario}
+              />
+            </div>
+          );
+        }
+        return (
+          <div className="p-6">
+            <UsuariosList
+              onAddNew={() => setShowUsuarioForm(true)}
+              onEdit={(usuario) => {
+                setEditingUsuario(usuario);
+                setShowUsuarioForm(true);
               }}
             />
           </div>
