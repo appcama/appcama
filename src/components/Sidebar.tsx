@@ -35,6 +35,13 @@ const navigationItems = [
     ],
   },
   {
+    section: "Segurança",
+    items: [
+      { id: "perfis", label: "Perfis", icon: Trash2 },
+      { id: "usuarios", label: "Usuários", icon: Recycle },     
+    ],
+  },
+  {
     section: "Dados",
     items: [
       { id: "geradores", label: "Geradores de Resíduos", icon: Trash2 },

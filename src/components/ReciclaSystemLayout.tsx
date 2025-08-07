@@ -105,6 +105,24 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
             </Card>
           </div>
         );
+         case "perfis":
+        return (
+          <div className="p-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Perfis</CardTitle>
+                <CardDescription>
+                  Perfis associados 
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Funcionalidade em desenvolvimento...
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        );
       case "geradores":
         return (
           <div className="p-6">
