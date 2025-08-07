@@ -1076,6 +1076,42 @@ export type Database = {
           },
         ]
       }
+      usuario_token: {
+        Row: {
+          dat_criacao: string
+          data_criacao: string
+          data_expiracao: string
+          id_token: number
+          id_usuario: number
+          id_usuario_criador: number
+          tipo_token: string
+          token: string
+          usado: boolean
+        }
+        Insert: {
+          dat_criacao?: string
+          data_criacao?: string
+          data_expiracao?: string
+          id_token?: number
+          id_usuario: number
+          id_usuario_criador?: number
+          tipo_token?: string
+          token: string
+          usado?: boolean
+        }
+        Update: {
+          dat_criacao?: string
+          data_criacao?: string
+          data_expiracao?: string
+          id_token?: number
+          id_usuario?: number
+          id_usuario_criador?: number
+          tipo_token?: string
+          token?: string
+          usado?: boolean
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1115,12 +1151,20 @@ export type Database = {
           entity_id: number
         }[]
       }
+      generate_user_token: {
+        Args: { user_id_param: number }
+        Returns: string
+      }
       reset_user_password: {
         Args: { user_id_param: number }
         Returns: boolean
       }
       validate_user_password: {
         Args: { user_id: number; new_password: string }
+        Returns: boolean
+      }
+      validate_user_token: {
+        Args: { user_id_param: number; token_param: string }
         Returns: boolean
       }
     }

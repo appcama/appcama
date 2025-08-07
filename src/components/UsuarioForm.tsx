@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Mail, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Usuario {
@@ -45,6 +44,7 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
   const [idEntidade, setIdEntidade] = useState<number | null>(null);
   const [idPerfil, setIdPerfil] = useState<number | null>(null);
   const [status, setStatus] = useState("A");
+  const [emailSent, setEmailSent] = useState(false);
 
   const { data: entidades } = useQuery({
     queryKey: ['entidades'],
@@ -81,8 +81,28 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
       setIdPerfil(editingUsuario.id_perfil);
       setStatus(editingUsuario.des_status);
       setSenha(""); // Não preencher senha para edição
+      setEmailSent(false);
     }
   }, [editingUsuario]);
+
+  const sendValidationEmail = async (userId: number, userEmail: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-validation-email', {
+        body: {
+          userId: userId,
+          email: userEmail,
+          userName: userEmail.split('@')[0] // Use email username as display name
+        }
+      });
+
+      if (error) throw error;
+
+      return data;
+    } catch (error) {
+      console.error('Error sending validation email:', error);
+      throw error;
+    }
+  };
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -102,8 +122,9 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
           .eq('id_usuario', editingUsuario.id_usuario);
 
         if (error) throw error;
+        return { isNew: false, userId: editingUsuario.id_usuario };
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('usuario')
           .insert({
             ...userData,
@@ -111,20 +132,39 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
             des_senha_validada: 'D',
             dat_criacao: new Date().toISOString(),
             id_usuario_criador: 1 // TODO: Use actual logged user id
-          });
+          })
+          .select('id_usuario')
+          .single();
 
         if (error) throw error;
+        return { isNew: true, userId: data.id_usuario };
       }
     },
-    onSuccess: () => {
+    onSuccess: async (result) => {
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
-      toast({
-        title: "Sucesso",
-        description: editingUsuario 
-          ? "Usuário atualizado com sucesso!" 
-          : "Usuário criado com sucesso!",
-      });
-      onSuccess();
+      
+      if (result.isNew) {
+        try {
+          await sendValidationEmail(result.userId, email);
+          setEmailSent(true);
+          toast({
+            title: "Usuário criado com sucesso!",
+            description: "Email de validação enviado para " + email,
+          });
+        } catch (emailError) {
+          toast({
+            title: "Usuário criado",
+            description: "Usuário criado, mas houve erro ao enviar email de validação",
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "Sucesso",
+          description: "Usuário atualizado com sucesso!",
+        });
+        onSuccess();
+      }
     },
     onError: (error) => {
       toast({
@@ -180,6 +220,62 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
     saveMutation.mutate();
   };
 
+  if (emailSent) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center space-x-2">
+          <Button variant="outline" size="sm" onClick={onBack}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar
+          </Button>
+        </div>
+
+        <Card>
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <CheckCircle className="h-16 w-16 text-green-600" />
+            </div>
+            <CardTitle className="text-green-800">Usuário Criado com Sucesso!</CardTitle>
+            <CardDescription>
+              Email de validação enviado
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center justify-center space-x-2 mb-2">
+                <Mail className="h-5 w-5 text-green-600" />
+                <span className="font-medium text-green-800">Email enviado para:</span>
+              </div>
+              <p className="text-green-700 font-mono">{email}</p>
+            </div>
+            
+            <div className="text-left space-y-2 text-sm text-gray-600">
+              <p><strong>O que fazer agora:</strong></p>
+              <ol className="list-decimal list-inside space-y-1 ml-4">
+                <li>O usuário deve verificar seu email</li>
+                <li>Fazer login com email e senha temporária: <code className="bg-gray-100 px-2 py-1 rounded">123456789</code></li>
+                <li>Inserir o código de validação recebido por email</li>
+                <li>Definir uma nova senha</li>
+              </ol>
+            </div>
+
+            <div className="flex justify-center space-x-2 pt-4">
+              <Button onClick={() => {
+                setEmailSent(false);
+                onSuccess();
+              }}>
+                Criar Outro Usuário
+              </Button>
+              <Button variant="outline" onClick={onSuccess}>
+                Voltar para Lista
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-2">
@@ -197,7 +293,7 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
           <CardDescription>
             {editingUsuario 
               ? 'Atualize as informações do usuário' 
-              : 'Preencha os dados para criar um novo usuário'}
+              : 'Preencha os dados para criar um novo usuário. Um email de validação será enviado.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -217,14 +313,17 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
 
               {!editingUsuario && (
                 <div className="space-y-2">
-                  <Label htmlFor="senha">Senha *</Label>
+                  <Label htmlFor="senha">Senha Temporária</Label>
                   <Input
                     id="senha"
                     type="password"
                     value={senha}
                     onChange={(e) => setSenha(e.target.value)}
-                    placeholder="Digite a senha"
+                    placeholder="Deixe em branco para usar padrão (123456789)"
                   />
+                  <p className="text-xs text-gray-500">
+                    Se não informada, será usada a senha padrão: 123456789
+                  </p>
                 </div>
               )}
 
@@ -281,7 +380,7 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
               <Button type="submit" disabled={saveMutation.isPending}>
                 {saveMutation.isPending 
                   ? 'Salvando...' 
-                  : (editingUsuario ? 'Atualizar' : 'Criar')
+                  : (editingUsuario ? 'Atualizar' : 'Criar e Enviar Email')
                 }
               </Button>
             </div>
