@@ -105,14 +105,32 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
             </Card>
           </div>
         );
-         case "perfis":
+      case "perfis":
         return (
           <div className="p-6">
             <Card>
               <CardHeader>
                 <CardTitle>Perfis</CardTitle>
                 <CardDescription>
-                  Perfis associados 
+                  Gerencie os tipos de acesso e permissões disponíveis no sistema.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Funcionalidade em desenvolvimento...
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      case "usuarios":
+        return (
+          <div className="p-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Usuários</CardTitle>
+                <CardDescription>
+                  Cadastre e administre os usuários com acesso ao sistema.
                 </CardDescription>
               </CardHeader>
               <CardContent>
