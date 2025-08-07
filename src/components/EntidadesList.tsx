@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Users } from "lucide-react";
+import { Plus, Users, Edit, Power } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -16,15 +16,20 @@ interface Entidade {
   num_cep: string;
   num_telefone: string | null;
   id_tipo_pessoa: number;
+  id_tipo_entidade: number;
+  id_tipo_situacao: number;
+  id_municipio: number;
+  des_status: string;
   des_tipo_entidade?: string;
   des_tipo_situacao?: string;
 }
 
 interface EntidadesListProps {
   onAddNew: () => void;
+  onEdit: (entidade: Entidade) => void;
 }
 
-export function EntidadesList({ onAddNew }: EntidadesListProps) {
+export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
   const [entidades, setEntidades] = useState<Entidade[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -46,7 +51,7 @@ export function EntidadesList({ onAddNew }: EntidadesListProps) {
             des_tipo_situacao
           )
         `)
-        .eq('des_status', 'A')
+        .in('des_status', ['A', 'D'])
         .order('nom_entidade');
 
       if (error) throw error;
@@ -83,6 +88,33 @@ export function EntidadesList({ onAddNew }: EntidadesListProps) {
 
   const getTipoPessoa = (tipo: number) => {
     return tipo === 1 ? 'Pessoa Física' : 'Pessoa Jurídica';
+  };
+
+  const handleToggleStatus = async (entidade: Entidade) => {
+    try {
+      const newStatus = entidade.des_status === 'A' ? 'D' : 'A';
+      
+      const { error } = await supabase
+        .from('entidade')
+        .update({ des_status: newStatus })
+        .eq('id_entidade', entidade.id_entidade);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: `Entidade ${newStatus === 'A' ? 'ativada' : 'desativada'} com sucesso`,
+      });
+
+      fetchEntidades();
+    } catch (error) {
+      console.error('Erro ao alterar status:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao alterar status da entidade",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -124,6 +156,8 @@ export function EntidadesList({ onAddNew }: EntidadesListProps) {
                   <TableHead>Endereço</TableHead>
                   <TableHead>Telefone</TableHead>
                   <TableHead>Situação</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -150,6 +184,39 @@ export function EntidadesList({ onAddNew }: EntidadesListProps) {
                     </TableCell>
                     <TableCell>{entidade.num_telefone || '-'}</TableCell>
                     <TableCell>{entidade.des_tipo_situacao}</TableCell>
+                    <TableCell>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        entidade.des_status === 'A' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {entidade.des_status === 'A' ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onEdit(entidade)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleToggleStatus(entidade)}
+                          className={`h-8 w-8 p-0 ${
+                            entidade.des_status === 'A' 
+                              ? 'hover:bg-red-50 hover:text-red-600' 
+                              : 'hover:bg-green-50 hover:text-green-600'
+                          }`}
+                        >
+                          <Power className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

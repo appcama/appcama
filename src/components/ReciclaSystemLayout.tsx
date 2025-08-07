@@ -13,6 +13,7 @@ interface ReciclaSystemLayoutProps {
 export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
   const [activeItem, setActiveItem] = useState("dashboard");
   const [showEntidadeForm, setShowEntidadeForm] = useState(false);
+  const [editingEntidade, setEditingEntidade] = useState(null);
 
   const renderContent = () => {
     switch (activeItem) {
@@ -23,13 +24,18 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
           return (
             <div className="p-6">
               <EntidadeForm
-                onBack={() => setShowEntidadeForm(false)}
+                onBack={() => {
+                  setShowEntidadeForm(false);
+                  setEditingEntidade(null);
+                }}
                 onSuccess={() => {
                   setShowEntidadeForm(false);
+                  setEditingEntidade(null);
                   // Forçar refresh da lista
                   setActiveItem("dashboard");
                   setTimeout(() => setActiveItem("entidades"), 100);
                 }}
+                editingEntidade={editingEntidade}
               />
             </div>
           );
@@ -38,6 +44,10 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
           <div className="p-6">
             <EntidadesList
               onAddNew={() => setShowEntidadeForm(true)}
+              onEdit={(entidade) => {
+                setEditingEntidade(entidade);
+                setShowEntidadeForm(true);
+              }}
             />
           </div>
         );

@@ -43,9 +43,23 @@ interface TipoSituacao {
 interface EntidadeFormProps {
   onBack: () => void;
   onSuccess: () => void;
+  editingEntidade?: {
+    id_entidade: number;
+    nom_entidade: string;
+    num_cpf_cnpj: string;
+    nom_razao_social: string | null;
+    des_logradouro: string;
+    des_bairro: string;
+    num_cep: string;
+    num_telefone: string | null;
+    id_tipo_pessoa: number;
+    id_tipo_entidade: number;
+    id_tipo_situacao: number;
+    id_municipio: number;
+  };
 }
 
-export function EntidadeForm({ onBack, onSuccess }: EntidadeFormProps) {
+export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFormProps) {
   const [tiposEntidade, setTiposEntidade] = useState<TipoEntidade[]>([]);
   const [tiposSituacao, setTiposSituacao] = useState<TipoSituacao[]>([]);
   const [loading, setLoading] = useState(false);
@@ -55,17 +69,17 @@ export function EntidadeForm({ onBack, onSuccess }: EntidadeFormProps) {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      nom_entidade: "",
-      num_cpf_cnpj: "",
-      id_tipo_entidade: "",
-      id_tipo_pessoa: "1",
-      nom_razao_social: "",
-      id_tipo_situacao: "",
-      des_logradouro: "",
-      des_bairro: "",
-      num_cep: "",
-      id_municipio: "2927408", // Salvador - BA (baseado no dado de exemplo)
-      num_telefone: "",
+      nom_entidade: editingEntidade?.nom_entidade || "",
+      num_cpf_cnpj: editingEntidade?.num_cpf_cnpj || "",
+      id_tipo_entidade: editingEntidade?.id_tipo_entidade?.toString() || "",
+      id_tipo_pessoa: editingEntidade?.id_tipo_pessoa?.toString() || "1",
+      nom_razao_social: editingEntidade?.nom_razao_social || "",
+      id_tipo_situacao: editingEntidade?.id_tipo_situacao?.toString() || "",
+      des_logradouro: editingEntidade?.des_logradouro || "",
+      des_bairro: editingEntidade?.des_bairro || "",
+      num_cep: editingEntidade?.num_cep || "",
+      id_municipio: editingEntidade?.id_municipio?.toString() || "2927408",
+      num_telefone: editingEntidade?.num_telefone || "",
     },
   });
 
@@ -135,15 +149,31 @@ export function EntidadeForm({ onBack, onSuccess }: EntidadeFormProps) {
         dat_criacao: new Date().toISOString(),
       };
 
-      const { error } = await supabase
-        .from('entidade')
-        .insert(insertData);
+      let result;
+      if (editingEntidade) {
+        // Atualizar entidade existente
+        result = await supabase
+          .from('entidade')
+          .update({
+            ...insertData,
+            id_usuario_atualizador: user.id,
+            dat_atualizacao: new Date().toISOString(),
+          })
+          .eq('id_entidade', editingEntidade.id_entidade);
+      } else {
+        // Inserir nova entidade
+        result = await supabase
+          .from('entidade')
+          .insert(insertData);
+      }
+      
+      const { error } = result;
 
       if (error) throw error;
 
       toast({
         title: "Sucesso",
-        description: "Entidade cadastrada com sucesso",
+        description: editingEntidade ? "Entidade atualizada com sucesso" : "Entidade cadastrada com sucesso",
       });
 
       onSuccess();
@@ -166,7 +196,7 @@ export function EntidadeForm({ onBack, onSuccess }: EntidadeFormProps) {
           <ArrowLeft className="h-4 w-4 mr-2" />
           Voltar
         </Button>
-        <h1 className="text-2xl font-bold">Nova Entidade</h1>
+        <h1 className="text-2xl font-bold">{editingEntidade ? 'Editar Entidade' : 'Nova Entidade'}</h1>
       </div>
 
       <Card>
