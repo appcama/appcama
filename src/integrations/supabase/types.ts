@@ -795,6 +795,8 @@ export type Database = {
           dat_criacao: string
           des_coletora_residuo: string
           des_geradora_residuo: string
+          des_locked: string
+          des_status: string
           des_tipo_entidade: string | null
           id_tipo_entidade: number
           id_usuario_atualizador: number | null
@@ -805,6 +807,8 @@ export type Database = {
           dat_criacao: string
           des_coletora_residuo?: string
           des_geradora_residuo?: string
+          des_locked?: string
+          des_status?: string
           des_tipo_entidade?: string | null
           id_tipo_entidade?: number
           id_usuario_atualizador?: number | null
@@ -815,6 +819,8 @@ export type Database = {
           dat_criacao?: string
           des_coletora_residuo?: string
           des_geradora_residuo?: string
+          des_locked?: string
+          des_status?: string
           des_tipo_entidade?: string | null
           id_tipo_entidade?: number
           id_usuario_atualizador?: number | null

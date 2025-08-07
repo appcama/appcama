@@ -1,8 +1,11 @@
+
 import { useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Dashboard } from "./Dashboard";
 import { EntidadesList } from "./EntidadesList";
 import { EntidadeForm } from "./EntidadeForm";
+import { TipoEntidadeList } from "./TipoEntidadeList";
+import { TipoEntidadeForm } from "./TipoEntidadeForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CooperativasCatadores } from './CooperativasCatadores';
 
@@ -14,6 +17,8 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
   const [activeItem, setActiveItem] = useState("dashboard");
   const [showEntidadeForm, setShowEntidadeForm] = useState(false);
   const [editingEntidade, setEditingEntidade] = useState(null);
+  const [showTipoEntidadeForm, setShowTipoEntidadeForm] = useState(false);
+  const [editingTipoEntidade, setEditingTipoEntidade] = useState(null);
 
   const renderContent = () => {
     switch (activeItem) {
@@ -52,21 +57,35 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
           </div>
         );
       case "tipos-entidades":
+        if (showTipoEntidadeForm) {
+          return (
+            <div className="p-6">
+              <TipoEntidadeForm
+                onBack={() => {
+                  setShowTipoEntidadeForm(false);
+                  setEditingTipoEntidade(null);
+                }}
+                onSuccess={() => {
+                  setShowTipoEntidadeForm(false);
+                  setEditingTipoEntidade(null);
+                  // Forçar refresh da lista
+                  setActiveItem("dashboard");
+                  setTimeout(() => setActiveItem("tipos-entidades"), 100);
+                }}
+                editingTipoEntidade={editingTipoEntidade}
+              />
+            </div>
+          );
+        }
         return (
           <div className="p-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Tipos de Entidades</CardTitle>
-                <CardDescription>
-                  Configuração dos tipos de entidades do sistema
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Funcionalidade em desenvolvimento...
-                </p>
-              </CardContent>
-            </Card>
+            <TipoEntidadeList
+              onAddNew={() => setShowTipoEntidadeForm(true)}
+              onEdit={(tipoEntidade) => {
+                setEditingTipoEntidade(tipoEntidade);
+                setShowTipoEntidadeForm(true);
+              }}
+            />
           </div>
         );
       case "centrais-apoio":
