@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Dashboard } from "./Dashboard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CooperativasCatadores } from './CooperativasCatadores';
 
 interface ReciclaSystemLayoutProps {
   children?: React.ReactNode;
@@ -15,23 +16,7 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
       case "dashboard":
         return <Dashboard />;
       case "entidades":
-        return (
-          <div className="p-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Cooperativas/Catadores</CardTitle>
-                <CardDescription>
-                  Gestão de cooperativas e catadores cadastrados no sistema
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Funcionalidade em desenvolvimento...
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        );
+        return <CooperativasCatadores />;
       case "tipos-entidades":
         return (
           <div className="p-6">
