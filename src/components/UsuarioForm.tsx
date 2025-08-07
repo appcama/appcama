@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Mail, CheckCircle } from "lucide-react";
+import { ArrowLeft, Mail, CheckCircle, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Usuario {
@@ -45,6 +45,7 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
   const [idPerfil, setIdPerfil] = useState<number | null>(null);
   const [status, setStatus] = useState("A");
   const [emailSent, setEmailSent] = useState(false);
+  const [emailResponse, setEmailResponse] = useState<any>(null);
 
   const { data: entidades } = useQuery({
     queryKey: ['entidades'],
@@ -93,18 +94,34 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
         body: {
           userId: userId,
           email: userEmail,
-          userName: userEmail.split('@')[0] // Use email username as display name
+          userName: userEmail.split('@')[0]
         }
       });
 
+      // Log the response for debugging
+      console.log('Edge function response:', { data, error });
+
       if (error) {
-        console.error('Supabase function error:', error);
-        throw error;
+        console.error('Supabase function invocation error:', error);
+        throw new Error(`Erro na chamada da função: ${error.message}`);
       }
 
-      if (!data?.success) {
+      // Handle the response - now we always expect a 200 status with success/failure in data
+      if (!data) {
+        throw new Error('Resposta vazia da função de email');
+      }
+
+      if (!data.success) {
         console.error('Email function returned error:', data);
-        throw new Error(data?.error || 'Failed to send validation email');
+        
+        // Handle specific error codes
+        if (data.code === 'RESEND_DOMAIN_NOT_VERIFIED') {
+          throw new Error('Domínio não verificado no Resend. Entre em contato com o administrador.');
+        } else if (data.code === 'RESEND_API_KEY_MISSING') {
+          throw new Error('Chave API do Resend não configurada. Entre em contato com o administrador.');
+        }
+        
+        throw new Error(data.error || 'Falha ao enviar email de validação');
       }
 
       console.log('Validation email sent successfully:', data);
@@ -156,28 +173,32 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
       
       if (result.isNew) {
         try {
-          await sendValidationEmail(result.userId, email);
+          const emailResult = await sendValidationEmail(result.userId, email);
+          setEmailResponse(emailResult);
           setEmailSent(true);
+          
           toast({
             title: "Usuário criado com sucesso!",
-            description: "Email de validação enviado para " + email,
+            description: emailResult.isTestMode 
+              ? `Email enviado para ${emailResult.sentTo} (modo teste)`
+              : `Email de validação enviado para ${email}`,
           });
         } catch (emailError: any) {
           console.error('Email error details:', emailError);
           
-          let errorDescription = "Usuário criado, mas houve erro ao enviar email de validação";
-          
-          if (emailError.message?.includes('RESEND_API_KEY')) {
-            errorDescription = "Usuário criado, mas API key do Resend não está configurada";
-          } else if (emailError.message?.includes('domain')) {
-            errorDescription = "Usuário criado, mas há problema com o domínio do email";
-          }
-          
           toast({
             title: "Usuário criado com avisos",
-            description: errorDescription,
+            description: `Usuário criado, mas houve erro ao enviar email: ${emailError.message}`,
             variant: "destructive",
           });
+          
+          // Still show the success screen but with error info
+          setEmailResponse({ 
+            success: false, 
+            error: emailError.message,
+            originalRecipient: email
+          });
+          setEmailSent(true);
         }
       } else {
         toast({
@@ -242,6 +263,9 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
   };
 
   if (emailSent) {
+    const isSuccess = emailResponse?.success;
+    const isTestMode = emailResponse?.isTestMode;
+    
     return (
       <div className="space-y-6">
         <div className="flex items-center space-x-2">
@@ -254,27 +278,87 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
         <Card>
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <CheckCircle className="h-16 w-16 text-green-600" />
+              {isSuccess ? (
+                <CheckCircle className="h-16 w-16 text-green-600" />
+              ) : (
+                <AlertTriangle className="h-16 w-16 text-orange-600" />
+              )}
             </div>
-            <CardTitle className="text-green-800">Usuário Criado com Sucesso!</CardTitle>
+            <CardTitle className={isSuccess ? "text-green-800" : "text-orange-800"}>
+              {isSuccess ? "Usuário Criado com Sucesso!" : "Usuário Criado com Avisos"}
+            </CardTitle>
             <CardDescription>
-              Email de validação enviado
+              {isSuccess 
+                ? (isTestMode ? "Email enviado em modo teste" : "Email de validação enviado")
+                : "Usuário criado, mas houve problema com o email"
+              }
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center space-y-4">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex items-center justify-center space-x-2 mb-2">
-                <Mail className="h-5 w-5 text-green-600" />
-                <span className="font-medium text-green-800">Email enviado para:</span>
+            {isSuccess ? (
+              <>
+                {isTestMode && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+                    <div className="flex items-center justify-center space-x-2 mb-2">
+                      <AlertTriangle className="h-5 w-5 text-orange-600" />
+                      <span className="font-medium text-orange-800">Modo Teste Ativo</span>
+                    </div>
+                    <p className="text-orange-700 text-sm">
+                      O email foi enviado para <strong>{emailResponse.sentTo}</strong> em vez de <strong>{emailResponse.originalRecipient}</strong>
+                    </p>
+                    <p className="text-orange-600 text-xs mt-2">
+                      Entre em contato com o administrador para configurar o domínio do email.
+                    </p>
+                  </div>
+                )}
+                
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center justify-center space-x-2 mb-2">
+                    <Mail className="h-5 w-5 text-green-600" />
+                    <span className="font-medium text-green-800">
+                      Email enviado para:
+                    </span>
+                  </div>
+                  <p className="text-green-700 font-mono">
+                    {isTestMode ? emailResponse.sentTo : email}
+                  </p>
+                  {isTestMode && (
+                    <p className="text-green-600 text-sm mt-1">
+                      (Email original: {emailResponse.originalRecipient})
+                    </p>
+                  )}
+                </div>
+                
+                {emailResponse?.token && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="font-medium text-blue-800 mb-2">Código de Validação:</p>
+                    <p className="text-2xl font-mono font-bold text-blue-900 tracking-wider">
+                      {emailResponse.token}
+                    </p>
+                    <p className="text-blue-600 text-xs mt-2">
+                      Use este código se necessário para testes
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-center justify-center space-x-2 mb-2">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                  <span className="font-medium text-red-800">Erro no Email</span>
+                </div>
+                <p className="text-red-700 text-sm">{emailResponse?.error}</p>
+                <p className="text-red-600 text-xs mt-2">
+                  O usuário foi criado mas não recebeu o email de validação.
+                </p>
               </div>
-              <p className="text-green-700 font-mono">{email}</p>
-            </div>
+            )}
             
             <div className="text-left space-y-2 text-sm text-gray-600">
               <p><strong>O que fazer agora:</strong></p>
               <ol className="list-decimal list-inside space-y-1 ml-4">
-                <li>O usuário deve verificar seu email</li>
-                <li>Fazer login com email e senha temporária: <code className="bg-gray-100 px-2 py-1 rounded">123456789</code></li>
+                <li>O usuário deve fazer login com email: <strong>{email}</strong></li>
+                <li>Usar a senha temporária: <code className="bg-gray-100 px-2 py-1 rounded">123456789</code></li>
                 <li>Inserir o código de validação recebido por email</li>
                 <li>Definir uma nova senha</li>
               </ol>
@@ -283,6 +367,7 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
             <div className="flex justify-center space-x-2 pt-4">
               <Button onClick={() => {
                 setEmailSent(false);
+                setEmailResponse(null);
                 onSuccess();
               }}>
                 Criar Outro Usuário
