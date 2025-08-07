@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Dashboard } from "./Dashboard";
@@ -6,6 +5,8 @@ import { EntidadesList } from "./EntidadesList";
 import { EntidadeForm } from "./EntidadeForm";
 import { TipoEntidadeList } from "./TipoEntidadeList";
 import { TipoEntidadeForm } from "./TipoEntidadeForm";
+import { PerfilList } from "./PerfilList";
+import { PerfilForm } from "./PerfilForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CooperativasCatadores } from './CooperativasCatadores';
 
@@ -19,6 +20,8 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
   const [editingEntidade, setEditingEntidade] = useState(null);
   const [showTipoEntidadeForm, setShowTipoEntidadeForm] = useState(false);
   const [editingTipoEntidade, setEditingTipoEntidade] = useState(null);
+  const [showPerfilForm, setShowPerfilForm] = useState(false);
+  const [editingPerfil, setEditingPerfil] = useState(null);
 
   const renderContent = () => {
     switch (activeItem) {
@@ -88,6 +91,38 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
             />
           </div>
         );
+      case "perfis":
+        if (showPerfilForm) {
+          return (
+            <div className="p-6">
+              <PerfilForm
+                onBack={() => {
+                  setShowPerfilForm(false);
+                  setEditingPerfil(null);
+                }}
+                onSuccess={() => {
+                  setShowPerfilForm(false);
+                  setEditingPerfil(null);
+                  // Forçar refresh da lista
+                  setActiveItem("dashboard");
+                  setTimeout(() => setActiveItem("perfis"), 100);
+                }}
+                editingPerfil={editingPerfil}
+              />
+            </div>
+          );
+        }
+        return (
+          <div className="p-6">
+            <PerfilList
+              onAddNew={() => setShowPerfilForm(true)}
+              onEdit={(perfil) => {
+                setEditingPerfil(perfil);
+                setShowPerfilForm(true);
+              }}
+            />
+          </div>
+        );
       case "centrais-apoio":
         return (
           <div className="p-6">
@@ -114,24 +149,6 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
                 <CardTitle>Eventos de Coleta</CardTitle>
                 <CardDescription>
                   Agendamento e controle de eventos de coleta
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Funcionalidade em desenvolvimento...
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        );
-      case "perfis":
-        return (
-          <div className="p-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Perfis</CardTitle>
-                <CardDescription>
-                  Gerencie os tipos de acesso e permissões disponíveis no sistema.
                 </CardDescription>
               </CardHeader>
               <CardContent>
