@@ -87,6 +87,8 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
 
   const sendValidationEmail = async (userId: number, userEmail: string) => {
     try {
+      console.log('Sending validation email for user:', { userId, userEmail });
+      
       const { data, error } = await supabase.functions.invoke('send-validation-email', {
         body: {
           userId: userId,
@@ -95,8 +97,17 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
 
+      if (!data?.success) {
+        console.error('Email function returned error:', data);
+        throw new Error(data?.error || 'Failed to send validation email');
+      }
+
+      console.log('Validation email sent successfully:', data);
       return data;
     } catch (error) {
       console.error('Error sending validation email:', error);
@@ -151,10 +162,20 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
             title: "Usuário criado com sucesso!",
             description: "Email de validação enviado para " + email,
           });
-        } catch (emailError) {
+        } catch (emailError: any) {
+          console.error('Email error details:', emailError);
+          
+          let errorDescription = "Usuário criado, mas houve erro ao enviar email de validação";
+          
+          if (emailError.message?.includes('RESEND_API_KEY')) {
+            errorDescription = "Usuário criado, mas API key do Resend não está configurada";
+          } else if (emailError.message?.includes('domain')) {
+            errorDescription = "Usuário criado, mas há problema com o domínio do email";
+          }
+          
           toast({
-            title: "Usuário criado",
-            description: "Usuário criado, mas houve erro ao enviar email de validação",
+            title: "Usuário criado com avisos",
+            description: errorDescription,
             variant: "destructive",
           });
         }
