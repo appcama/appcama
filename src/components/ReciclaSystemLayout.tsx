@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useEffect, useMemo, useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Dashboard } from "./Dashboard";
 import { EntidadesList } from "./EntidadesList";
@@ -13,6 +14,10 @@ import { UsuariosList } from "./UsuariosList";
 import { UsuarioForm } from "./UsuarioForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CooperativasCatadores } from './CooperativasCatadores';
+import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
+import { featureByItemId } from "@/lib/featureMap";
+import { PerfilFuncionalidades } from "./PerfilFuncionalidades";
 
 interface ReciclaSystemLayoutProps {
   children?: React.ReactNode;
@@ -37,6 +42,9 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
   const [editingUsuario, setEditingUsuario] = useState(null);
   const [perfilFilter, setPerfilFilter] = useState<PerfilFilter | null>(null);
 
+  const { toast } = useToast();
+  const { allowedFeatures, loading: permissionsLoading, isAllowed } = usePermissions();
+
   const handleViewUsersFromPerfil = (perfil: any) => {
     setPerfilFilter({
       id_perfil: perfil.id_perfil,
@@ -47,6 +55,47 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
 
   const handleClearPerfilFilter = () => {
     setPerfilFilter(null);
+  };
+
+  // Garante que o item ativo seja permitido; caso contrário, tenta fallback
+  useEffect(() => {
+    if (permissionsLoading) return;
+    const currentFeature = featureByItemId(activeItem);
+    if (currentFeature && !isAllowed(currentFeature)) {
+      // tenta ir para dashboard se permitido
+      if (isAllowed("Dashboard")) {
+        setActiveItem("dashboard");
+      } else {
+        // encontra primeiro item permitido simples
+        const candidates = [
+          "entidades",
+          "tipos-entidades",
+          "tipos-residuos",
+          "perfis",
+          "usuarios",
+        ];
+        const found = candidates.find((id) => {
+          const f = featureByItemId(id);
+          return f ? isAllowed(f) : true;
+        });
+        if (found) {
+          setActiveItem(found);
+        }
+      }
+    }
+  }, [permissionsLoading, allowedFeatures, activeItem, isAllowed]);
+
+  const onProtectedItemClick = (id: string) => {
+    const feature = featureByItemId(id);
+    if (feature && !isAllowed(feature)) {
+      toast({
+        title: "Acesso negado",
+        description: "Você não tem permissão para acessar este módulo.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setActiveItem(id);
   };
 
   const renderContent = () => {
@@ -65,7 +114,6 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
                 onSuccess={() => {
                   setShowEntidadeForm(false);
                   setEditingEntidade(null);
-                  // Forçar refresh da lista
                   setActiveItem("dashboard");
                   setTimeout(() => setActiveItem("entidades"), 100);
                 }}
@@ -97,7 +145,6 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
                 onSuccess={() => {
                   setShowTipoEntidadeForm(false);
                   setEditingTipoEntidade(null);
-                  // Forçar refresh da lista
                   setActiveItem("dashboard");
                   setTimeout(() => setActiveItem("tipos-entidades"), 100);
                 }}
@@ -129,7 +176,6 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
                 onSuccess={() => {
                   setShowTipoResiduoForm(false);
                   setEditingTipoResiduo(null);
-                  // Forçar refresh da lista
                   setActiveItem("dashboard");
                   setTimeout(() => setActiveItem("tipos-residuos"), 100);
                 }}
@@ -161,7 +207,6 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
                 onSuccess={() => {
                   setShowPerfilForm(false);
                   setEditingPerfil(null);
-                  // Forçar refresh da lista
                   setActiveItem("dashboard");
                   setTimeout(() => setActiveItem("perfis"), 100);
                 }}
@@ -194,7 +239,6 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
                 onSuccess={() => {
                   setShowUsuarioForm(false);
                   setEditingUsuario(null);
-                  // Forçar refresh da lista
                   setActiveItem("dashboard");
                   setTimeout(() => setActiveItem("usuarios"), 100);
                 }}
@@ -242,24 +286,6 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
                 <CardTitle>Eventos de Coleta</CardTitle>
                 <CardDescription>
                   Agendamento e controle de eventos de coleta
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Funcionalidade em desenvolvimento...
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        );
-      case "usuarios":
-        return (
-          <div className="p-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Usuários</CardTitle>
-                <CardDescription>
-                  Cadastre e administre os usuários com acesso ao sistema.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -396,6 +422,12 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
             </Card>
           </div>
         );
+      case "funcionalidades":
+        return (
+          <div className="p-6">
+            <PerfilFuncionalidades />
+          </div>
+        );
       default:
         return <Dashboard />;
     }
@@ -403,7 +435,11 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar activeItem={activeItem} onItemClick={setActiveItem} />
+      <Sidebar
+        activeItem={activeItem}
+        onItemClick={onProtectedItemClick}
+        allowedFeatures={allowedFeatures}
+      />
       <main className="flex-1 overflow-y-auto">
         {children || renderContent()}
       </main>

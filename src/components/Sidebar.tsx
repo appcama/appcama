@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import {
   BarChart3,
@@ -17,10 +18,12 @@ import {
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { featureByItemId } from "@/lib/featureMap";
 
 interface SidebarProps {
   activeItem: string;
   onItemClick: (item: string) => void;
+  allowedFeatures?: string[]; // novas permissões
 }
 
 const navigationItems = [
@@ -39,7 +42,8 @@ const navigationItems = [
     section: "Segurança",
     items: [
       { id: "perfis", label: "Perfis", icon: Trash2 },
-      { id: "usuarios", label: "Usuários", icon: Recycle },     
+      { id: "usuarios", label: "Usuários", icon: Recycle },
+      { id: "funcionalidades", label: "Funcionalidades", icon: Settings }, // novo item
     ],
   },
   {
@@ -64,8 +68,20 @@ const bottomItems = [
   { id: "ajuda", label: "Ajuda", icon: HelpCircle },
 ];
 
-export function Sidebar({ activeItem, onItemClick }: SidebarProps) {
+export function Sidebar({ activeItem, onItemClick, allowedFeatures }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const filterByPermissions = useMemo(() => {
+    if (!allowedFeatures || allowedFeatures.length === 0) {
+      // Se ainda não temos permissões, não filtramos nada (mostra tudo)
+      return (id: string) => true;
+    }
+    return (id: string) => {
+      const featureName = featureByItemId(id);
+      if (!featureName) return true; // se não mapeado, mantém visível
+      return allowedFeatures.includes(featureName);
+    };
+  }, [allowedFeatures]);
 
   return (
     <div
@@ -106,26 +122,28 @@ export function Sidebar({ activeItem, onItemClick }: SidebarProps) {
               </h3>
             )}
             <div className="space-y-1">
-              {section.items.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Button
-                    key={item.id}
-                    variant={activeItem === item.id ? "secondary" : "ghost"}
-                    className={cn(
-                      "w-full justify-start",
-                      isCollapsed && "px-2",
-                      activeItem === item.id && "bg-recycle-green-light border-l-2 border-recycle-green"
-                    )}
-                    onClick={() => onItemClick(item.id)}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {!isCollapsed && (
-                      <span className="ml-2 text-sm">{item.label}</span>
-                    )}
-                  </Button>
-                );
-              })}
+              {section.items
+                .filter((item) => filterByPermissions(item.id))
+                .map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Button
+                      key={item.id}
+                      variant={activeItem === item.id ? "secondary" : "ghost"}
+                      className={cn(
+                        "w-full justify-start",
+                        isCollapsed && "px-2",
+                        activeItem === item.id && "bg-recycle-green-light border-l-2 border-recycle-green"
+                      )}
+                      onClick={() => onItemClick(item.id)}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {!isCollapsed && (
+                        <span className="ml-2 text-sm">{item.label}</span>
+                      )}
+                    </Button>
+                  );
+                })}
             </div>
           </div>
         ))}
@@ -133,26 +151,28 @@ export function Sidebar({ activeItem, onItemClick }: SidebarProps) {
 
       {/* Bottom Section */}
       <div className="p-2 border-t border-border">
-        {bottomItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Button
-              key={item.id}
-              variant={activeItem === item.id ? "secondary" : "ghost"}
-              className={cn(
-                "w-full justify-start mb-1",
-                isCollapsed && "px-2",
-                activeItem === item.id && "bg-recycle-green-light"
-              )}
-              onClick={() => onItemClick(item.id)}
-            >
-              <Icon className="h-4 w-4" />
-              {!isCollapsed && (
-                <span className="ml-2 text-sm">{item.label}</span>
-              )}
-            </Button>
-          );
-        })}
+        {bottomItems
+          .filter((item) => filterByPermissions(item.id))
+          .map((item) => {
+            const Icon = item.icon;
+            return (
+              <Button
+                key={item.id}
+                variant={activeItem === item.id ? "secondary" : "ghost"}
+                className={cn(
+                  "w-full justify-start mb-1",
+                  isCollapsed && "px-2",
+                  activeItem === item.id && "bg-recycle-green-light"
+                )}
+                onClick={() => onItemClick(item.id)}
+              >
+                <Icon className="h-4 w-4" />
+                {!isCollapsed && (
+                  <span className="ml-2 text-sm">{item.label}</span>
+                )}
+              </Button>
+            );
+          })}
       </div>
     </div>
   );
