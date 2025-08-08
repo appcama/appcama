@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -130,34 +131,36 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
       const data = await response.json();
 
       if (data.erro) {
+        // Clear the fields if CEP is not found
+        form.setValue("des_logradouro", "");
+        form.setValue("des_bairro", "");
+        
         toast({
           title: "CEP não encontrado",
-          description: "O CEP informado não foi encontrado. Você pode preencher o endereço manualmente.",
+          description: "O CEP informado não foi encontrado. Os campos de endereço foram limpos.",
           variant: "destructive",
         });
         return;
       }
 
-      // Auto-fill fields only if they are empty
-      const currentLogradouro = form.getValues("des_logradouro");
-      const currentBairro = form.getValues("des_bairro");
-
-      if (!currentLogradouro && data.logradouro) {
+      // Always overwrite the fields with new data
+      if (data.logradouro) {
         form.setValue("des_logradouro", data.logradouro);
+      } else {
+        form.setValue("des_logradouro", "");
       }
 
-      if (!currentBairro && data.bairro) {
+      if (data.bairro) {
         form.setValue("des_bairro", data.bairro);
+      } else {
+        form.setValue("des_bairro", "");
       }
 
-      // For now, keeping Salvador as default municipality since we don't have a municipalities table
-      // This could be enhanced later with a proper municipality lookup
-      if (data.localidade && data.uf) {
-        toast({
-          title: "CEP encontrado",
-          description: `Endereço localizado: ${data.localidade} - ${data.uf}. Verifique se os campos foram preenchidos corretamente.`,
-        });
-      }
+      // Success toast
+      toast({
+        title: "CEP encontrado",
+        description: `Endereço localizado: ${data.localidade} - ${data.uf}. Os campos foram atualizados.`,
+      });
 
     } catch (error) {
       console.error('Erro ao consultar CEP:', error);
@@ -384,34 +387,6 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
 
                 <FormField
                   control={form.control}
-                  name="des_logradouro"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Logradouro *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Rua, Avenida, etc." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="des_bairro"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Bairro *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Digite o bairro" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
                   name="num_cep"
                   render={({ field }) => (
                     <FormItem>
@@ -440,6 +415,34 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                             <Search className="h-4 w-4" />
                           </Button>
                         </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="des_logradouro"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Logradouro *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Rua, Avenida, etc." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="des_bairro"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bairro *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Digite o bairro" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
