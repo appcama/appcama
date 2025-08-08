@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ArrowLeft, Save, Search } from "lucide-react";
+import { ArrowLeft, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -63,7 +63,6 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
   const [tiposEntidade, setTiposEntidade] = useState<TipoEntidade[]>([]);
   const [tiposSituacao, setTiposSituacao] = useState<TipoSituacao[]>([]);
   const [loading, setLoading] = useState(false);
-  const [loadingCep, setLoadingCep] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -115,59 +114,6 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
         description: "Erro ao carregar dados do formulário",
         variant: "destructive",
       });
-    }
-  };
-
-  const handleCepLookup = async (cep: string) => {
-    if (!cep || cep.length < 8) return;
-
-    const cleanCep = cep.replace(/\D/g, '');
-    if (cleanCep.length !== 8) return;
-
-    setLoadingCep(true);
-    try {
-      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
-      const data = await response.json();
-
-      if (data.erro) {
-        toast({
-          title: "CEP não encontrado",
-          description: "O CEP informado não foi encontrado. Você pode preencher o endereço manualmente.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Auto-fill fields only if they are empty
-      const currentLogradouro = form.getValues("des_logradouro");
-      const currentBairro = form.getValues("des_bairro");
-
-      if (!currentLogradouro && data.logradouro) {
-        form.setValue("des_logradouro", data.logradouro);
-      }
-
-      if (!currentBairro && data.bairro) {
-        form.setValue("des_bairro", data.bairro);
-      }
-
-      // For now, keeping Salvador as default municipality since we don't have a municipalities table
-      // This could be enhanced later with a proper municipality lookup
-      if (data.localidade && data.uf) {
-        toast({
-          title: "CEP encontrado",
-          description: `Endereço localizado: ${data.localidade} - ${data.uf}. Verifique se os campos foram preenchidos corretamente.`,
-        });
-      }
-
-    } catch (error) {
-      console.error('Erro ao consultar CEP:', error);
-      toast({
-        title: "Erro na consulta",
-        description: "Não foi possível consultar o CEP. Verifique sua conexão e tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingCep(false);
     }
   };
 
@@ -384,6 +330,30 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
 
                 <FormField
                   control={form.control}
+                  name="num_cep"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CEP *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="00000-000"
+                          {...field}
+                          onChange={(e) => {
+                            let value = e.target.value.replace(/\D/g, '');
+                            if (value.length > 5) {
+                              value = value.substring(0, 5) + '-' + value.substring(5, 8);
+                            }
+                            field.onChange(value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
                   name="des_logradouro"
                   render={({ field }) => (
                     <FormItem>
@@ -410,41 +380,7 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="num_cep"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>CEP *</FormLabel>
-                      <FormControl>
-                        <div className="flex space-x-2">
-                          <Input
-                            placeholder="00000-000"
-                            {...field}
-                            onChange={(e) => {
-                              let value = e.target.value.replace(/\D/g, '');
-                              if (value.length > 5) {
-                                value = value.substring(0, 5) + '-' + value.substring(5, 8);
-                              }
-                              field.onChange(value);
-                            }}
-                            onBlur={() => handleCepLookup(field.value)}
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            onClick={() => handleCepLookup(field.value)}
-                            disabled={loadingCep}
-                          >
-                            <Search className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                
 
                 <FormField
                   control={form.control}
