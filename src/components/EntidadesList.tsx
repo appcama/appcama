@@ -132,7 +132,7 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
       <CardHeader className="flex flex-row items-center justify-between">
         <div className="flex items-center gap-2">
           <Users className="h-5 w-5" />
-          <CardTitle>Cooperativas/Catadores</CardTitle>
+          <CardTitle>Entidades</CardTitle>
         </div>
         <Button onClick={onAddNew} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
