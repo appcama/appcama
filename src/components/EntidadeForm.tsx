@@ -330,30 +330,6 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
 
                 <FormField
                   control={form.control}
-                  name="num_cep"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>CEP *</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="00000-000"
-                          {...field}
-                          onChange={(e) => {
-                            let value = e.target.value.replace(/\D/g, '');
-                            if (value.length > 5) {
-                              value = value.substring(0, 5) + '-' + value.substring(5, 8);
-                            }
-                            field.onChange(value);
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
                   name="des_logradouro"
                   render={({ field }) => (
                     <FormItem>
@@ -380,7 +356,29 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                   )}
                 />
 
-                
+                <FormField
+                  control={form.control}
+                  name="num_cep"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CEP *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="00000-000"
+                          {...field}
+                          onChange={(e) => {
+                            let value = e.target.value.replace(/\D/g, '');
+                            if (value.length > 5) {
+                              value = value.substring(0, 5) + '-' + value.substring(5, 8);
+                            }
+                            field.onChange(value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={form.control}
