@@ -28,7 +28,7 @@ const navigationItems = [
     section: "Principal",
     items: [
       { id: "dashboard", label: "Dashboard", icon: Home },
-      { id: "entidades", label: "Cooperativas/Catadores", icon: Users },
+      { id: "entidades", label: "Entidades", icon: Users },
       { id: "tipos-entidades", label: "Tipos de Entidades", icon: Building2 },
       { id: "centrais-apoio", label: "Centrais de Apoio", icon: MapPin },
       { id: "eventos-coleta", label: "Eventos de Coleta", icon: Calendar },
