@@ -101,7 +101,6 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
       // Log the response for debugging
       console.log('Edge function response:', { data, error });
 
-      // The edge function now always returns 200, so we don't expect HTTP errors
       if (error) {
         console.error('Supabase function invocation error:', error);
         throw new Error(`Erro na chamada da função: ${error.message}`);
@@ -112,8 +111,20 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
         throw new Error('Resposta vazia da função de email');
       }
 
-      // The function returns success: true/false, so we handle both cases
-      console.log('Email function response:', data);
+      if (!data.success) {
+        console.error('Email function returned error:', data);
+        
+        // Handle specific error codes
+        if (data.code === 'RESEND_DOMAIN_NOT_VERIFIED') {
+          throw new Error('Domínio não verificado no Resend. Entre em contato com o administrador.');
+        } else if (data.code === 'RESEND_API_KEY_MISSING') {
+          throw new Error('Chave API do Resend não configurada. Entre em contato com o administrador.');
+        }
+        
+        throw new Error(data.error || 'Falha ao enviar email de validação');
+      }
+
+      console.log('Validation email sent successfully:', data);
       return data;
     } catch (error) {
       console.error('Error sending validation email:', error);
@@ -166,20 +177,12 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
           setEmailResponse(emailResult);
           setEmailSent(true);
           
-          if (emailResult.success) {
-            toast({
-              title: "Usuário criado com sucesso!",
-              description: emailResult.isTestMode 
-                ? `Email enviado para ${emailResult.sentTo} (modo teste)`
-                : `Email de validação enviado para ${email}`,
-            });
-          } else {
-            toast({
-              title: "Usuário criado com avisos",
-              description: `Usuário criado, mas houve erro ao enviar email: ${emailResult.error}`,
-              variant: "destructive",
-            });
-          }
+          toast({
+            title: "Usuário criado com sucesso!",
+            description: emailResult.isTestMode 
+              ? `Email enviado para ${emailResult.sentTo} (modo teste)`
+              : `Email de validação enviado para ${email}`,
+          });
         } catch (emailError: any) {
           console.error('Email error details:', emailError);
           
@@ -304,7 +307,7 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
                       O email foi enviado para <strong>{emailResponse.sentTo}</strong> em vez de <strong>{emailResponse.originalRecipient}</strong>
                     </p>
                     <p className="text-orange-600 text-xs mt-2">
-                      Todos os emails estão sendo enviados para o proprietário da conta Resend para evitar erros de domínio.
+                      Entre em contato com o administrador para configurar o domínio do email.
                     </p>
                   </div>
                 )}
