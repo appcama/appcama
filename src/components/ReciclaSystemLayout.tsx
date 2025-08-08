@@ -16,6 +16,11 @@ interface ReciclaSystemLayoutProps {
   children?: React.ReactNode;
 }
 
+interface PerfilFilter {
+  id_perfil: number;
+  nom_perfil: string;
+}
+
 export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
   const [activeItem, setActiveItem] = useState("dashboard");
   const [showEntidadeForm, setShowEntidadeForm] = useState(false);
@@ -26,6 +31,19 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
   const [editingPerfil, setEditingPerfil] = useState(null);
   const [showUsuarioForm, setShowUsuarioForm] = useState(false);
   const [editingUsuario, setEditingUsuario] = useState(null);
+  const [perfilFilter, setPerfilFilter] = useState<PerfilFilter | null>(null);
+
+  const handleViewUsersFromPerfil = (perfil: any) => {
+    setPerfilFilter({
+      id_perfil: perfil.id_perfil,
+      nom_perfil: perfil.nom_perfil
+    });
+    setActiveItem("usuarios");
+  };
+
+  const handleClearPerfilFilter = () => {
+    setPerfilFilter(null);
+  };
 
   const renderContent = () => {
     switch (activeItem) {
@@ -124,6 +142,7 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
                 setEditingPerfil(perfil);
                 setShowPerfilForm(true);
               }}
+              onViewUsers={handleViewUsersFromPerfil}
             />
           </div>
         );
@@ -156,6 +175,8 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
                 setEditingUsuario(usuario);
                 setShowUsuarioForm(true);
               }}
+              perfilFilter={perfilFilter}
+              onClearFilter={handleClearPerfilFilter}
             />
           </div>
         );

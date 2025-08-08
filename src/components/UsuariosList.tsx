@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit2, Power, PowerOff, RotateCcw } from "lucide-react";
+import { Plus, Edit2, Power, PowerOff, RotateCcw, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -38,16 +38,21 @@ interface Usuario {
 interface UsuariosListProps {
   onAddNew: () => void;
   onEdit: (usuario: Usuario) => void;
+  perfilFilter?: {
+    id_perfil: number;
+    nom_perfil: string;
+  } | null;
+  onClearFilter?: () => void;
 }
 
-export function UsuariosList({ onAddNew, onEdit }: UsuariosListProps) {
+export function UsuariosList({ onAddNew, onEdit, perfilFilter, onClearFilter }: UsuariosListProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: usuarios, isLoading } = useQuery({
-    queryKey: ['usuarios'],
+    queryKey: ['usuarios', perfilFilter?.id_perfil],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('usuario')
         .select(`
           *,
@@ -56,6 +61,12 @@ export function UsuariosList({ onAddNew, onEdit }: UsuariosListProps) {
         `)
         .order('id_usuario', { ascending: true });
 
+      // Aplicar filtro por perfil se fornecido
+      if (perfilFilter) {
+        query = query.eq('id_perfil', perfilFilter.id_perfil);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as Usuario[];
     },
@@ -135,18 +146,47 @@ export function UsuariosList({ onAddNew, onEdit }: UsuariosListProps) {
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>
-              <CardTitle>Usuários</CardTitle>
+              <CardTitle>
+                Usuários
+                {perfilFilter && (
+                  <span className="text-base font-normal text-muted-foreground ml-2">
+                    - Perfil: {perfilFilter.nom_perfil}
+                  </span>
+                )}
+              </CardTitle>
               <CardDescription>
-                Gerencie os usuários do sistema
+                {perfilFilter 
+                  ? `Usuários com o perfil "${perfilFilter.nom_perfil}"` 
+                  : "Gerencie os usuários do sistema"
+                }
               </CardDescription>
             </div>
-            <Button onClick={onAddNew}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Usuário
-            </Button>
+            <div className="flex gap-2">
+              {perfilFilter && onClearFilter && (
+                <Button 
+                  variant="outline" 
+                  onClick={onClearFilter}
+                  className="flex items-center gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  Limpar Filtro
+                </Button>
+              )}
+              <Button onClick={onAddNew}>
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Usuário
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
+          {perfilFilter && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-sm text-blue-800">
+                <strong>Filtro ativo:</strong> Exibindo apenas usuários do perfil "{perfilFilter.nom_perfil}"
+              </p>
+            </div>
+          )}
           {usuarios && usuarios.length > 0 ? (
             <div className="grid gap-4">
               {usuarios.map((usuario) => (
@@ -219,7 +259,10 @@ export function UsuariosList({ onAddNew, onEdit }: UsuariosListProps) {
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              Nenhum usuário encontrado
+              {perfilFilter 
+                ? `Nenhum usuário encontrado com o perfil "${perfilFilter.nom_perfil}"` 
+                : "Nenhum usuário encontrado"
+              }
             </div>
           )}
         </CardContent>

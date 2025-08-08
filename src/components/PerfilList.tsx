@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Shield, Edit, Power } from "lucide-react";
+import { Plus, Shield, Edit, Power, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -21,9 +21,10 @@ interface Perfil {
 interface PerfilListProps {
   onAddNew: () => void;
   onEdit: (perfil: Perfil) => void;
+  onViewUsers?: (perfil: Perfil) => void;
 }
 
-export function PerfilList({ onAddNew, onEdit }: PerfilListProps) {
+export function PerfilList({ onAddNew, onEdit, onViewUsers }: PerfilListProps) {
   const [perfis, setPerfis] = useState<Perfil[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -157,6 +158,15 @@ export function PerfilList({ onAddNew, onEdit }: PerfilListProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onViewUsers?.(perfil)}
+                          className="h-8 w-8 p-0"
+                          title="Ver usuários deste perfil"
+                        >
+                          <Users className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
