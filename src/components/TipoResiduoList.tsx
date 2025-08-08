@@ -5,42 +5,41 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Power, Building2 } from "lucide-react";
+import { Plus, Pencil, Power, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-interface TipoEntidade {
-  id_tipo_entidade: number;
-  des_tipo_entidade: string;
-  des_geradora_residuo: string;
-  des_coletora_residuo: string;
+interface TipoResiduo {
+  id_tipo_residuo: number;
+  des_tipo_residuo: string;
+  des_recurso_natural: string;
   des_status: string;
   des_locked: string;
 }
 
-interface TipoEntidadeListProps {
+interface TipoResiduoListProps {
   onAddNew: () => void;
-  onEdit: (tipoEntidade: TipoEntidade) => void;
+  onEdit: (tipoResiduo: TipoResiduo) => void;
 }
 
-export function TipoEntidadeList({ onAddNew, onEdit }: TipoEntidadeListProps) {
+export function TipoResiduoList({ onAddNew, onEdit }: TipoResiduoListProps) {
   const queryClient = useQueryClient();
 
-  const { data: tiposEntidade = [], isLoading, error } = useQuery({
-    queryKey: ['tipos-entidade'],
+  const { data: tiposResiduo = [], isLoading, error } = useQuery({
+    queryKey: ['tipos-residuo'],
     queryFn: async () => {
-      console.log('Fetching tipos de entidade...');
+      console.log('Fetching tipos de resíduo...');
       const { data, error } = await supabase
-        .from('tipo_entidade')
+        .from('tipo_residuo')
         .select('*')
-        .order('des_tipo_entidade');
+        .order('des_tipo_residuo');
       
       if (error) {
-        console.error('Error fetching tipos de entidade:', error);
+        console.error('Error fetching tipos de resíduo:', error);
         throw error;
       }
       
-      console.log('Tipos de entidade fetched:', data);
-      return data as TipoEntidade[];
+      console.log('Tipos de resíduo fetched:', data);
+      return data as TipoResiduo[];
     }
   });
 
@@ -48,30 +47,30 @@ export function TipoEntidadeList({ onAddNew, onEdit }: TipoEntidadeListProps) {
     mutationFn: async ({ id, currentStatus }: { id: number; currentStatus: string }) => {
       const newStatus = currentStatus === 'A' ? 'I' : 'A';
       const { error } = await supabase
-        .from('tipo_entidade')
+        .from('tipo_residuo')
         .update({ 
           des_status: newStatus,
           dat_atualizacao: new Date().toISOString(),
           id_usuario_atualizador: 1 // TODO: get from auth context
         })
-        .eq('id_tipo_entidade', id);
+        .eq('id_tipo_residuo', id);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tipos-entidade'] });
-      toast.success('Status do tipo de entidade atualizado com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['tipos-residuo'] });
+      toast.success('Status do tipo de resíduo atualizado com sucesso!');
     },
     onError: (error) => {
-      console.error('Error updating tipo entidade status:', error);
-      toast.error('Erro ao atualizar status do tipo de entidade');
+      console.error('Error updating tipo residuo status:', error);
+      toast.error('Erro ao atualizar status do tipo de resíduo');
     }
   });
 
-  const handleToggleStatus = (tipoEntidade: TipoEntidade) => {
+  const handleToggleStatus = (tipoResiduo: TipoResiduo) => {
     toggleStatusMutation.mutate({
-      id: tipoEntidade.id_tipo_entidade,
-      currentStatus: tipoEntidade.des_status
+      id: tipoResiduo.id_tipo_residuo,
+      currentStatus: tipoResiduo.des_status
     });
   };
 
@@ -79,7 +78,7 @@ export function TipoEntidadeList({ onAddNew, onEdit }: TipoEntidadeListProps) {
     return (
       <Card>
         <CardContent className="p-6">
-          <div className="text-center">Carregando tipos de entidade...</div>
+          <div className="text-center">Carregando tipos de resíduo...</div>
         </CardContent>
       </Card>
     );
@@ -91,7 +90,7 @@ export function TipoEntidadeList({ onAddNew, onEdit }: TipoEntidadeListProps) {
       <Card>
         <CardContent className="p-6">
           <div className="text-center text-red-500">
-            Erro ao carregar tipos de entidade: {error.message}
+            Erro ao carregar tipos de resíduo: {error.message}
           </div>
         </CardContent>
       </Card>
@@ -103,17 +102,17 @@ export function TipoEntidadeList({ onAddNew, onEdit }: TipoEntidadeListProps) {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-recycle-green" />
+            <Trash2 className="h-5 w-5 text-recycle-green" />
             <div>
-              <CardTitle>Tipos de Entidades</CardTitle>
+              <CardTitle>Tipos de Resíduos</CardTitle>
               <CardDescription>
-                Gerencie os tipos de entidades do sistema
+                Gerencie os tipos de resíduos do sistema
               </CardDescription>
             </div>
           </div>
           <Button onClick={onAddNew} className="gap-2">
             <Plus className="h-4 w-4" />
-            Novo Tipo de Entidade
+            Novo Tipo de Resíduo
           </Button>
         </div>
       </CardHeader>
@@ -122,27 +121,19 @@ export function TipoEntidadeList({ onAddNew, onEdit }: TipoEntidadeListProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Nome do Tipo</TableHead>
-              <TableHead>Geradora</TableHead>
-              <TableHead>Coletora</TableHead>
+              <TableHead>Recurso Natural</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {tiposEntidade.map((tipo) => (
-              <TableRow key={tipo.id_tipo_entidade}>
+            {tiposResiduo.map((tipo) => (
+              <TableRow key={tipo.id_tipo_residuo}>
                 <TableCell className="font-medium">
-                  {tipo.des_tipo_entidade}
+                  {tipo.des_tipo_residuo}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={tipo.des_geradora_residuo === 'A' ? "default" : "secondary"}>
-                    {tipo.des_geradora_residuo === 'A' ? 'Sim' : 'Não'}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={tipo.des_coletora_residuo === 'A' ? "default" : "secondary"}>
-                    {tipo.des_coletora_residuo === 'A' ? 'Sim' : 'Não'}
-                  </Badge>
+                  {tipo.des_recurso_natural || '-'}
                 </TableCell>
                 <TableCell>
                   <Badge variant={tipo.des_status === 'A' ? "default" : "secondary"}>
@@ -173,9 +164,9 @@ export function TipoEntidadeList({ onAddNew, onEdit }: TipoEntidadeListProps) {
           </TableBody>
         </Table>
         
-        {tiposEntidade.length === 0 && (
+        {tiposResiduo.length === 0 && (
           <div className="text-center py-8 text-muted-foreground">
-            Nenhum tipo de entidade encontrado
+            Nenhum tipo de resíduo encontrado
           </div>
         )}
       </CardContent>

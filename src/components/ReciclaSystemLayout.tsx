@@ -5,6 +5,8 @@ import { EntidadesList } from "./EntidadesList";
 import { EntidadeForm } from "./EntidadeForm";
 import { TipoEntidadeList } from "./TipoEntidadeList";
 import { TipoEntidadeForm } from "./TipoEntidadeForm";
+import { TipoResiduoList } from "./TipoResiduoList";
+import { TipoResiduoForm } from "./TipoResiduoForm";
 import { PerfilList } from "./PerfilList";
 import { PerfilForm } from "./PerfilForm";
 import { UsuariosList } from "./UsuariosList";
@@ -27,6 +29,8 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
   const [editingEntidade, setEditingEntidade] = useState(null);
   const [showTipoEntidadeForm, setShowTipoEntidadeForm] = useState(false);
   const [editingTipoEntidade, setEditingTipoEntidade] = useState(null);
+  const [showTipoResiduoForm, setShowTipoResiduoForm] = useState(false);
+  const [editingTipoResiduo, setEditingTipoResiduo] = useState(null);
   const [showPerfilForm, setShowPerfilForm] = useState(false);
   const [editingPerfil, setEditingPerfil] = useState(null);
   const [showUsuarioForm, setShowUsuarioForm] = useState(false);
@@ -109,6 +113,38 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
               onEdit={(tipoEntidade) => {
                 setEditingTipoEntidade(tipoEntidade);
                 setShowTipoEntidadeForm(true);
+              }}
+            />
+          </div>
+        );
+      case "tipos-residuos":
+        if (showTipoResiduoForm) {
+          return (
+            <div className="p-6">
+              <TipoResiduoForm
+                onBack={() => {
+                  setShowTipoResiduoForm(false);
+                  setEditingTipoResiduo(null);
+                }}
+                onSuccess={() => {
+                  setShowTipoResiduoForm(false);
+                  setEditingTipoResiduo(null);
+                  // Forçar refresh da lista
+                  setActiveItem("dashboard");
+                  setTimeout(() => setActiveItem("tipos-residuos"), 100);
+                }}
+                editingTipoResiduo={editingTipoResiduo}
+              />
+            </div>
+          );
+        }
+        return (
+          <div className="p-6">
+            <TipoResiduoList
+              onAddNew={() => setShowTipoResiduoForm(true)}
+              onEdit={(tipoResiduo) => {
+                setEditingTipoResiduo(tipoResiduo);
+                setShowTipoResiduoForm(true);
               }}
             />
           </div>

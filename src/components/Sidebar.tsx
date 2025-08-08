@@ -32,6 +32,7 @@ const navigationItems = [
       { id: "pontos-coleta", label: "Pontos de Coleta", icon: MapPin },
       { id: "eventos-coleta", label: "Eventos de Coleta", icon: Calendar },
       { id: "tipos-entidades", label: "Tipos de Entidades", icon: Building2 },
+      { id: "tipos-residuos", label: "Tipos de Resíduos", icon: Trash2 },
     ],
   },
   {
