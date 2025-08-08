@@ -159,14 +159,14 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
             />
           </div>
         );
-      case "centrais-apoio":
+      case "pontos-coleta":
         return (
           <div className="p-6">
             <Card>
               <CardHeader>
-                <CardTitle>Centrais de Apoio</CardTitle>
+                <CardTitle>Pontos de Coleta</CardTitle>
                 <CardDescription>
-                  Gestão das centrais de apoio à reciclagem
+                  Gestão dos pontos de coleta à reciclagem
                 </CardDescription>
               </CardHeader>
               <CardContent>
