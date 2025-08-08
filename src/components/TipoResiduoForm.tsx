@@ -57,36 +57,51 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
   const saveMutation = useMutation({
     mutationFn: async (data: FormData) => {
       console.log('Saving tipo residuo:', data);
+      console.log('Is editing:', isEditing);
+      console.log('Editing object:', editingTipoResiduo);
       
       const tipoResiduoData = {
         des_tipo_residuo: data.des_tipo_residuo,
         des_recurso_natural: data.des_recurso_natural || null,
-        des_status: 'A',
-        des_locked: 'D',
         dat_atualizacao: new Date().toISOString(),
         id_usuario_atualizador: 1, // TODO: get from auth context
       };
 
-      if (isEditing) {
-        const { error } = await supabase
+      if (isEditing && editingTipoResiduo) {
+        console.log('Updating with data:', tipoResiduoData);
+        const { data: result, error } = await supabase
           .from('tipo_residuo')
           .update(tipoResiduoData)
-          .eq('id_tipo_residuo', editingTipoResiduo.id_tipo_residuo);
+          .eq('id_tipo_residuo', editingTipoResiduo.id_tipo_residuo)
+          .select();
 
-        if (error) throw error;
+        console.log('Update result:', result);
+        if (error) {
+          console.error('Update error:', error);
+          throw error;
+        }
       } else {
-        const { error } = await supabase
+        console.log('Inserting new record with data:', tipoResiduoData);
+        const { data: result, error } = await supabase
           .from('tipo_residuo')
           .insert([{
             ...tipoResiduoData,
+            des_status: 'A',
+            des_locked: 'D',
             dat_criacao: new Date().toISOString(),
             id_usuario_criador: 1, // TODO: get from auth context
-          }]);
+          }])
+          .select();
 
-        if (error) throw error;
+        console.log('Insert result:', result);
+        if (error) {
+          console.error('Insert error:', error);
+          throw error;
+        }
       }
     },
     onSuccess: () => {
+      console.log('Mutation success, invalidating queries');
       queryClient.invalidateQueries({ queryKey: ['tipos-residuo'] });
       toast.success(
         isEditing 
@@ -97,7 +112,7 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
     },
     onError: (error) => {
       console.error('Error saving tipo residuo:', error);
-      toast.error('Erro ao salvar tipo de resíduo');
+      toast.error('Erro ao salvar tipo de resíduo: ' + (error.message || 'Erro desconhecido'));
     }
   });
 
@@ -107,18 +122,23 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+    <div className="space-y-6">
+      <div className="flex items-center space-x-4">
+        <Button variant="outline" onClick={onBack}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Voltar
+        </Button>
+        <h1 className="text-2xl font-bold">
+          {isEditing ? 'Editar Tipo de Resíduo' : 'Novo Tipo de Resíduo'}
+        </h1>
+      </div>
+
+      <Card>
+        <CardHeader>
           <div className="flex items-center gap-2">
             <Trash2 className="h-5 w-5 text-recycle-green" />
             <div>
-              <CardTitle>
-                {isEditing ? 'Editar Tipo de Resíduo' : 'Novo Tipo de Resíduo'}
-              </CardTitle>
+              <CardTitle>Dados do Tipo de Resíduo</CardTitle>
               <CardDescription>
                 {isEditing 
                   ? 'Atualize as informações do tipo de resíduo'
@@ -127,68 +147,70 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
               </CardDescription>
             </div>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="des_tipo_residuo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome do Tipo *</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Ex: Plástico PET" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="des_tipo_residuo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome do Tipo *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Ex: Plástico PET" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <FormField
-              control={form.control}
-              name="des_recurso_natural"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Recurso Natural</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Ex: Petróleo" 
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                <FormField
+                  control={form.control}
+                  name="des_recurso_natural"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Recurso Natural</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Ex: Petróleo" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-            <div className="flex gap-4 pt-6 border-t">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onBack}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={saveMutation.isPending}
-              >
-                {saveMutation.isPending
-                  ? 'Salvando...'
-                  : isEditing
-                  ? 'Atualizar'
-                  : 'Salvar'
-                }
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+              <div className="flex justify-end space-x-4 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onBack}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={saveMutation.isPending}
+                >
+                  {saveMutation.isPending
+                    ? 'Salvando...'
+                    : isEditing
+                    ? 'Atualizar'
+                    : 'Salvar'
+                  }
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
