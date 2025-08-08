@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Dashboard } from "./Dashboard";
@@ -59,33 +58,54 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
 
   // Garante que o item ativo seja permitido; caso contrário, tenta fallback
   useEffect(() => {
-    if (permissionsLoading) return;
+    if (permissionsLoading) {
+      console.log("[Layout] Permissions still loading, keeping current item:", activeItem);
+      return;
+    }
+    
+    console.log("[Layout] Checking access for current item:", activeItem);
     const currentFeature = featureByItemId(activeItem);
+    
     if (currentFeature && !isAllowed(currentFeature)) {
+      console.log("[Layout] Current item not allowed, finding alternative");
+      
       // tenta ir para dashboard se permitido
       if (isAllowed("Dashboard")) {
+        console.log("[Layout] Switching to Dashboard");
         setActiveItem("dashboard");
       } else {
-        // encontra primeiro item permitido simples
+        // encontra primeiro item permitido
         const candidates = [
           "entidades",
-          "tipos-entidades",
+          "tipos-entidades", 
           "tipos-residuos",
           "perfis",
           "usuarios",
         ];
         const found = candidates.find((id) => {
           const f = featureByItemId(id);
-          return f ? isAllowed(f) : true;
+          return f ? isAllowed(f) : false;
         });
+        
         if (found) {
+          console.log("[Layout] Switching to:", found);
           setActiveItem(found);
+        } else {
+          console.log("[Layout] No allowed items found, staying on current");
+          // Se não encontrar nenhum item permitido, mantém o atual
+          // O usuário verá a mensagem de acesso negado
         }
       }
     }
   }, [permissionsLoading, allowedFeatures, activeItem, isAllowed]);
 
   const onProtectedItemClick = (id: string) => {
+    // Durante o carregamento, permite a navegação
+    if (permissionsLoading) {
+      setActiveItem(id);
+      return;
+    }
+    
     const feature = featureByItemId(id);
     if (feature && !isAllowed(feature)) {
       toast({
@@ -99,6 +119,40 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
   };
 
   const renderContent = () => {
+    // Se as permissões ainda estão carregando, mostra loading
+    if (permissionsLoading) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
+            <p>Carregando permissões...</p>
+          </div>
+        </div>
+      );
+    }
+
+    // Verifica se o usuário tem permissão para o item atual
+    const currentFeature = featureByItemId(activeItem);
+    if (currentFeature && !isAllowed(currentFeature)) {
+      return (
+        <div className="p-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Acesso Negado</CardTitle>
+              <CardDescription>
+                Você não tem permissão para acessar este módulo.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                Entre em contato com o administrador do sistema para solicitar acesso.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
     switch (activeItem) {
       case "dashboard":
         return <Dashboard />;

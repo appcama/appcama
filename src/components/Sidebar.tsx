@@ -72,14 +72,28 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures }: SidebarPro
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const filterByPermissions = useMemo(() => {
-    if (!allowedFeatures || allowedFeatures.length === 0) {
-      // Se ainda não temos permissões, não filtramos nada (mostra tudo)
+    // Se allowedFeatures for undefined ou null, mostra tudo (ainda carregando)
+    if (!allowedFeatures) {
+      console.log("[Sidebar] Permissions still loading, showing all items");
       return (id: string) => true;
     }
+    
+    // Se for array vazio, esconde tudo (sem permissões)
+    if (allowedFeatures.length === 0) {
+      console.log("[Sidebar] No permissions loaded, hiding all items");
+      return (id: string) => false;
+    }
+    
     return (id: string) => {
       const featureName = featureByItemId(id);
-      if (!featureName) return true; // se não mapeado, mantém visível
-      return allowedFeatures.includes(featureName);
+      if (!featureName) {
+        console.log(`[Sidebar] No feature mapping for ${id}, keeping visible`);
+        return true; // se não mapeado, mantém visível
+      }
+      
+      const allowed = allowedFeatures.includes(featureName);
+      console.log(`[Sidebar] Item ${id} (${featureName}): ${allowed ? 'visible' : 'hidden'}`);
+      return allowed;
     };
   }, [allowedFeatures]);
 
