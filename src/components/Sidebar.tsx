@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   Home, 
@@ -24,6 +23,7 @@ interface SidebarProps {
   activeItem: string;
   onItemClick: (item: string) => void;
   allowedFeatures: string[];
+  onMenuClose?: () => void;
 }
 
 interface MenuItem {
@@ -33,7 +33,7 @@ interface MenuItem {
   children?: MenuItem[];
 }
 
-export function Sidebar({ activeItem, onItemClick, allowedFeatures }: SidebarProps) {
+export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose }: SidebarProps) {
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const { isMobile } = useBreakpoints();
 
@@ -140,6 +140,13 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures }: SidebarPro
     return allowed;
   };
 
+  const handleItemClick = (item: string) => {
+    onItemClick(item);
+    if (isMobile && onMenuClose) {
+      onMenuClose();
+    }
+  };
+
   const renderMenuItem = (item: MenuItem) => {
     if (!isFeatureAllowed(item.id)) {
       return null;
@@ -151,7 +158,7 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures }: SidebarPro
     return (
       <button
         key={item.id}
-        onClick={() => onItemClick(item.id)}
+        onClick={() => handleItemClick(item.id)}
         className={cn(
           "w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors text-sm font-medium",
           isMobile ? "min-h-[44px]" : "min-h-[36px]",

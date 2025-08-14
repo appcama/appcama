@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, Recycle } from "lucide-react";
@@ -12,10 +13,21 @@ interface MobileHeaderProps {
 }
 
 export function MobileHeader({ activeItem, onItemClick, allowedFeatures, userName }: MobileHeaderProps) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleItemClick = (item: string) => {
+    onItemClick(item);
+    setIsOpen(false); // Fecha o menu automaticamente
+  };
+
+  const handleMenuClose = () => {
+    setIsOpen(false);
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center px-4">
-        <Sheet>
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
             <Button
               variant="ghost"
@@ -42,8 +54,9 @@ export function MobileHeader({ activeItem, onItemClick, allowedFeatures, userNam
               <div className="flex-1 overflow-y-auto">
                 <Sidebar
                   activeItem={activeItem}
-                  onItemClick={onItemClick}
+                  onItemClick={handleItemClick}
                   allowedFeatures={allowedFeatures}
+                  onMenuClose={handleMenuClose}
                 />
               </div>
             </div>
