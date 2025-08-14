@@ -11,6 +11,14 @@ import { TipoEntidadeList } from '@/components/TipoEntidadeList';
 import { TipoResiduoList } from '@/components/TipoResiduoList';
 import { PerfilList } from '@/components/PerfilList';
 import { UsuariosList } from '@/components/UsuariosList';
+import { EntidadeForm } from '@/components/EntidadeForm';
+import { EventoForm } from '@/components/EventoForm';
+import { PontosColetaForm } from '@/components/PontosColetaForm';
+import { TipoPontoColetaForm } from '@/components/TipoPontoColetaForm';
+import { TipoEntidadeForm } from '@/components/TipoEntidadeForm';
+import { TipoResiduoForm } from '@/components/TipoResiduoForm';
+import { PerfilForm } from '@/components/PerfilForm';
+import { UsuarioForm } from '@/components/UsuarioForm';
 import { Sidebar } from '@/components/Sidebar';
 import { MobileHeader } from '@/components/MobileHeader';
 import { useBreakpoints } from '@/hooks/use-breakpoints';
@@ -18,6 +26,8 @@ import { cn } from '@/lib/utils';
 
 export function ReciclaELayout() {
   const [activeItem, setActiveItem] = useState('dashboard');
+  const [currentView, setCurrentView] = useState<'list' | 'form'>('list');
+  const [editingItem, setEditingItem] = useState<any>(null);
   const { user } = useAuth();
   const { allowedFeatures, loading: permissionsLoading } = usePermissions();
   const { isMobile } = useBreakpoints();
@@ -29,20 +39,105 @@ export function ReciclaELayout() {
   const handleItemClick = (item: string) => {
     console.log('[ReciclaELayout] Item clicked:', item);
     setActiveItem(item);
+    setCurrentView('list');
+    setEditingItem(null);
   };
 
-  // Placeholder functions for handling add/edit actions
   const handleAddNew = () => {
     console.log('Add new clicked for:', activeItem);
-    // TODO: Implement add new functionality
+    setCurrentView('form');
+    setEditingItem(null);
   };
 
   const handleEdit = (item: any) => {
     console.log('Edit clicked for:', activeItem, item);
-    // TODO: Implement edit functionality
+    setCurrentView('form');
+    setEditingItem(item);
+  };
+
+  const handleBackToList = () => {
+    setCurrentView('list');
+    setEditingItem(null);
+  };
+
+  const handleFormSuccess = () => {
+    setCurrentView('list');
+    setEditingItem(null);
   };
 
   const renderContent = () => {
+    if (currentView === 'form') {
+      switch (activeItem) {
+        case 'entidades':
+          return (
+            <EntidadeForm
+              onBack={handleBackToList}
+              onSuccess={handleFormSuccess}
+              editingEntidade={editingItem}
+            />
+          );
+        case 'pontos-coleta':
+          return (
+            <PontosColetaForm
+              onBack={handleBackToList}
+              onSuccess={handleFormSuccess}
+              editingPontoColeta={editingItem}
+            />
+          );
+        case 'eventos-coleta':
+          return (
+            <EventoForm
+              onBack={handleBackToList}
+              onSuccess={handleFormSuccess}
+              editingEvento={editingItem}
+            />
+          );
+        case 'tipos-ponto-coleta':
+          return (
+            <TipoPontoColetaForm
+              onBack={handleBackToList}
+              onSuccess={handleFormSuccess}
+              editingTipoPontoColeta={editingItem}
+            />
+          );
+        case 'tipos-entidades':
+          return (
+            <TipoEntidadeForm
+              onBack={handleBackToList}
+              onSuccess={handleFormSuccess}
+              editingTipoEntidade={editingItem}
+            />
+          );
+        case 'tipos-residuos':
+          return (
+            <TipoResiduoForm
+              onBack={handleBackToList}
+              onSuccess={handleFormSuccess}
+              editingTipoResiduo={editingItem}
+            />
+          );
+        case 'perfis':
+          return (
+            <PerfilForm
+              onBack={handleBackToList}
+              onSuccess={handleFormSuccess}
+              editingPerfil={editingItem}
+            />
+          );
+        case 'usuarios':
+          return (
+            <UsuarioForm
+              onBack={handleBackToList}
+              onSuccess={handleFormSuccess}
+              editingUsuario={editingItem}
+            />
+          );
+        default:
+          return <Dashboard />;
+      }
+    }
+
+    // Lista/Dashboard view
     switch (activeItem) {
       case 'dashboard':
         return <Dashboard />;
