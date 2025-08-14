@@ -8,6 +8,7 @@ export const idToFeatureMap: Record<string, string> = {
   entidades: "Entidades",
   "pontos-coleta": "Pontos de Coleta",
   "eventos-coleta": "Eventos de Coleta",
+  "tipos-ponto-coleta": "Tipos de Ponto de Coleta",
   "tipos-entidades": "Tipos de Entidades",
   "tipos-residuos": "Tipos de Resíduos",
   perfis: "Perfis",

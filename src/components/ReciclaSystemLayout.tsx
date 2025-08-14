@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { Dashboard } from "@/components/Dashboard";
@@ -8,6 +9,8 @@ import { TipoEntidadeList } from "@/components/TipoEntidadeList";
 import { TipoEntidadeForm } from "@/components/TipoEntidadeForm";
 import { TipoResiduoList } from "@/components/TipoResiduoList";
 import { TipoResiduoForm } from "@/components/TipoResiduoForm";
+import { TipoPontoColetaList } from "@/components/TipoPontoColetaList";
+import { TipoPontoColetaForm } from "@/components/TipoPontoColetaForm";
 import { PerfilList } from "@/components/PerfilList";
 import { PerfilForm } from "@/components/PerfilForm";
 import { UsuariosList } from "@/components/UsuariosList";
@@ -35,6 +38,7 @@ export function ReciclaSystemLayout() {
   const [eventosForm, setEventosForm] = useState<FormState>({ mode: "list" });
   const [pontosColetaForm, setPontosColetaForm] = useState<FormState>({ mode: "list" });
   const [tipoResiduoForm, setTipoResiduoForm] = useState<FormState>({ mode: "list" });
+  const [tipoPontoColetaForm, setTipoPontoColetaForm] = useState<FormState>({ mode: "list" });
   const [perfilForm, setPerfilForm] = useState<FormState>({ mode: "list" });
   const [usuarioForm, setUsuarioForm] = useState<FormState>({ mode: "list" });
 
@@ -77,6 +81,23 @@ export function ReciclaSystemLayout() {
           <PontosColetaList
             onEdit={(pontoColeta) => setPontosColetaForm({ mode: "form", editingItem: pontoColeta })}
             onAddNew={() => setPontosColetaForm({ mode: "form" })}
+          />
+        );
+      
+      case "tipos-ponto-coleta":
+        if (tipoPontoColetaForm.mode === "form") {
+          return (
+            <TipoPontoColetaForm
+              editingTipoPontoColeta={tipoPontoColetaForm.editingItem}
+              onBack={() => setTipoPontoColetaForm({ mode: "list" })}
+              onSuccess={() => setTipoPontoColetaForm({ mode: "list" })}
+            />
+          );
+        }
+        return (
+          <TipoPontoColetaList
+            onEdit={(tipoPontoColeta) => setTipoPontoColetaForm({ mode: "form", editingItem: tipoPontoColeta })}
+            onAddNew={() => setTipoPontoColetaForm({ mode: "form" })}
           />
         );
       

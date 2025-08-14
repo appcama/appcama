@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import {
@@ -23,7 +22,7 @@ import { featureByItemId } from "@/lib/featureMap";
 interface SidebarProps {
   activeItem: string;
   onItemClick: (item: string) => void;
-  allowedFeatures?: string[]; // novas permissões
+  allowedFeatures?: string[];
 }
 
 const navigationItems = [
@@ -34,6 +33,12 @@ const navigationItems = [
       { id: "entidades", label: "Entidades", icon: Users },    
       { id: "pontos-coleta", label: "Pontos de Coleta", icon: MapPin },
       { id: "eventos-coleta", label: "Eventos de Coleta", icon: Calendar },
+    ],
+  },
+  {
+    section: "Auxiliares",
+    items: [
+      { id: "tipos-ponto-coleta", label: "Tipos de Ponto de Coleta", icon: MapPin },
       { id: "tipos-entidades", label: "Tipos de Entidades", icon: Building2 },
       { id: "tipos-residuos", label: "Tipos de Resíduos", icon: Trash2 },
     ],
@@ -43,7 +48,7 @@ const navigationItems = [
     items: [
       { id: "perfis", label: "Perfis", icon: Trash2 },
       { id: "usuarios", label: "Usuários", icon: Recycle },
-      { id: "funcionalidades", label: "Funcionalidades", icon: Settings }, // novo item
+      { id: "funcionalidades", label: "Funcionalidades", icon: Settings },
     ],
   },
   {
@@ -72,13 +77,11 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures }: SidebarPro
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const filterByPermissions = useMemo(() => {
-    // Se allowedFeatures for undefined ou null, mostra tudo (ainda carregando)
     if (!allowedFeatures) {
       console.log("[Sidebar] Permissions still loading, showing all items");
       return (id: string) => true;
     }
     
-    // Se for array vazio, esconde tudo (sem permissões)
     if (allowedFeatures.length === 0) {
       console.log("[Sidebar] No permissions loaded, hiding all items");
       return (id: string) => false;
@@ -88,7 +91,7 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures }: SidebarPro
       const featureName = featureByItemId(id);
       if (!featureName) {
         console.log(`[Sidebar] No feature mapping for ${id}, keeping visible`);
-        return true; // se não mapeado, mantém visível
+        return true;
       }
       
       const allowed = allowedFeatures.includes(featureName);
