@@ -1,3 +1,4 @@
+
 import {
   useEffect,
   useState,
@@ -47,11 +48,8 @@ import {
   UsuariosForm
 } from "./UsuariosForm";
 import {
-  TipoPontoColetaList
-} from './TipoPontoColetaList';
-import {
-  TipoPontoColetaForm
-} from './TipoPontoColetaForm';
+  TipoPontoColetaManagerView
+} from './TipoPontoColetaManagerView';
 
 export function ReciclaSystemLayout() {
   const navigate = useNavigate();
@@ -80,109 +78,79 @@ export function ReciclaSystemLayout() {
 
     switch (path) {
       case "dashboard":
-        return < Dashboard / > ;
+        return <Dashboard />;
       case "entidades":
-        return ( <
-          div className="space-y-6" >
-          <
-          EntidadesForm / >
-          <
-          EntidadesList / >
-          <
-          /div>
+        return (
+          <div className="space-y-6">
+            <EntidadesForm />
+            <EntidadesList />
+          </div>
         );
       case "tipos-entidades":
-        return ( <
-          div className="space-y-6" >
-          <
-          TiposEntidadesForm / >
-          <
-          TiposEntidadesList / >
-          <
-          /div>
+        return (
+          <div className="space-y-6">
+            <TiposEntidadesForm />
+            <TiposEntidadesList />
+          </div>
         );
       case "tipos-residuos":
-        return ( <
-          div className="space-y-6" >
-          <
-          TiposResiduosForm / >
-          <
-          TiposResiduosList / >
-          <
-          /div>
+        return (
+          <div className="space-y-6">
+            <TiposResiduosForm />
+            <TiposResiduosList />
+          </div>
         );
       case "perfis":
-        return < PerfilFuncionalidades / > ;
+        return <PerfilFuncionalidades />;
       case "usuarios":
-        return ( <
-          div className="space-y-6" >
-          <
-          UsuariosForm / >
-          <
-          UsuariosList / >
-          <
-          /div>
+        return (
+          <div className="space-y-6">
+            <UsuariosForm />
+            <UsuariosList />
+          </div>
         );
       case "tipo-pontos-coleta":
-        return ( <
-          div className="space-y-6" >
-          <
-          TipoPontoColetaForm / >
-          <
-          TipoPontoColetaList / >
-          <
-          /div>
-        );
+        return <TipoPontoColetaManagerView />;
       default:
-        return < div > Conteúdo não encontrado < /div>;
+        return <div>Conteúdo não encontrado</div>;
     }
   };
 
   if (!user) {
-    return < div > Redirecionando para o login... < /div>;
+    return <div>Redirecionando para o login...</div>;
   }
 
-  return ( <
-    div className="h-screen flex overflow-hidden bg-gray-100" > {
-      /* Sidebar */ } <
-    Sidebar isSidebarOpen={
-      isSidebarOpen
-    }
-    toggleSidebar={
-      toggleSidebar
-    }
-    signOut={
-      signOut
-    }
-    />
+  return (
+    <div className="h-screen flex overflow-hidden bg-gray-100">
+      {/* Sidebar */}
+      <Sidebar 
+        isSidebarOpen={isSidebarOpen}
+        toggleSidebar={toggleSidebar}
+        signOut={signOut}
+      />
 
-    {
-      /* Content area */ } <
-    div className="flex flex-col flex-1 overflow-hidden" > {
-      /* Main content */ } <
-    main className="flex-1 relative overflow-y-auto focus:outline-none" >
-    <
-    div className="py-6" >
-    <
-    div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8" >
-    <
-    h1 className="text-2xl font-semibold text-gray-900" > {
-      location.pathname.split("/").pop()
-    } < /h1> <
-    /div> <
-    div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8" > {
-      /* Replace with your content */ } <
-    div className="py-4" >
-    <
-    div className="h-full" > {
-      renderContent()
-    } < /div> <
-    /div> {
-      /* /End replace */ } <
-    /div> <
-    /div> <
-    /main> <
-    /div> <
-    /div>
+      {/* Content area */}
+      <div className="flex flex-col flex-1 overflow-hidden">
+        {/* Main content */}
+        <main className="flex-1 relative overflow-y-auto focus:outline-none">
+          <div className="py-6">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+              <h1 className="text-2xl font-semibold text-gray-900">
+                {location.pathname.split("/").pop()}
+              </h1>
+            </div>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+              {/* Replace with your content */}
+              <div className="py-4">
+                <div className="h-full">
+                  {renderContent()}
+                </div>
+              </div>
+              {/* /End replace */}
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
   );
 }
