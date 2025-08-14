@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -49,19 +50,12 @@
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -111,5 +105,96 @@
 
   body {
     @apply bg-background text-foreground;
+    /* Prevent zoom on input focus in iOS */
+    -webkit-text-size-adjust: 100%;
+  }
+  
+  /* Mobile-first typography */
+  html {
+    font-size: 16px;
+  }
+  
+  @media (max-width: 767px) {
+    html {
+      font-size: 14px;
+    }
+  }
+}
+
+@layer components {
+  /* Mobile-first touch targets */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  
+  /* Mobile-first form inputs */
+  .mobile-input {
+    @apply min-h-[44px] text-base px-4 py-3;
+  }
+  
+  /* Mobile-first buttons */
+  .mobile-button {
+    @apply min-h-[44px] px-6 py-3 text-base font-medium;
+  }
+  
+  /* Mobile-first cards */
+  .mobile-card {
+    @apply p-4 rounded-lg border border-border bg-card;
+  }
+  
+  /* Safe area handling for mobile */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Scrollable areas */
+  .mobile-scroll {
+    @apply overflow-y-auto -webkit-overflow-scrolling-touch;
+  }
+  
+  /* Mobile-first spacing */
+  .mobile-spacing {
+    @apply space-y-4 sm:space-y-6;
+  }
+  
+  /* High contrast for outdoor visibility */
+  .high-contrast {
+    @apply text-gray-900 bg-white border-gray-300;
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbars but maintain functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Touch-friendly hover states */
+  @media (hover: hover) {
+    .hover-touch:hover {
+      @apply bg-accent;
+    }
+  }
+  
+  /* Prevent text selection on touch */
+  .no-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+  
+  /* Smooth scrolling */
+  .smooth-scroll {
+    scroll-behavior: smooth;
   }
 }

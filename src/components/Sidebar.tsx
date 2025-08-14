@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { featureByItemId } from "@/lib/featureMap";
+import { useBreakpoints } from "@/hooks/use-breakpoints";
 
 interface SidebarProps {
   activeItem: string;
@@ -34,6 +35,7 @@ interface MenuItem {
 
 export function Sidebar({ activeItem, onItemClick, allowedFeatures }: SidebarProps) {
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const { isMobile } = useBreakpoints();
 
   const toggleExpanded = (itemId: string) => {
     setExpandedItems(prev => 
@@ -120,13 +122,11 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures }: SidebarPro
   ];
 
   const isFeatureAllowed = (featureId: string) => {
-    // Se não há permissões carregadas ainda, permitir temporariamente (carregando)
     if (!allowedFeatures || allowedFeatures.length === 0) {
       console.log("[Sidebar] No permissions loaded yet, allowing access during loading");
       return true;
     }
 
-    // Mapear o ID do item para o nome da funcionalidade
     const featureName = featureByItemId(featureId);
     
     if (!featureName) {
@@ -153,14 +153,15 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures }: SidebarPro
         key={item.id}
         onClick={() => onItemClick(item.id)}
         className={cn(
-          "w-full flex items-center gap-3 px-3 py-2 text-left rounded-lg transition-colors text-sm",
+          "w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors text-sm font-medium",
+          isMobile ? "min-h-[44px]" : "min-h-[36px]",
           isActive 
-            ? "bg-green-100 text-green-800 font-medium" 
-            : "text-gray-700 hover:bg-gray-100",
+            ? "bg-recycle-green-light text-recycle-green-dark" 
+            : "text-gray-700 hover:bg-gray-100 active:bg-gray-200",
         )}
       >
-        <Icon className="w-4 h-4 flex-shrink-0" />
-        <span className="flex-1">{item.label}</span>
+        <Icon className={cn("flex-shrink-0", isMobile ? "w-5 h-5" : "w-4 h-4")} />
+        <span className="flex-1 truncate">{item.label}</span>
       </button>
     );
   };
@@ -173,8 +174,8 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures }: SidebarPro
     }
 
     return (
-      <div key={group.label} className="mb-6">
-        <div className="px-3 mb-2">
+      <div key={group.label} className={cn("mb-6", isMobile && "mb-4")}>
+        <div className={cn("px-4 mb-3", isMobile && "mb-2")}>
           <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
             {group.label}
           </h3>
@@ -187,20 +188,25 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures }: SidebarPro
   };
 
   return (
-    <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
-            <Recycle className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">ReciclaÊ</h1>
-            <p className="text-xs text-gray-500">Sistema de Gestão</p>
+    <div className={cn(
+      "bg-white flex flex-col h-full",
+      !isMobile && "w-64 border-r border-gray-200"
+    )}>
+      {!isMobile && (
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-recycle-green rounded-lg flex items-center justify-center">
+              <Recycle className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900">ReciclaÊ</h1>
+              <p className="text-xs text-gray-500">Sistema de Gestão</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
       
-      <nav className="flex-1 p-4 overflow-y-auto">
+      <nav className={cn("flex-1 overflow-y-auto", isMobile ? "p-2" : "p-4")}>
         {menuGroups.map(renderGroup)}
       </nav>
     </div>

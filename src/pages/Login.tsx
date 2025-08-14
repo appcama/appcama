@@ -9,7 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { applyCpfCnpjMask, validateCpfOrCnpj } from '@/lib/cpf-cnpj-utils';
-import { Leaf } from 'lucide-react';
+import { useBreakpoints } from '@/hooks/use-breakpoints';
+import { cn } from '@/lib/utils';
 
 export default function Login() {
   const [loginForm, setLoginForm] = useState({ cpfCnpj: '', password: '' });
@@ -18,6 +19,7 @@ export default function Login() {
   const { login } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { isMobile } = useBreakpoints();
 
   const handleCpfCnpjChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -86,8 +88,6 @@ export default function Login() {
     setLoading(true);
     
     try {
-      // Aqui implementaremos o envio por email
-      // Por enquanto, simular sucesso
       setTimeout(() => {
         toast({
           title: 'Sucesso',
@@ -107,34 +107,83 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50 p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-recycle-green-light to-eco-blue/10 p-4">
+      <div className={cn(
+        "w-full",
+        isMobile ? "max-w-sm" : "max-w-md"
+      )}>
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
-             {/* <Leaf className="h-12 w-12 text-green-600 mr-2" /> */}
-            <h1 className="text-3xl font-bold text-green-800"><img src="/logo.png" alt="Minha Logo" style={{ width: "250px" }} /></h1>
+          <div className="flex items-center justify-center mb-6">
+            <div className={cn(
+              "flex items-center justify-center",
+              isMobile ? "mb-2" : "mb-4"
+            )}>
+              <img 
+                src="/logo.png" 
+                alt="ReciclaÊ Logo" 
+                className={cn(
+                  "object-contain",
+                  isMobile ? "h-16 w-auto" : "h-20 w-auto"
+                )}
+              />
+            </div>
           </div>
-          <p className="text-gray-600">Sistema de Gestão de Reciclagem</p>
+          <p className={cn(
+            "text-gray-600 font-medium",
+            isMobile ? "text-sm" : "text-base"
+          )}>
+            Sistema de Gestão de Reciclagem
+          </p>
         </div>
 
         <Tabs defaultValue="login" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Logar</TabsTrigger>
-            <TabsTrigger value="aderir">Aderir</TabsTrigger>
+          <TabsList className={cn(
+            "grid w-full grid-cols-2",
+            isMobile ? "h-12" : "h-10"
+          )}>
+            <TabsTrigger 
+              value="login" 
+              className={cn(
+                "text-sm font-medium",
+                isMobile && "min-h-[44px]"
+              )}
+            >
+              Logar
+            </TabsTrigger>
+            <TabsTrigger 
+              value="aderir"
+              className={cn(
+                "text-sm font-medium",
+                isMobile && "min-h-[44px]"
+              )}
+            >
+              Aderir
+            </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="login">
+          <TabsContent value="login" className="mt-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Fazer Login</CardTitle>
-                <CardDescription>
+              <CardHeader className={cn(isMobile ? "pb-4" : "pb-6")}>
+                <CardTitle className={cn(
+                  isMobile ? "text-lg" : "text-xl"
+                )}>
+                  Fazer Login
+                </CardTitle>
+                <CardDescription className={cn(
+                  isMobile ? "text-sm" : "text-base"
+                )}>
                   Digite seu CPF ou CNPJ e senha para acessar o sistema
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleLogin} className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="cpfCnpj">CPF ou CNPJ</Label>
+                    <Label 
+                      htmlFor="cpfCnpj"
+                      className="text-sm font-medium"
+                    >
+                      CPF ou CNPJ
+                    </Label>
                     <Input
                       id="cpfCnpj"
                       type="text"
@@ -143,11 +192,20 @@ export default function Login() {
                       placeholder="000.000.000-00 ou 00.000.000/0000-00"
                       maxLength={18}
                       required
+                      className={cn(
+                        "text-base",
+                        isMobile && "min-h-[44px] text-[16px]"
+                      )}
                     />
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="password">Senha</Label>
+                    <Label 
+                      htmlFor="password"
+                      className="text-sm font-medium"
+                    >
+                      Senha
+                    </Label>
                     <Input
                       id="password"
                       type="password"
@@ -155,10 +213,21 @@ export default function Login() {
                       onChange={(e) => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
                       placeholder="Digite sua senha"
                       required
+                      className={cn(
+                        "text-base",
+                        isMobile && "min-h-[44px] text-[16px]"
+                      )}
                     />
                   </div>
                   
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  <Button 
+                    type="submit" 
+                    className={cn(
+                      "w-full font-medium",
+                      isMobile ? "min-h-[44px] text-base" : "h-10"
+                    )} 
+                    disabled={loading}
+                  >
                     {loading ? 'Entrando...' : 'Entrar'}
                   </Button>
                 </form>
@@ -166,18 +235,29 @@ export default function Login() {
             </Card>
           </TabsContent>
           
-          <TabsContent value="aderir">
+          <TabsContent value="aderir" className="mt-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Solicitar Adesão</CardTitle>
-                <CardDescription>
+              <CardHeader className={cn(isMobile ? "pb-4" : "pb-6")}>
+                <CardTitle className={cn(
+                  isMobile ? "text-lg" : "text-xl"
+                )}>
+                  Solicitar Adesão
+                </CardTitle>
+                <CardDescription className={cn(
+                  isMobile ? "text-sm" : "text-base"
+                )}>
                   Preencha seus dados para solicitar adesão ao sistema
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleAdesao} className="space-y-4">
+                <form onSubmit={handleAdesao} className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="nome">Nome Completo</Label>
+                    <Label 
+                      htmlFor="nome"
+                      className="text-sm font-medium"
+                    >
+                      Nome Completo
+                    </Label>
                     <Input
                       id="nome"
                       type="text"
@@ -185,11 +265,20 @@ export default function Login() {
                       onChange={(e) => setAdesaoForm(prev => ({ ...prev, nome: e.target.value }))}
                       placeholder="Digite seu nome completo"
                       required
+                      className={cn(
+                        "text-base",
+                        isMobile && "min-h-[44px] text-[16px]"
+                      )}
                     />
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="telefone">Telefone</Label>
+                    <Label 
+                      htmlFor="telefone"
+                      className="text-sm font-medium"
+                    >
+                      Telefone
+                    </Label>
                     <Input
                       id="telefone"
                       type="tel"
@@ -197,10 +286,21 @@ export default function Login() {
                       onChange={(e) => setAdesaoForm(prev => ({ ...prev, telefone: e.target.value }))}
                       placeholder="(00) 00000-0000"
                       required
+                      className={cn(
+                        "text-base",
+                        isMobile && "min-h-[44px] text-[16px]"
+                      )}
                     />
                   </div>
                   
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  <Button 
+                    type="submit" 
+                    className={cn(
+                      "w-full font-medium",
+                      isMobile ? "min-h-[44px] text-base" : "h-10"
+                    )} 
+                    disabled={loading}
+                  >
                     {loading ? 'Enviando...' : 'Solicitar Adesão'}
                   </Button>
                 </form>
