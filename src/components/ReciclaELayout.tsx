@@ -87,9 +87,8 @@ export function ReciclaELayout() {
         case 'eventos-coleta':
           return (
             <EventoForm
+              evento={editingItem}
               onBack={handleBackToList}
-              onSuccess={handleFormSuccess}
-              editingEvento={editingItem}
             />
           );
         case 'tipos-ponto-coleta':
