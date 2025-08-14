@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { 
   Home, 
@@ -16,6 +17,7 @@ import {
   FileText
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { featureByItemId } from "@/lib/featureMap";
 
 interface SidebarProps {
   activeItem: string;
@@ -112,12 +114,38 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures }: SidebarPro
   ];
 
   const isFeatureAllowed = (featureId: string) => {
-    return allowedFeatures.includes(featureId);
+    // Se não há permissões carregadas ainda, permitir temporariamente (carregando)
+    if (!allowedFeatures || allowedFeatures.length === 0) {
+      console.log("[Sidebar] No permissions loaded yet, allowing access during loading");
+      return true;
+    }
+
+    // Mapear o ID do item para o nome da funcionalidade
+    const featureName = featureByItemId(featureId);
+    
+    if (!featureName) {
+      console.log(`[Sidebar] No feature mapping found for: ${featureId}`);
+      return false;
+    }
+
+    const allowed = allowedFeatures.includes(featureName);
+    console.log(`[Sidebar] Feature ${featureName} (${featureId}): ${allowed ? 'ALLOWED' : 'DENIED'}`);
+    
+    return allowed;
   };
 
   const renderMenuItem = (item: MenuItem, level = 0) => {
-    if (!isFeatureAllowed(item.id)) {
-      return null;
+    // Para itens pai com filhos, verificar se pelo menos um filho é permitido
+    if (item.children && item.children.length > 0) {
+      const hasAllowedChildren = item.children.some(child => isFeatureAllowed(child.id));
+      if (!hasAllowedChildren) {
+        return null;
+      }
+    } else {
+      // Para itens sem filhos, verificar a permissão diretamente
+      if (!isFeatureAllowed(item.id)) {
+        return null;
+      }
     }
 
     const hasChildren = item.children && item.children.length > 0;
