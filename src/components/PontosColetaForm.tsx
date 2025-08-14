@@ -5,12 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, MapPin } from "lucide-react";
+import { ArrowLeft, MapPin, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useViaCep } from "@/hooks/useViaCep";
 
 interface PontoColeta {
   id_ponto_coleta: number;
+  nom_ponto_coleta: string;
   des_logradouro: string;
   des_bairro: string;
   num_cep: string;
@@ -29,6 +31,15 @@ interface PontoColeta {
   id_usuario_atualizador: number | null;
 }
 
+interface Entidade {
+  id_entidade: number;
+  nom_entidade: string;
+  nom_razao_social: string | null;
+  tipo_entidade: {
+    des_tipo_entidade: string;
+  };
+}
+
 interface PontosColetaFormProps {
   editingPontoColeta?: PontoColeta;
   onBack: () => void;
@@ -37,27 +48,37 @@ interface PontosColetaFormProps {
 
 export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: PontosColetaFormProps) {
   const [formData, setFormData] = useState({
+    nom_ponto_coleta: '',
+    num_cep: '',
     des_logradouro: '',
     des_bairro: '',
-    num_cep: '',
     des_status: 'A',
-    id_entidade_gestora: 1, // Default value - should be from logged user's entity
-    id_municipio: 1, // Default value
-    id_unidade_federativa: 1, // Default value
-    id_tipo_ponto_coleta: 1, // Default value
-    id_tipo_situacao: 1, // Default value
+    id_entidade_gestora: 0,
+    id_municipio: 1,
+    id_unidade_federativa: 1,
+    id_tipo_ponto_coleta: 1,
+    id_tipo_situacao: 1,
     num_latitude: null as number | null,
     num_longitude: null as number | null
   });
+  
+  const [entidadesGestoras, setEntidadesGestoras] = useState<Entidade[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingEntidades, setLoadingEntidades] = useState(true);
   const { toast } = useToast();
+  const { searchCep, loading: cepLoading } = useViaCep();
+
+  useEffect(() => {
+    fetchEntidadesGestoras();
+  }, []);
 
   useEffect(() => {
     if (editingPontoColeta) {
       setFormData({
+        nom_ponto_coleta: editingPontoColeta.nom_ponto_coleta,
+        num_cep: editingPontoColeta.num_cep,
         des_logradouro: editingPontoColeta.des_logradouro,
         des_bairro: editingPontoColeta.des_bairro,
-        num_cep: editingPontoColeta.num_cep,
         des_status: editingPontoColeta.des_status,
         id_entidade_gestora: editingPontoColeta.id_entidade_gestora,
         id_municipio: editingPontoColeta.id_municipio,
@@ -70,9 +91,70 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
     }
   }, [editingPontoColeta]);
 
+  const fetchEntidadesGestoras = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('entidade')
+        .select(`
+          id_entidade,
+          nom_entidade,
+          nom_razao_social,
+          tipo_entidade:tipo_entidade!inner(
+            des_tipo_entidade
+          )
+        `)
+        .eq('des_status', 'A')
+        .order('nom_entidade');
+
+      if (error) throw error;
+      setEntidadesGestoras(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar entidades gestoras:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar entidades gestoras",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingEntidades(false);
+    }
+  };
+
+  const handleCepChange = async (cep: string) => {
+    const formattedCep = cep
+      .replace(/\D/g, '')
+      .replace(/(\d{5})(\d{3})/, '$1-$2')
+      .substring(0, 9);
+    
+    setFormData(prev => ({
+      ...prev,
+      num_cep: formattedCep
+    }));
+
+    if (formattedCep.replace(/\D/g, '').length === 8) {
+      const cepData = await searchCep(formattedCep);
+      if (cepData) {
+        setFormData(prev => ({
+          ...prev,
+          des_logradouro: cepData.logradouro,
+          des_bairro: cepData.bairro
+        }));
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!formData.nom_ponto_coleta.trim()) {
+      toast({
+        title: "Erro",
+        description: "Nome do ponto de coleta é obrigatório",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!formData.des_logradouro.trim()) {
       toast({
         title: "Erro",
@@ -82,13 +164,23 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
       return;
     }
 
+    if (!formData.id_entidade_gestora || formData.id_entidade_gestora === 0) {
+      toast({
+        title: "Erro",
+        description: "Entidade gestora é obrigatória",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
       const dataToSave = {
+        nom_ponto_coleta: formData.nom_ponto_coleta.trim(),
+        num_cep: formData.num_cep.trim(),
         des_logradouro: formData.des_logradouro.trim(),
         des_bairro: formData.des_bairro.trim(),
-        num_cep: formData.num_cep.trim(),
         des_status: formData.des_status,
         id_entidade_gestora: formData.id_entidade_gestora,
         id_municipio: formData.id_municipio,
@@ -98,7 +190,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
         num_latitude: formData.num_latitude,
         num_longitude: formData.num_longitude,
         dat_criacao: new Date().toISOString(),
-        id_usuario_criador: 1 // Should be from logged user
+        id_usuario_criador: 1
       };
 
       if (editingPontoColeta) {
@@ -107,7 +199,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
           .update({
             ...dataToSave,
             dat_atualizacao: new Date().toISOString(),
-            id_usuario_atualizador: 1 // Should be from logged user
+            id_usuario_atualizador: 1
           })
           .eq('id_ponto_coleta', editingPontoColeta.id_ponto_coleta);
 
@@ -165,6 +257,67 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="nom_ponto_coleta">Nome do Ponto de Coleta *</Label>
+            <Input
+              id="nom_ponto_coleta"
+              value={formData.nom_ponto_coleta}
+              onChange={(e) => handleInputChange('nom_ponto_coleta', e.target.value)}
+              placeholder="Nome do ponto de coleta"
+              maxLength={60}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="id_entidade_gestora">Entidade Gestora *</Label>
+            {loadingEntidades ? (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Carregando entidades...
+              </div>
+            ) : (
+              <Select 
+                value={formData.id_entidade_gestora.toString()} 
+                onValueChange={(value) => handleInputChange('id_entidade_gestora', parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma entidade gestora" />
+                </SelectTrigger>
+                <SelectContent>
+                  {entidadesGestoras.map((entidade) => (
+                    <SelectItem key={entidade.id_entidade} value={entidade.id_entidade.toString()}>
+                      {entidade.nom_entidade} 
+                      {entidade.nom_razao_social && ` (${entidade.nom_razao_social})`}
+                      <span className="text-muted-foreground ml-2">
+                        - {entidade.tipo_entidade.des_tipo_entidade}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="num_cep">CEP *</Label>
+            <div className="relative">
+              <Input
+                id="num_cep"
+                value={formData.num_cep}
+                onChange={(e) => handleCepChange(e.target.value)}
+                placeholder="00000-000"
+                maxLength={9}
+                required
+              />
+              {cepLoading && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="des_logradouro">Logradouro *</Label>
@@ -188,30 +341,17 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="num_cep">CEP</Label>
-              <Input
-                id="num_cep"
-                value={formData.num_cep}
-                onChange={(e) => handleInputChange('num_cep', e.target.value)}
-                placeholder="00000-000"
-                maxLength={9}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="des_status">Status</Label>
-              <Select value={formData.des_status} onValueChange={(value) => handleInputChange('des_status', value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="A">Ativo</SelectItem>
-                  <SelectItem value="D">Inativo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="des_status">Status</Label>
+            <Select value={formData.des_status} onValueChange={(value) => handleInputChange('des_status', value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="A">Ativo</SelectItem>
+                <SelectItem value="D">Inativo</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

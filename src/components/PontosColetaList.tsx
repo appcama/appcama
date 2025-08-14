@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface PontoColeta {
   id_ponto_coleta: number;
+  nom_ponto_coleta: string;
   des_logradouro: string;
   des_bairro: string;
   num_cep: string;
@@ -47,7 +48,7 @@ export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
         .from('ponto_coleta')
         .select('*')
         .in('des_status', ['A', 'D'])
-        .order('des_logradouro');
+        .order('nom_ponto_coleta');
 
       if (error) throw error;
       setPontosColeta(data || []);
@@ -122,6 +123,7 @@ export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Nome</TableHead>
                   <TableHead>Logradouro</TableHead>
                   <TableHead>Bairro</TableHead>
                   <TableHead>CEP</TableHead>
@@ -133,8 +135,9 @@ export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
                 {pontosColeta.map((pontoColeta) => (
                   <TableRow key={pontoColeta.id_ponto_coleta}>
                     <TableCell className="font-medium">
-                      {pontoColeta.des_logradouro}
+                      {pontoColeta.nom_ponto_coleta}
                     </TableCell>
+                    <TableCell>{pontoColeta.des_logradouro}</TableCell>
                     <TableCell>{pontoColeta.des_bairro}</TableCell>
                     <TableCell>{pontoColeta.num_cep}</TableCell>
                     <TableCell>

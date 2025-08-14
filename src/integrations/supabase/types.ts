@@ -628,6 +628,7 @@ export type Database = {
           id_unidade_federativa: number
           id_usuario_atualizador: number | null
           id_usuario_criador: number
+          nom_ponto_coleta: string
           num_cep: string
           num_latitude: number | null
           num_longitude: number | null
@@ -647,6 +648,7 @@ export type Database = {
           id_unidade_federativa: number
           id_usuario_atualizador?: number | null
           id_usuario_criador: number
+          nom_ponto_coleta: string
           num_cep: string
           num_latitude?: number | null
           num_longitude?: number | null
@@ -666,6 +668,7 @@ export type Database = {
           id_unidade_federativa?: number
           id_usuario_atualizador?: number | null
           id_usuario_criador?: number
+          nom_ponto_coleta?: string
           num_cep?: string
           num_latitude?: number | null
           num_longitude?: number | null
