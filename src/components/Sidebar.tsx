@@ -43,74 +43,80 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures }: SidebarPro
     );
   };
 
-  const menuItems: MenuItem[] = [
+  const menuGroups = [
     {
-      id: "dashboard",
-      label: "Dashboard",
-      icon: Home,
-    },
-    {
-      id: "cooperativas-catadores",
-      label: "Cooperativas/Catadores",
-      icon: Users,
-    },
-    {
-      id: "cadastros",
-      label: "Cadastros",
-      icon: Building2,
-      children: [
-        { id: "entidades", label: "Entidades", icon: Building2 },
-        { id: "pontos-coleta", label: "Pontos de Coleta", icon: MapPin },
-        { id: "tipos-ponto-coleta", label: "Tipos Ponto Coleta", icon: MapPin },
-        { id: "tipos-entidades", label: "Tipos de Entidades", icon: Building2 },
-        { id: "tipos-residuos", label: "Tipos de Resíduos", icon: Trash2 },
+      label: "PRINCIPAL",
+      items: [
+        {
+          id: "dashboard",
+          label: "Dashboard",
+          icon: Home,
+        },
+        {
+          id: "entidades",
+          label: "Entidades",
+          icon: Building2,
+        },
+        {
+          id: "pontos-coleta",
+          label: "Pontos de Coleta",
+          icon: MapPin,
+        },
+        {
+          id: "eventos-coleta",
+          label: "Eventos de Coleta",
+          icon: Calendar,
+        },
       ]
     },
     {
-      id: "eventos-coleta",
-      label: "Eventos de Coleta",
-      icon: Calendar,
-    },
-    {
-      id: "geradores-residuos",
-      label: "Geradores de Resíduos",
-      icon: Building2,
-    },
-    {
-      id: "recebimento-residuos",
-      label: "Recebimento de Resíduos",
-      icon: Trash2,
-    },
-    {
-      id: "ecoindicadores",
-      label: "Ecoindicadores",
-      icon: BarChart3,
-    },
-    {
-      id: "relatorios",
-      label: "Relatórios",
-      icon: FileText,
-    },
-    {
-      id: "reciclometro",
-      label: "Reciclômetro",
-      icon: Recycle,
-    },
-    {
-      id: "administracao",
-      label: "Administração",
-      icon: Shield,
-      children: [
-        { id: "perfis", label: "Perfis", icon: UserCheck },
-        { id: "funcionalidades", label: "Funcionalidades", icon: Shield },
-        { id: "usuarios", label: "Usuários", icon: Users },
+      label: "AUXILIARES",
+      items: [
+        {
+          id: "tipos-ponto-coleta",
+          label: "Tipos de Ponto de Coleta",
+          icon: MapPin,
+        },
+        {
+          id: "tipos-entidades",
+          label: "Tipos de Entidades",
+          icon: Building2,
+        },
+        {
+          id: "tipos-residuos",
+          label: "Tipos de Resíduos",
+          icon: Trash2,
+        },
       ]
     },
     {
-      id: "configuracoes",
-      label: "Configurações",
-      icon: Settings,
+      label: "SEGURANÇA",
+      items: [
+        {
+          id: "perfis",
+          label: "Perfis",
+          icon: UserCheck,
+        },
+        {
+          id: "usuarios",
+          label: "Usuários",
+          icon: Users,
+        },
+        {
+          id: "funcionalidades",
+          label: "Funcionalidades",
+          icon: Shield,
+        },
+      ]
     },
+    {
+      label: "DADOS",
+      items: []
+    },
+    {
+      label: "RELATÓRIOS",
+      items: []
+    }
   ];
 
   const isFeatureAllowed = (featureId: string) => {
@@ -134,59 +140,48 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures }: SidebarPro
     return allowed;
   };
 
-  const renderMenuItem = (item: MenuItem, level = 0) => {
-    // Para itens pai com filhos, verificar se pelo menos um filho é permitido
-    if (item.children && item.children.length > 0) {
-      const hasAllowedChildren = item.children.some(child => isFeatureAllowed(child.id));
-      if (!hasAllowedChildren) {
-        return null;
-      }
-    } else {
-      // Para itens sem filhos, verificar a permissão diretamente
-      if (!isFeatureAllowed(item.id)) {
-        return null;
-      }
+  const renderMenuItem = (item: MenuItem) => {
+    if (!isFeatureAllowed(item.id)) {
+      return null;
     }
 
-    const hasChildren = item.children && item.children.length > 0;
-    const isExpanded = expandedItems.includes(item.id);
     const isActive = activeItem === item.id;
     const Icon = item.icon;
 
     return (
-      <div key={item.id}>
-        <button
-          onClick={() => {
-            if (hasChildren) {
-              toggleExpanded(item.id);
-            } else {
-              onItemClick(item.id);
-            }
-          }}
-          className={cn(
-            "w-full flex items-center gap-3 px-3 py-2 text-left rounded-lg transition-colors",
-            level > 0 && "ml-4 text-sm",
-            isActive 
-              ? "bg-green-100 text-green-800 font-medium" 
-              : "text-gray-700 hover:bg-gray-100",
-          )}
-        >
-          <Icon className="w-5 h-5 flex-shrink-0" />
-          <span className="flex-1">{item.label}</span>
-          {hasChildren && (
-            isExpanded ? (
-              <ChevronDown className="w-4 h-4" />
-            ) : (
-              <ChevronRight className="w-4 h-4" />
-            )
-          )}
-        </button>
-        
-        {hasChildren && isExpanded && (
-          <div className="mt-1 space-y-1">
-            {item.children?.map(child => renderMenuItem(child, level + 1))}
-          </div>
+      <button
+        key={item.id}
+        onClick={() => onItemClick(item.id)}
+        className={cn(
+          "w-full flex items-center gap-3 px-3 py-2 text-left rounded-lg transition-colors text-sm",
+          isActive 
+            ? "bg-green-100 text-green-800 font-medium" 
+            : "text-gray-700 hover:bg-gray-100",
         )}
+      >
+        <Icon className="w-4 h-4 flex-shrink-0" />
+        <span className="flex-1">{item.label}</span>
+      </button>
+    );
+  };
+
+  const renderGroup = (group: any) => {
+    const visibleItems = group.items.filter((item: MenuItem) => isFeatureAllowed(item.id));
+    
+    if (visibleItems.length === 0) {
+      return null;
+    }
+
+    return (
+      <div key={group.label} className="mb-6">
+        <div className="px-3 mb-2">
+          <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+            {group.label}
+          </h3>
+        </div>
+        <div className="space-y-1">
+          {visibleItems.map(renderMenuItem)}
+        </div>
       </div>
     );
   };
@@ -205,8 +200,8 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures }: SidebarPro
         </div>
       </div>
       
-      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-        {menuItems.map(item => renderMenuItem(item))}
+      <nav className="flex-1 p-4 overflow-y-auto">
+        {menuGroups.map(renderGroup)}
       </nav>
     </div>
   );
