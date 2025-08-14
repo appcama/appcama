@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { Dashboard } from "@/components/Dashboard";
@@ -13,6 +12,7 @@ import { TipoPontoColetaList } from "@/components/TipoPontoColetaList";
 import { TipoPontoColetaForm } from "@/components/TipoPontoColetaForm";
 import { PerfilList } from "@/components/PerfilList";
 import { PerfilForm } from "@/components/PerfilForm";
+import { PerfilFuncionalidades } from "@/components/PerfilFuncionalidades";
 import { UsuariosList } from "@/components/UsuariosList";
 import { UsuarioForm } from "@/components/UsuarioForm";
 import { EventosList } from "@/components/EventosList";
@@ -167,6 +167,9 @@ export function ReciclaSystemLayout() {
             onAddNew={() => setPerfilForm({ mode: "form" })}
           />
         );
+      
+      case "funcionalidades":
+        return <PerfilFuncionalidades />;
       
       case "usuarios":
         if (usuarioForm.mode === "form") {
