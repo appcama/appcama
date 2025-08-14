@@ -31,26 +31,37 @@ export function ReciclaELayout() {
     setActiveItem(item);
   };
 
+  // Placeholder functions for handling add/edit actions
+  const handleAddNew = () => {
+    console.log('Add new clicked for:', activeItem);
+    // TODO: Implement add new functionality
+  };
+
+  const handleEdit = (item: any) => {
+    console.log('Edit clicked for:', activeItem, item);
+    // TODO: Implement edit functionality
+  };
+
   const renderContent = () => {
     switch (activeItem) {
       case 'dashboard':
         return <Dashboard />;
       case 'entidades':
-        return <EntidadesList />;
+        return <EntidadesList onAddNew={handleAddNew} onEdit={handleEdit} />;
       case 'pontos-coleta':
-        return <PontosColetaList />;
+        return <PontosColetaList onAddNew={handleAddNew} onEdit={handleEdit} />;
       case 'eventos-coleta':
-        return <EventosList />;
+        return <EventosList onAddNew={handleAddNew} onEdit={handleEdit} />;
       case 'tipos-ponto-coleta':
-        return <TipoPontoColetaList />;
+        return <TipoPontoColetaList onAddNew={handleAddNew} onEdit={handleEdit} />;
       case 'tipos-entidades':
-        return <TipoEntidadeList />;
+        return <TipoEntidadeList onAddNew={handleAddNew} onEdit={handleEdit} />;
       case 'tipos-residuos':
-        return <TipoResiduoList />;
+        return <TipoResiduoList onAddNew={handleAddNew} onEdit={handleEdit} />;
       case 'perfis':
-        return <PerfilList />;
+        return <PerfilList onAddNew={handleAddNew} onEdit={handleEdit} />;
       case 'usuarios':
-        return <UsuariosList />;
+        return <UsuariosList onAddNew={handleAddNew} onEdit={handleEdit} />;
       default:
         return <Dashboard />;
     }
@@ -75,7 +86,7 @@ export function ReciclaELayout() {
             activeItem={activeItem}
             onItemClick={handleItemClick}
             allowedFeatures={allowedFeatures}
-            userName={user?.nom_usuario}
+            userName={user?.email || 'Usuário'}
           />
           <main className="flex-1 overflow-hidden">
             <div className="h-full overflow-y-auto">
