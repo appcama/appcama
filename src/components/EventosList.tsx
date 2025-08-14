@@ -9,13 +9,16 @@ import { useToast } from "@/hooks/use-toast";
 
 interface Evento {
   id_evento: number;
-  nom_evento: string;
+  nom_evento: string | null;
   des_evento: string | null;
-  dat_evento: string;
-  hor_inicio: string;
-  hor_fim: string | null;
-  des_local: string;
+  dat_inicio: string;
+  dat_termino: string;
   des_status: string;
+  des_locked: string;
+  dat_criacao: string;
+  dat_atualizacao: string | null;
+  id_usuario_criador: number;
+  id_usuario_atualizador: number | null;
 }
 
 interface EventosListProps {
@@ -38,7 +41,7 @@ export function EventosList({ onAddNew, onEdit }: EventosListProps) {
         .from('evento')
         .select('*')
         .in('des_status', ['A', 'D'])
-        .order('dat_evento', { ascending: false });
+        .order('dat_inicio', { ascending: false });
 
       if (error) throw error;
       setEventos(data || []);
@@ -85,8 +88,8 @@ export function EventosList({ onAddNew, onEdit }: EventosListProps) {
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
-  const formatTime = (timeString: string) => {
-    return timeString.substring(0, 5); // Remove seconds
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleString('pt-BR');
   };
 
   if (loading) {
@@ -123,9 +126,8 @@ export function EventosList({ onAddNew, onEdit }: EventosListProps) {
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>Descrição</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Horário</TableHead>
-                  <TableHead>Local</TableHead>
+                  <TableHead>Data Início</TableHead>
+                  <TableHead>Data Término</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
@@ -134,15 +136,11 @@ export function EventosList({ onAddNew, onEdit }: EventosListProps) {
                 {eventos.map((evento) => (
                   <TableRow key={evento.id_evento}>
                     <TableCell className="font-medium">
-                      {evento.nom_evento}
+                      {evento.nom_evento || '-'}
                     </TableCell>
                     <TableCell>{evento.des_evento || '-'}</TableCell>
-                    <TableCell>{formatDate(evento.dat_evento)}</TableCell>
-                    <TableCell>
-                      {formatTime(evento.hor_inicio)}
-                      {evento.hor_fim && ` - ${formatTime(evento.hor_fim)}`}
-                    </TableCell>
-                    <TableCell>{evento.des_local}</TableCell>
+                    <TableCell>{formatDateTime(evento.dat_inicio)}</TableCell>
+                    <TableCell>{formatDateTime(evento.dat_termino)}</TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                         evento.des_status === 'A' 

@@ -9,14 +9,22 @@ import { useToast } from "@/hooks/use-toast";
 
 interface PontoColeta {
   id_ponto_coleta: number;
-  nom_ponto_coleta: string;
-  des_ponto_coleta: string | null;
   des_logradouro: string;
   des_bairro: string;
   num_cep: string;
-  des_referencia: string | null;
+  des_locked: string;
   des_status: string;
+  id_entidade_gestora: number;
   id_municipio: number;
+  id_unidade_federativa: number;
+  id_tipo_ponto_coleta: number;
+  id_tipo_situacao: number;
+  num_latitude: number | null;
+  num_longitude: number | null;
+  dat_criacao: string;
+  dat_atualizacao: string | null;
+  id_usuario_criador: number;
+  id_usuario_atualizador: number | null;
 }
 
 interface PontosColetaListProps {
@@ -39,7 +47,7 @@ export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
         .from('ponto_coleta')
         .select('*')
         .in('des_status', ['A', 'D'])
-        .order('nom_ponto_coleta');
+        .order('des_logradouro');
 
       if (error) throw error;
       setPontosColeta(data || []);
@@ -114,12 +122,9 @@ export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Endereço</TableHead>
+                  <TableHead>Logradouro</TableHead>
                   <TableHead>Bairro</TableHead>
                   <TableHead>CEP</TableHead>
-                  <TableHead>Referência</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
@@ -128,13 +133,10 @@ export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
                 {pontosColeta.map((pontoColeta) => (
                   <TableRow key={pontoColeta.id_ponto_coleta}>
                     <TableCell className="font-medium">
-                      {pontoColeta.nom_ponto_coleta}
+                      {pontoColeta.des_logradouro}
                     </TableCell>
-                    <TableCell>{pontoColeta.des_ponto_coleta || '-'}</TableCell>
-                    <TableCell>{pontoColeta.des_logradouro}</TableCell>
                     <TableCell>{pontoColeta.des_bairro}</TableCell>
                     <TableCell>{pontoColeta.num_cep}</TableCell>
-                    <TableCell>{pontoColeta.des_referencia || '-'}</TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                         pontoColeta.des_status === 'A' 
