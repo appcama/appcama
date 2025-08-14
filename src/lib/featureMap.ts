@@ -1,31 +1,28 @@
 
-// Mapeamento entre itens do menu e funcionalidades do sistema
-const itemToFeatureMap: Record<string, string> = {
-  'dashboard': 'DASHBOARD',
-  'entidades': 'ENTIDADES',
-  'pontos-coleta': 'PONTOS_COLETA',
-  'eventos-coleta': 'EVENTOS_COLETA',
-  'coletas-residuos': 'COLETAS_RESIDUOS',
-  'tipos-entidades': 'TIPOS_ENTIDADES',
-  'tipos-residuos': 'TIPOS_RESIDUOS',
-  'perfis': 'PERFIS',
-  'usuarios': 'USUARIOS',
-  'funcionalidades': 'FUNCIONALIDADES',
-  'geradores': 'GERADORES_RESIDUOS',
-  'recebimentos': 'RECEBIMENTO_RESIDUOS',
-  'ecoindicadores': 'ECOINDICADORES',
-  'relatorios': 'RELATORIOS',
-  'reciclometro': 'RECICLOMETRO',
-  'configuracoes': 'CONFIGURACOES',
-  'ajuda': 'AJUDA'
+/**
+ * Mapa entre ids dos itens do layout e o nome da funcionalidade
+ * conforme armazenado na tabela public.funcionalidade.nom_funcionalidade
+ */
+export const idToFeatureMap: Record<string, string> = {
+  dashboard: "Dashboard",
+  entidades: "Entidades",
+  "pontos-coleta": "Pontos de Coleta",
+  "eventos-coleta": "Eventos de Coleta",
+  "tipos-entidades": "Tipos de Entidades",
+  "tipos-residuos": "Tipos de Resíduos",
+  perfis: "Perfis",
+  usuarios: "Usuários",
+  geradores: "Geradores de Resíduos",
+  recebimentos: "Recebimento de Resíduos",
+  ecoindicadores: "Ecoindicadores",
+  relatorios: "Relatórios",
+  reciclometro: "Reciclômetro",
+  configuracoes: "Configurações",
+  ajuda: "Ajuda",
+  // A tela de gerenciamento de funcionalidades será controlada pela permissão "Perfis"
+  funcionalidades: "Perfis",
 };
 
 export function featureByItemId(itemId: string): string | undefined {
-  return itemToFeatureMap[itemId];
-}
-
-export function itemsByFeature(featureName: string): string[] {
-  return Object.entries(itemToFeatureMap)
-    .filter(([_, feature]) => feature === featureName)
-    .map(([itemId, _]) => itemId);
+  return idToFeatureMap[itemId];
 }
