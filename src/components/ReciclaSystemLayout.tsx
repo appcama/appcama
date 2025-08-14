@@ -20,35 +20,50 @@ import {
   Dashboard
 } from "./Dashboard";
 import {
-  EntidadeManagerView
-} from "./EntidadeManagerView";
+  EntidadesList
+} from "./EntidadesList";
 import {
-  TipoEntidadeManagerView
-} from "./TipoEntidadeManagerView";
+  EntidadesForm
+} from "./EntidadesForm";
 import {
-  TipoResiduoManagerView
-} from "./TipoResiduoManagerView";
+  TiposEntidadesList
+} from "./TiposEntidadesList";
+import {
+  TiposEntidadesForm
+} from "./TiposEntidadesForm";
+import {
+  TiposResiduosList
+} from "./TiposResiduosList";
+import {
+  TiposResiduosForm
+} from "./TiposResiduosForm";
 import {
   PerfilFuncionalidades
 } from "./PerfilFuncionalidades";
 import {
-  UsuarioManagerView
-} from "./UsuarioManagerView";
+  UsuariosList
+} from "./UsuariosList";
 import {
-  TipoPontoColetaManagerView
-} from './TipoPontoColetaManagerView';
+  UsuariosForm
+} from "./UsuariosForm";
+import {
+  TipoPontoColetaList
+} from './TipoPontoColetaList';
+import {
+  TipoPontoColetaForm
+} from './TipoPontoColetaForm';
 
 export function ReciclaSystemLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const {
     user,
-    logout
+    signOut
   } = useAuth();
   const {
     isAllowed
   } = usePermissions();
-  const [activeItem, setActiveItem] = useState("dashboard");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   useEffect(() => {
     if (!user) {
@@ -56,74 +71,118 @@ export function ReciclaSystemLayout() {
     }
   }, [user, navigate]);
 
-  useEffect(() => {
-    const path = location.pathname.split("/").pop() || "dashboard";
-    setActiveItem(path);
-  }, [location]);
-
-  const handleItemClick = (item: string) => {
-    setActiveItem(item);
-    navigate(`/${item}`);
-  };
+  const toggleSidebar = useCallback(() => {
+    setIsSidebarOpen((prev) => !prev);
+  }, []);
 
   const renderContent = () => {
     const path = location.pathname.split("/").pop();
 
     switch (path) {
       case "dashboard":
-        return <Dashboard />;
+        return < Dashboard / > ;
       case "entidades":
-        return <EntidadeManagerView />;
+        return ( <
+          div className="space-y-6" >
+          <
+          EntidadesForm / >
+          <
+          EntidadesList / >
+          <
+          /div>
+        );
       case "tipos-entidades":
-        return <TipoEntidadeManagerView />;
+        return ( <
+          div className="space-y-6" >
+          <
+          TiposEntidadesForm / >
+          <
+          TiposEntidadesList / >
+          <
+          /div>
+        );
       case "tipos-residuos":
-        return <TipoResiduoManagerView />;
+        return ( <
+          div className="space-y-6" >
+          <
+          TiposResiduosForm / >
+          <
+          TiposResiduosList / >
+          <
+          /div>
+        );
       case "perfis":
-        return <PerfilFuncionalidades />;
+        return < PerfilFuncionalidades / > ;
       case "usuarios":
-        return <UsuarioManagerView />;
-      case "tipos-ponto-coleta":
-        return <TipoPontoColetaManagerView />;
+        return ( <
+          div className="space-y-6" >
+          <
+          UsuariosForm / >
+          <
+          UsuariosList / >
+          <
+          /div>
+        );
+      case "tipo-pontos-coleta":
+        return ( <
+          div className="space-y-6" >
+          <
+          TipoPontoColetaForm / >
+          <
+          TipoPontoColetaList / >
+          <
+          /div>
+        );
       default:
-        return <div>Conteúdo não encontrado</div>;
+        return < div > Conteúdo não encontrado < /div>;
     }
   };
 
   if (!user) {
-    return <div>Redirecionando para o login...</div>;
+    return < div > Redirecionando para o login... < /div>;
   }
 
-  return (
-    <div className="h-screen flex overflow-hidden bg-gray-100">
-      {/* Sidebar */}
-      <Sidebar 
-        activeItem={activeItem}
-        onItemClick={handleItemClick}
-        allowedFeatures={[]} // This will be populated by permissions
-      />
+  return ( <
+    div className="h-screen flex overflow-hidden bg-gray-100" > {
+      /* Sidebar */ } <
+    Sidebar isSidebarOpen={
+      isSidebarOpen
+    }
+    toggleSidebar={
+      toggleSidebar
+    }
+    signOut={
+      signOut
+    }
+    />
 
-      {/* Content area */}
-      <div className="flex flex-col flex-1 overflow-hidden">
-        {/* Main content */}
-        <main className="flex-1 relative overflow-y-auto focus:outline-none">
-          <div className="py-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-              <h1 className="text-2xl font-semibold text-gray-900">
-                {location.pathname.split("/").pop()}
-              </h1>
-            </div>
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-              {/* Replace with your content */}
-              <div className="py-4">
-                <div className="h-full">
-                  {renderContent()}
-                </div>
-              </div>
-              {/* /End replace */}
-            </div>
-          </div>
-        </main>
-      </div>
-    </div>
+    {
+      /* Content area */ } <
+    div className="flex flex-col flex-1 overflow-hidden" > {
+      /* Main content */ } <
+    main className="flex-1 relative overflow-y-auto focus:outline-none" >
+    <
+    div className="py-6" >
+    <
+    div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8" >
+    <
+    h1 className="text-2xl font-semibold text-gray-900" > {
+      location.pathname.split("/").pop()
+    } < /h1> <
+    /div> <
+    div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8" > {
+      /* Replace with your content */ } <
+    div className="py-4" >
+    <
+    div className="h-full" > {
+      renderContent()
+    } < /div> <
+    /div> {
+      /* /End replace */ } <
+    /div> <
+    /div> <
+    /main> <
+    /div> <
+    /div>
   );
 }

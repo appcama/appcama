@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -64,26 +64,19 @@ export function TipoPontoColetaForm({ editingTipoPontoColeta, onBack, onSuccess 
 
   const saveMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      console.log('Saving tipo ponto coleta:', data, 'isEditing:', isEditing);
-      
       if (isEditing) {
-        const { data: result, error } = await supabase
+        const { error } = await supabase
           .from('tipo_ponto_coleta')
           .update({
             des_tipo_ponto_coleta: data.des_tipo_ponto_coleta.trim(),
             dat_atualizacao: new Date().toISOString(),
             id_usuario_atualizador: 1,
           })
-          .eq('id_tipo_ponto_coleta', editingTipoPontoColeta.id_tipo_ponto_coleta)
-          .select();
+          .eq('id_tipo_ponto_coleta', editingTipoPontoColeta.id_tipo_ponto_coleta);
 
-        if (error) {
-          console.error('Erro ao atualizar:', error);
-          throw error;
-        }
-        console.log('Atualizado com sucesso:', result);
+        if (error) throw error;
       } else {
-        const { data: result, error } = await supabase
+        const { error } = await supabase
           .from('tipo_ponto_coleta')
           .insert({
             des_tipo_ponto_coleta: data.des_tipo_ponto_coleta.trim(),
@@ -91,14 +84,9 @@ export function TipoPontoColetaForm({ editingTipoPontoColeta, onBack, onSuccess 
             des_locked: 'D',
             id_usuario_criador: 1,
             dat_criacao: new Date().toISOString(),
-          })
-          .select();
+          });
 
-        if (error) {
-          console.error('Erro ao criar:', error);
-          throw error;
-        }
-        console.log('Criado com sucesso:', result);
+        if (error) throw error;
       }
     },
     onSuccess: () => {
@@ -120,73 +108,58 @@ export function TipoPontoColetaForm({ editingTipoPontoColeta, onBack, onSuccess 
   });
 
   const onSubmit = (data: FormData) => {
-    console.log('Form submitted:', data);
     saveMutation.mutate(data);
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <CardTitle>
-              {isEditing ? 'Editar Tipo de Ponto de Coleta' : 'Novo Tipo de Ponto de Coleta'}
-            </CardTitle>
-            <CardDescription>
-              {isEditing 
-                ? 'Atualize as informações do tipo de ponto de coleta'
-                : 'Preencha as informações para criar um novo tipo de ponto de coleta'
-              }
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="des_tipo_ponto_coleta"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome do Tipo de Ponto de Coleta *</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Ex: Ponto de Entrega Voluntária"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Button variant="outline" size="sm" onClick={onBack}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <h1 className="text-3xl font-bold">
+          {isEditing ? "Editar Tipo de Ponto de Coleta" : "Novo Tipo de Ponto de Coleta"}
+        </h1>
+      </div>
 
-            <div className="flex gap-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onBack}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={saveMutation.isPending}
-              >
-                {saveMutation.isPending
-                  ? 'Salvando...'
-                  : isEditing
-                  ? 'Atualizar'
-                  : 'Criar'
-                }
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            {isEditing ? "Editar Tipo de Ponto de Coleta" : "Novo Tipo de Ponto de Coleta"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="des_tipo_ponto_coleta"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome do Tipo de Ponto de Coleta *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Digite o nome do tipo de ponto de coleta"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex gap-4">
+                <Button type="button" variant="outline" onClick={onBack}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={saveMutation.isPending}>
+                  {saveMutation.isPending ? "Salvando..." : isEditing ? "Atualizar" : "Salvar"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

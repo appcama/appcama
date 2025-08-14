@@ -39,7 +39,6 @@ export function TipoPontoColetaList({ onEdit, onAddNew }: TipoPontoColetaListPro
   const { data: tiposPontoColeta, isLoading } = useQuery({
     queryKey: ['tipos-ponto-coleta'],
     queryFn: async () => {
-      console.log('Fetching tipos de ponto de coleta...');
       const { data, error } = await supabase
         .from('tipo_ponto_coleta')
         .select('*')
@@ -50,35 +49,24 @@ export function TipoPontoColetaList({ onEdit, onAddNew }: TipoPontoColetaListPro
         throw error;
       }
       
-      console.log('Dados carregados:', data);
       return data as TipoPontoColeta[];
     },
   });
 
   const toggleStatusMutation = useMutation({
     mutationFn: async ({ id, newStatus }: { id: number; newStatus: string }) => {
-      console.log('Updating status for id:', id, 'to:', newStatus);
-      
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('tipo_ponto_coleta')
         .update({ 
           des_status: newStatus,
           dat_atualizacao: new Date().toISOString(),
           id_usuario_atualizador: 1
         })
-        .eq('id_tipo_ponto_coleta', id)
-        .select();
+        .eq('id_tipo_ponto_coleta', id);
 
-      if (error) {
-        console.error('Erro ao atualizar status:', error);
-        throw error;
-      }
-      
-      console.log('Status atualizado com sucesso:', data);
-      return data;
+      if (error) throw error;
     },
-    onSuccess: (data) => {
-      console.log('Mutation success, invalidating queries...');
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tipos-ponto-coleta'] });
       toast({
         title: "Status atualizado",
@@ -97,7 +85,6 @@ export function TipoPontoColetaList({ onEdit, onAddNew }: TipoPontoColetaListPro
 
   const handleToggleStatus = (tipoPontoColeta: TipoPontoColeta) => {
     const newStatus = tipoPontoColeta.des_status === 'A' ? 'I' : 'A';
-    console.log('Toggling status from', tipoPontoColeta.des_status, 'to', newStatus);
     toggleStatusMutation.mutate({ id: tipoPontoColeta.id_tipo_ponto_coleta, newStatus });
   };
 
