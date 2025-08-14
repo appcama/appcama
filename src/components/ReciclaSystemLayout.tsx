@@ -1,487 +1,145 @@
-import { useEffect, useMemo, useState } from "react";
-import { Sidebar } from "./Sidebar";
-import { Dashboard } from "./Dashboard";
-import { EntidadesList } from "./EntidadesList";
-import { EntidadeForm } from "./EntidadeForm";
-import { TipoEntidadeList } from "./TipoEntidadeList";
-import { TipoEntidadeForm } from "./TipoEntidadeForm";
-import { TipoResiduoList } from "./TipoResiduoList";
-import { TipoResiduoForm } from "./TipoResiduoForm";
-import { PerfilList } from "./PerfilList";
-import { PerfilForm } from "./PerfilForm";
-import { UsuariosList } from "./UsuariosList";
-import { UsuarioForm } from "./UsuarioForm";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CooperativasCatadores } from './CooperativasCatadores';
-import { useToast } from "@/hooks/use-toast";
+
+import { useState } from "react";
+import { Sidebar } from "@/components/Sidebar";
+import { Dashboard } from "@/components/Dashboard";
+import { CooperativasCatadores } from "@/components/CooperativasCatadores";
+import { EntidadesList } from "@/components/EntidadesList";
+import { EntidadeForm } from "@/components/EntidadeForm";
+import { TipoEntidadeList } from "@/components/TipoEntidadeList";
+import { TipoEntidadeForm } from "@/components/TipoEntidadeForm";
+import { TipoResiduoList } from "@/components/TipoResiduoList";
+import { TipoResiduoForm } from "@/components/TipoResiduoForm";
+import { PerfilList } from "@/components/PerfilList";
+import { PerfilForm } from "@/components/PerfilForm";
+import { UsuariosList } from "@/components/UsuariosList";
+import { UsuarioForm } from "@/components/UsuarioForm";
+import { EventosList } from "@/components/EventosList";
+import { EventoForm } from "@/components/EventoForm";
 import { usePermissions } from "@/hooks/usePermissions";
-import { featureByItemId } from "@/lib/featureMap";
-import { PerfilFuncionalidades } from "./PerfilFuncionalidades";
 
-interface ReciclaSystemLayoutProps {
-  children?: React.ReactNode;
+type ViewMode = "list" | "form";
+
+interface FormState {
+  mode: ViewMode;
+  editingItem?: any;
 }
 
-interface PerfilFilter {
-  id_perfil: number;
-  nom_perfil: string;
-}
-
-export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
+export function ReciclaSystemLayout() {
   const [activeItem, setActiveItem] = useState("dashboard");
-  const [showEntidadeForm, setShowEntidadeForm] = useState(false);
-  const [editingEntidade, setEditingEntidade] = useState(null);
-  const [showTipoEntidadeForm, setShowTipoEntidadeForm] = useState(false);
-  const [editingTipoEntidade, setEditingTipoEntidade] = useState(null);
-  const [showTipoResiduoForm, setShowTipoResiduoForm] = useState(false);
-  const [editingTipoResiduo, setEditingTipoResiduo] = useState(null);
-  const [showPerfilForm, setShowPerfilForm] = useState(false);
-  const [editingPerfil, setEditingPerfil] = useState(null);
-  const [showUsuarioForm, setShowUsuarioForm] = useState(false);
-  const [editingUsuario, setEditingUsuario] = useState(null);
-  const [perfilFilter, setPerfilFilter] = useState<PerfilFilter | null>(null);
-
-  const { toast } = useToast();
-  const { allowedFeatures, loading: permissionsLoading, isAllowed } = usePermissions();
-
-  const handleViewUsersFromPerfil = (perfil: any) => {
-    setPerfilFilter({
-      id_perfil: perfil.id_perfil,
-      nom_perfil: perfil.nom_perfil
-    });
-    setActiveItem("usuarios");
-  };
-
-  const handleClearPerfilFilter = () => {
-    setPerfilFilter(null);
-  };
-
-  // Garante que o item ativo seja permitido; caso contrário, tenta fallback
-  useEffect(() => {
-    if (permissionsLoading) {
-      console.log("[Layout] Permissions still loading, keeping current item:", activeItem);
-      return;
-    }
-    
-    console.log("[Layout] Checking access for current item:", activeItem);
-    const currentFeature = featureByItemId(activeItem);
-    
-    if (currentFeature && !isAllowed(currentFeature)) {
-      console.log("[Layout] Current item not allowed, finding alternative");
-      
-      // tenta ir para dashboard se permitido
-      if (isAllowed("Dashboard")) {
-        console.log("[Layout] Switching to Dashboard");
-        setActiveItem("dashboard");
-      } else {
-        // encontra primeiro item permitido
-        const candidates = [
-          "entidades",
-          "tipos-entidades", 
-          "tipos-residuos",
-          "perfis",
-          "usuarios",
-        ];
-        const found = candidates.find((id) => {
-          const f = featureByItemId(id);
-          return f ? isAllowed(f) : false;
-        });
-        
-        if (found) {
-          console.log("[Layout] Switching to:", found);
-          setActiveItem(found);
-        } else {
-          console.log("[Layout] No allowed items found, staying on current");
-          // Se não encontrar nenhum item permitido, mantém o atual
-          // O usuário verá a mensagem de acesso negado
-        }
-      }
-    }
-  }, [permissionsLoading, allowedFeatures, activeItem, isAllowed]);
-
-  const onProtectedItemClick = (id: string) => {
-    // Durante o carregamento, permite a navegação
-    if (permissionsLoading) {
-      setActiveItem(id);
-      return;
-    }
-    
-    const feature = featureByItemId(id);
-    if (feature && !isAllowed(feature)) {
-      toast({
-        title: "Acesso negado",
-        description: "Você não tem permissão para acessar este módulo.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setActiveItem(id);
-  };
+  const { allowedFeatures } = usePermissions();
+  
+  // Estados dos formulários para cada módulo
+  const [entidadeForm, setEntidadeForm] = useState<FormState>({ mode: "list" });
+  const [tipoEntidadeForm, setTipoEntidadeForm] = useState<FormState>({ mode: "list" });
+  const [eventosForm, setEventosForm] = useState<FormState>({ mode: "list" });
+  const [tipoResiduoForm, setTipoResiduoForm] = useState<FormState>({ mode: "list" });
+  const [perfilForm, setPerfilForm] = useState<FormState>({ mode: "list" });
+  const [usuarioForm, setUsuarioForm] = useState<FormState>({ mode: "list" });
 
   const renderContent = () => {
-    // Se as permissões ainda estão carregando, mostra loading
-    if (permissionsLoading) {
-      return (
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
-            <p>Carregando permissões...</p>
-          </div>
-        </div>
-      );
-    }
-
-    // Verifica se o usuário tem permissão para o item atual
-    const currentFeature = featureByItemId(activeItem);
-    if (currentFeature && !isAllowed(currentFeature)) {
-      return (
-        <div className="p-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Acesso Negado</CardTitle>
-              <CardDescription>
-                Você não tem permissão para acessar este módulo.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                Entre em contato com o administrador do sistema para solicitar acesso.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      );
-    }
-
     switch (activeItem) {
       case "dashboard":
         return <Dashboard />;
+      
+      case "cooperativas-catadores":
+        return <CooperativasCatadores />;
+      
       case "entidades":
-        if (showEntidadeForm) {
+        if (entidadeForm.mode === "form") {
           return (
-            <div className="p-6">
-              <EntidadeForm
-                onBack={() => {
-                  setShowEntidadeForm(false);
-                  setEditingEntidade(null);
-                }}
-                onSuccess={() => {
-                  setShowEntidadeForm(false);
-                  setEditingEntidade(null);
-                  setActiveItem("dashboard");
-                  setTimeout(() => setActiveItem("entidades"), 100);
-                }}
-                editingEntidade={editingEntidade}
-              />
-            </div>
+            <EntidadeForm
+              entidade={entidadeForm.editingItem}
+              onBack={() => setEntidadeForm({ mode: "list" })}
+            />
           );
         }
         return (
-          <div className="p-6">
-            <EntidadesList
-              onAddNew={() => setShowEntidadeForm(true)}
-              onEdit={(entidade) => {
-                setEditingEntidade(entidade);
-                setShowEntidadeForm(true);
-              }}
-            />
-          </div>
+          <EntidadesList
+            onEdit={(entidade) => setEntidadeForm({ mode: "form", editingItem: entidade })}
+            onNew={() => setEntidadeForm({ mode: "form" })}
+          />
         );
+      
       case "tipos-entidades":
-        if (showTipoEntidadeForm) {
+        if (tipoEntidadeForm.mode === "form") {
           return (
-            <div className="p-6">
-              <TipoEntidadeForm
-                onBack={() => {
-                  setShowTipoEntidadeForm(false);
-                  setEditingTipoEntidade(null);
-                }}
-                onSuccess={() => {
-                  setShowTipoEntidadeForm(false);
-                  setEditingTipoEntidade(null);
-                  setActiveItem("dashboard");
-                  setTimeout(() => setActiveItem("tipos-entidades"), 100);
-                }}
-                editingTipoEntidade={editingTipoEntidade}
-              />
-            </div>
+            <TipoEntidadeForm
+              tipoEntidade={tipoEntidadeForm.editingItem}
+              onBack={() => setTipoEntidadeForm({ mode: "list" })}
+            />
           );
         }
         return (
-          <div className="p-6">
-            <TipoEntidadeList
-              onAddNew={() => setShowTipoEntidadeForm(true)}
-              onEdit={(tipoEntidade) => {
-                setEditingTipoEntidade(tipoEntidade);
-                setShowTipoEntidadeForm(true);
-              }}
-            />
-          </div>
+          <TipoEntidadeList
+            onEdit={(tipoEntidade) => setTipoEntidadeForm({ mode: "form", editingItem: tipoEntidade })}
+            onNew={() => setTipoEntidadeForm({ mode: "form" })}
+          />
         );
-      case "tipos-residuos":
-        if (showTipoResiduoForm) {
-          return (
-            <div className="p-6">
-              <TipoResiduoForm
-                onBack={() => {
-                  setShowTipoResiduoForm(false);
-                  setEditingTipoResiduo(null);
-                }}
-                onSuccess={() => {
-                  setShowTipoResiduoForm(false);
-                  setEditingTipoResiduo(null);
-                  setActiveItem("dashboard");
-                  setTimeout(() => setActiveItem("tipos-residuos"), 100);
-                }}
-                editingTipoResiduo={editingTipoResiduo}
-              />
-            </div>
-          );
-        }
-        return (
-          <div className="p-6">
-            <TipoResiduoList
-              onAddNew={() => setShowTipoResiduoForm(true)}
-              onEdit={(tipoResiduo) => {
-                setEditingTipoResiduo(tipoResiduo);
-                setShowTipoResiduoForm(true);
-              }}
-            />
-          </div>
-        );
-      case "perfis":
-        if (showPerfilForm) {
-          return (
-            <div className="p-6">
-              <PerfilForm
-                onBack={() => {
-                  setShowPerfilForm(false);
-                  setEditingPerfil(null);
-                }}
-                onSuccess={() => {
-                  setShowPerfilForm(false);
-                  setEditingPerfil(null);
-                  setActiveItem("dashboard");
-                  setTimeout(() => setActiveItem("perfis"), 100);
-                }}
-                editingPerfil={editingPerfil}
-              />
-            </div>
-          );
-        }
-        return (
-          <div className="p-6">
-            <PerfilList
-              onAddNew={() => setShowPerfilForm(true)}
-              onEdit={(perfil) => {
-                setEditingPerfil(perfil);
-                setShowPerfilForm(true);
-              }}
-              onViewUsers={handleViewUsersFromPerfil}
-            />
-          </div>
-        );
-      case "usuarios":
-        if (showUsuarioForm) {
-          return (
-            <div className="p-6">
-              <UsuarioForm
-                onBack={() => {
-                  setShowUsuarioForm(false);
-                  setEditingUsuario(null);
-                }}
-                onSuccess={() => {
-                  setShowUsuarioForm(false);
-                  setEditingUsuario(null);
-                  setActiveItem("dashboard");
-                  setTimeout(() => setActiveItem("usuarios"), 100);
-                }}
-                editingUsuario={editingUsuario}
-              />
-            </div>
-          );
-        }
-        return (
-          <div className="p-6">
-            <UsuariosList
-              onAddNew={() => setShowUsuarioForm(true)}
-              onEdit={(usuario) => {
-                setEditingUsuario(usuario);
-                setShowUsuarioForm(true);
-              }}
-              perfilFilter={perfilFilter}
-              onClearFilter={handleClearPerfilFilter}
-            />
-          </div>
-        );
-      case "pontos-coleta":
-        return (
-          <div className="p-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Pontos de Coleta</CardTitle>
-                <CardDescription>
-                  Gestão dos pontos de coleta à reciclagem
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Funcionalidade em desenvolvimento...
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        );
+      
       case "eventos-coleta":
+        if (eventosForm.mode === "form") {
+          return (
+            <EventoForm
+              evento={eventosForm.editingItem}
+              onBack={() => setEventosForm({ mode: "list" })}
+            />
+          );
+        }
         return (
-          <div className="p-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Eventos de Coleta</CardTitle>
-                <CardDescription>
-                  Agendamento e controle de eventos de coleta
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Funcionalidade em desenvolvimento...
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+          <EventosList
+            onEdit={(evento) => setEventosForm({ mode: "form", editingItem: evento })}
+            onNew={() => setEventosForm({ mode: "form" })}
+          />
         );
-      case "geradores":
+      
+      case "tipos-residuos":
+        if (tipoResiduoForm.mode === "form") {
+          return (
+            <TipoResiduoForm
+              tipoResiduo={tipoResiduoForm.editingItem}
+              onBack={() => setTipoResiduoForm({ mode: "list" })}
+            />
+          );
+        }
         return (
-          <div className="p-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Geradores de Resíduos</CardTitle>
-                <CardDescription>
-                  Cadastro e gestão de empresas geradoras de resíduos
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Funcionalidade em desenvolvimento...
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+          <TipoResiduoList
+            onEdit={(tipoResiduo) => setTipoResiduoForm({ mode: "form", editingItem: tipoResiduo })}
+            onNew={() => setTipoResiduoForm({ mode: "form" })}
+          />
         );
-      case "recebimentos":
+      
+      case "perfis":
+        if (perfilForm.mode === "form") {
+          return (
+            <PerfilForm
+              perfil={perfilForm.editingItem}
+              onBack={() => setPerfilForm({ mode: "list" })}
+            />
+          );
+        }
         return (
-          <div className="p-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Recebimento de Resíduos</CardTitle>
-                <CardDescription>
-                  Controle de recebimento e processamento de resíduos
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Funcionalidade em desenvolvimento...
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+          <PerfilList
+            onEdit={(perfil) => setPerfilForm({ mode: "form", editingItem: perfil })}
+            onNew={() => setPerfilForm({ mode: "form" })}
+          />
         );
-      case "ecoindicadores":
+      
+      case "usuarios":
+        if (usuarioForm.mode === "form") {
+          return (
+            <UsuarioForm
+              usuario={usuarioForm.editingItem}
+              onBack={() => setUsuarioForm({ mode: "list" })}
+            />
+          );
+        }
         return (
-          <div className="p-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Ecoindicadores</CardTitle>
-                <CardDescription>
-                  Métricas e indicadores de impacto ambiental
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Funcionalidade em desenvolvimento...
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+          <UsuariosList
+            onEdit={(usuario) => setUsuarioForm({ mode: "form", editingItem: usuario })}
+            onNew={() => setUsuarioForm({ mode: "form" })}
+          />
         );
-      case "relatorios":
-        return (
-          <div className="p-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Relatórios</CardTitle>
-                <CardDescription>
-                  Geração de relatórios do sistema
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Funcionalidade em desenvolvimento...
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        );
-      case "reciclometro":
-        return (
-          <div className="p-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Reciclômetro</CardTitle>
-                <CardDescription>
-                  Medição e acompanhamento de metas de reciclagem
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Funcionalidade em desenvolvimento...
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        );
-      case "configuracoes":
-        return (
-          <div className="p-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Configurações</CardTitle>
-                <CardDescription>
-                  Configurações gerais do sistema
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Funcionalidade em desenvolvimento...
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        );
-      case "ajuda":
-        return (
-          <div className="p-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Ajuda</CardTitle>
-                <CardDescription>
-                  Documentação e suporte do sistema
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Funcionalidade em desenvolvimento...
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        );
-      case "funcionalidades":
-        return (
-          <div className="p-6">
-            <PerfilFuncionalidades />
-          </div>
-        );
+      
       default:
         return <Dashboard />;
     }
@@ -489,13 +147,13 @@ export function ReciclaSystemLayout({ children }: ReciclaSystemLayoutProps) {
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar
-        activeItem={activeItem}
-        onItemClick={onProtectedItemClick}
+      <Sidebar 
+        activeItem={activeItem} 
+        onItemClick={setActiveItem}
         allowedFeatures={allowedFeatures}
       />
-      <main className="flex-1 overflow-y-auto">
-        {children || renderContent()}
+      <main className="flex-1 overflow-y-auto p-6">
+        {renderContent()}
       </main>
     </div>
   );

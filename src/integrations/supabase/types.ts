@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.12 (cd3cf9e)"
@@ -1120,35 +1120,35 @@ export type Database = {
       authenticate_user: {
         Args: { cpf_cnpj: string; senha: string }
         Returns: {
-          user_id: number
-          entity_id: number
-          profile_id: number
-          password_validated: string
-          user_status: string
           email: string
+          entity_id: number
+          password_validated: string
+          profile_id: number
+          user_id: number
+          user_status: string
         }[]
       }
       debug_authenticate_user: {
         Args: { cpf_cnpj_param: string; senha_param: string }
         Returns: {
-          step: string
+          cpf_cnpj_db: string
           found_entities: number
           found_users: number
-          cpf_cnpj_db: string
+          locked_db: string
           senha_db: string
           status_db: string
-          locked_db: string
+          step: string
         }[]
       }
       debug_user_data: {
         Args: Record<PropertyKey, never>
         Returns: {
           cpf_cnpj: string
+          entity_id: number
+          locked: string
           senha: string
           status: string
-          locked: string
           user_id: number
-          entity_id: number
         }[]
       }
       generate_user_token: {
@@ -1160,11 +1160,11 @@ export type Database = {
         Returns: boolean
       }
       validate_user_password: {
-        Args: { user_id: number; new_password: string }
+        Args: { new_password: string; user_id: number }
         Returns: boolean
       }
       validate_user_token: {
-        Args: { user_id_param: number; token_param: string }
+        Args: { token_param: string; user_id_param: number }
         Returns: boolean
       }
     }
