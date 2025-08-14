@@ -3,50 +3,51 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Calendar, Edit, Power } from "lucide-react";
+import { Plus, MapPin, Edit, Power } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-interface Evento {
-  id_evento: number;
-  nom_evento: string;
-  des_evento: string | null;
-  dat_evento: string;
-  hor_inicio: string;
-  hor_fim: string | null;
-  des_local: string;
+interface PontoColeta {
+  id_ponto_coleta: number;
+  nom_ponto_coleta: string;
+  des_ponto_coleta: string | null;
+  des_logradouro: string;
+  des_bairro: string;
+  num_cep: string;
+  des_referencia: string | null;
   des_status: string;
+  id_municipio: number;
 }
 
-interface EventosListProps {
+interface PontosColetaListProps {
   onAddNew: () => void;
-  onEdit: (evento: Evento) => void;
+  onEdit: (pontoColeta: PontoColeta) => void;
 }
 
-export function EventosList({ onAddNew, onEdit }: EventosListProps) {
-  const [eventos, setEventos] = useState<Evento[]>([]);
+export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
+  const [pontosColeta, setPontosColeta] = useState<PontoColeta[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchEventos();
+    fetchPontosColeta();
   }, []);
 
-  const fetchEventos = async () => {
+  const fetchPontosColeta = async () => {
     try {
       const { data, error } = await supabase
-        .from('evento')
+        .from('ponto_coleta')
         .select('*')
         .in('des_status', ['A', 'D'])
-        .order('dat_evento', { ascending: false });
+        .order('nom_ponto_coleta');
 
       if (error) throw error;
-      setEventos(data || []);
+      setPontosColeta(data || []);
     } catch (error) {
-      console.error('Erro ao buscar eventos:', error);
+      console.error('Erro ao buscar pontos de coleta:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar lista de eventos",
+        description: "Erro ao carregar lista de pontos de coleta",
         variant: "destructive",
       });
     } finally {
@@ -54,46 +55,38 @@ export function EventosList({ onAddNew, onEdit }: EventosListProps) {
     }
   };
 
-  const handleToggleStatus = async (evento: Evento) => {
+  const handleToggleStatus = async (pontoColeta: PontoColeta) => {
     try {
-      const newStatus = evento.des_status === 'A' ? 'D' : 'A';
+      const newStatus = pontoColeta.des_status === 'A' ? 'D' : 'A';
       
       const { error } = await supabase
-        .from('evento')
+        .from('ponto_coleta')
         .update({ des_status: newStatus })
-        .eq('id_evento', evento.id_evento);
+        .eq('id_ponto_coleta', pontoColeta.id_ponto_coleta);
 
       if (error) throw error;
 
       toast({
         title: "Sucesso",
-        description: `Evento ${newStatus === 'A' ? 'ativado' : 'desativado'} com sucesso`,
+        description: `Ponto de coleta ${newStatus === 'A' ? 'ativado' : 'desativado'} com sucesso`,
       });
 
-      fetchEventos();
+      fetchPontosColeta();
     } catch (error) {
       console.error('Erro ao alterar status:', error);
       toast({
         title: "Erro",
-        description: "Erro ao alterar status do evento",
+        description: "Erro ao alterar status do ponto de coleta",
         variant: "destructive",
       });
     }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
-  };
-
-  const formatTime = (timeString: string) => {
-    return timeString.substring(0, 5); // Remove seconds
   };
 
   if (loading) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center p-8">
-          <div className="text-muted-foreground">Carregando eventos...</div>
+          <div className="text-muted-foreground">Carregando pontos de coleta...</div>
         </CardContent>
       </Card>
     );
@@ -103,18 +96,18 @@ export function EventosList({ onAddNew, onEdit }: EventosListProps) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div className="flex items-center gap-2">
-          <Calendar className="h-5 w-5" />
-          <CardTitle>Eventos de Coleta</CardTitle>
+          <MapPin className="h-5 w-5" />
+          <CardTitle>Pontos de Coleta</CardTitle>
         </div>
         <Button onClick={onAddNew} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
-          Novo Evento
+          Novo Ponto de Coleta
         </Button>
       </CardHeader>
       <CardContent>
-        {eventos.length === 0 ? (
+        {pontosColeta.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">
-            Nenhum evento cadastrado
+            Nenhum ponto de coleta cadastrado
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -123,33 +116,32 @@ export function EventosList({ onAddNew, onEdit }: EventosListProps) {
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>Descrição</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Horário</TableHead>
-                  <TableHead>Local</TableHead>
+                  <TableHead>Endereço</TableHead>
+                  <TableHead>Bairro</TableHead>
+                  <TableHead>CEP</TableHead>
+                  <TableHead>Referência</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {eventos.map((evento) => (
-                  <TableRow key={evento.id_evento}>
+                {pontosColeta.map((pontoColeta) => (
+                  <TableRow key={pontoColeta.id_ponto_coleta}>
                     <TableCell className="font-medium">
-                      {evento.nom_evento}
+                      {pontoColeta.nom_ponto_coleta}
                     </TableCell>
-                    <TableCell>{evento.des_evento || '-'}</TableCell>
-                    <TableCell>{formatDate(evento.dat_evento)}</TableCell>
-                    <TableCell>
-                      {formatTime(evento.hor_inicio)}
-                      {evento.hor_fim && ` - ${formatTime(evento.hor_fim)}`}
-                    </TableCell>
-                    <TableCell>{evento.des_local}</TableCell>
+                    <TableCell>{pontoColeta.des_ponto_coleta || '-'}</TableCell>
+                    <TableCell>{pontoColeta.des_logradouro}</TableCell>
+                    <TableCell>{pontoColeta.des_bairro}</TableCell>
+                    <TableCell>{pontoColeta.num_cep}</TableCell>
+                    <TableCell>{pontoColeta.des_referencia || '-'}</TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        evento.des_status === 'A' 
+                        pontoColeta.des_status === 'A' 
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-red-100 text-red-800'
                       }`}>
-                        {evento.des_status === 'A' ? 'Ativo' : 'Inativo'}
+                        {pontoColeta.des_status === 'A' ? 'Ativo' : 'Inativo'}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -157,7 +149,7 @@ export function EventosList({ onAddNew, onEdit }: EventosListProps) {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => onEdit(evento)}
+                          onClick={() => onEdit(pontoColeta)}
                           className="h-8 w-8 p-0"
                         >
                           <Edit className="h-4 w-4" />
@@ -165,9 +157,9 @@ export function EventosList({ onAddNew, onEdit }: EventosListProps) {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleToggleStatus(evento)}
+                          onClick={() => handleToggleStatus(pontoColeta)}
                           className={`h-8 w-8 p-0 ${
-                            evento.des_status === 'A' 
+                            pontoColeta.des_status === 'A' 
                               ? 'hover:bg-red-50 hover:text-red-600' 
                               : 'hover:bg-green-50 hover:text-green-600'
                           }`}

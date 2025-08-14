@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { Dashboard } from "@/components/Dashboard";
@@ -16,6 +15,8 @@ import { UsuarioForm } from "@/components/UsuarioForm";
 import { EventosList } from "@/components/EventosList";
 import { EventoForm } from "@/components/EventoForm";
 import { usePermissions } from "@/hooks/usePermissions";
+import { PontosColetaList } from "@/components/PontosColetaList";
+import { PontosColetaForm } from "@/components/PontosColetaForm";
 
 type ViewMode = "list" | "form";
 
@@ -32,6 +33,7 @@ export function ReciclaSystemLayout() {
   const [entidadeForm, setEntidadeForm] = useState<FormState>({ mode: "list" });
   const [tipoEntidadeForm, setTipoEntidadeForm] = useState<FormState>({ mode: "list" });
   const [eventosForm, setEventosForm] = useState<FormState>({ mode: "list" });
+  const [pontosColetaForm, setPontosColetaForm] = useState<FormState>({ mode: "list" });
   const [tipoResiduoForm, setTipoResiduoForm] = useState<FormState>({ mode: "list" });
   const [perfilForm, setPerfilForm] = useState<FormState>({ mode: "list" });
   const [usuarioForm, setUsuarioForm] = useState<FormState>({ mode: "list" });
@@ -58,6 +60,23 @@ export function ReciclaSystemLayout() {
           <EntidadesList
             onEdit={(entidade) => setEntidadeForm({ mode: "form", editingItem: entidade })}
             onAddNew={() => setEntidadeForm({ mode: "form" })}
+          />
+        );
+      
+      case "pontos-coleta":
+        if (pontosColetaForm.mode === "form") {
+          return (
+            <PontosColetaForm
+              editingPontoColeta={pontosColetaForm.editingItem}
+              onBack={() => setPontosColetaForm({ mode: "list" })}
+              onSuccess={() => setPontosColetaForm({ mode: "list" })}
+            />
+          );
+        }
+        return (
+          <PontosColetaList
+            onEdit={(pontoColeta) => setPontosColetaForm({ mode: "form", editingItem: pontoColeta })}
+            onAddNew={() => setPontosColetaForm({ mode: "form" })}
           />
         );
       
