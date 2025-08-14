@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { Dashboard } from "@/components/Dashboard";
@@ -14,6 +15,8 @@ import { UsuariosList } from "@/components/UsuariosList";
 import { UsuarioForm } from "@/components/UsuarioForm";
 import { EventosList } from "@/components/EventosList";
 import { EventoForm } from "@/components/EventoForm";
+import { ColetasList } from "@/components/ColetasList";
+import { ColetaForm } from "@/components/ColetaForm";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PontosColetaList } from "@/components/PontosColetaList";
 import { PontosColetaForm } from "@/components/PontosColetaForm";
@@ -37,6 +40,7 @@ export function ReciclaSystemLayout() {
   const [tipoResiduoForm, setTipoResiduoForm] = useState<FormState>({ mode: "list" });
   const [perfilForm, setPerfilForm] = useState<FormState>({ mode: "list" });
   const [usuarioForm, setUsuarioForm] = useState<FormState>({ mode: "list" });
+  const [coletaForm, setColetaForm] = useState<FormState>({ mode: "list" });
 
   const renderContent = () => {
     switch (activeItem) {
@@ -110,6 +114,23 @@ export function ReciclaSystemLayout() {
           <EventosList
             onEdit={(evento) => setEventosForm({ mode: "form", editingItem: evento })}
             onAddNew={() => setEventosForm({ mode: "form" })}
+          />
+        );
+      
+      case "coletas-residuos":
+        if (coletaForm.mode === "form") {
+          return (
+            <ColetaForm
+              editingColeta={coletaForm.editingItem}
+              onBack={() => setColetaForm({ mode: "list" })}
+              onSuccess={() => setColetaForm({ mode: "list" })}
+            />
+          );
+        }
+        return (
+          <ColetasList
+            onEdit={(coleta) => setColetaForm({ mode: "form", editingItem: coleta })}
+            onAddNew={() => setColetaForm({ mode: "form" })}
           />
         );
       

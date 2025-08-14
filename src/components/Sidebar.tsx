@@ -1,4 +1,5 @@
 
+
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import {
@@ -16,6 +17,7 @@ import {
   Trash2,
   TrendingUp,
   Users,
+  Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { featureByItemId } from "@/lib/featureMap";
@@ -34,6 +36,7 @@ const navigationItems = [
       { id: "entidades", label: "Entidades", icon: Users },    
       { id: "pontos-coleta", label: "Pontos de Coleta", icon: MapPin },
       { id: "eventos-coleta", label: "Eventos de Coleta", icon: Calendar },
+      { id: "coletas-residuos", label: "Coletas de Resíduos", icon: Package },
       { id: "tipos-entidades", label: "Tipos de Entidades", icon: Building2 },
       { id: "tipos-residuos", label: "Tipos de Resíduos", icon: Trash2 },
     ],
@@ -191,3 +194,4 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures }: SidebarPro
     </div>
   );
 }
+
