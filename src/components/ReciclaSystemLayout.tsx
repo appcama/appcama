@@ -24,20 +24,20 @@ import {
   EntidadesList
 } from "./EntidadesList";
 import {
-  EntidadesForm
-} from "./EntidadesForm";
+  EntidadeForm
+} from "./EntidadeForm";
 import {
-  TiposEntidadesList
-} from "./TiposEntidadesList";
+  TipoEntidadeList
+} from "./TipoEntidadeList";
 import {
-  TiposEntidadesForm
-} from "./TiposEntidadesForm";
+  TipoEntidadeForm
+} from "./TipoEntidadeForm";
 import {
-  TiposResiduosList
-} from "./TiposResiduosList";
+  TipoResiduoList
+} from "./TipoResiduoList";
 import {
-  TiposResiduosForm
-} from "./TiposResiduosForm";
+  TipoResiduoForm
+} from "./TipoResiduoForm";
 import {
   PerfilFuncionalidades
 } from "./PerfilFuncionalidades";
@@ -45,8 +45,8 @@ import {
   UsuariosList
 } from "./UsuariosList";
 import {
-  UsuariosForm
-} from "./UsuariosForm";
+  UsuarioForm
+} from "./UsuarioForm";
 import {
   TipoPontoColetaManagerView
 } from './TipoPontoColetaManagerView';
@@ -56,12 +56,12 @@ export function ReciclaSystemLayout() {
   const location = useLocation();
   const {
     user,
-    signOut
+    logout
   } = useAuth();
   const {
     isAllowed
   } = usePermissions();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [activeItem, setActiveItem] = useState("dashboard");
 
   useEffect(() => {
     if (!user) {
@@ -69,9 +69,15 @@ export function ReciclaSystemLayout() {
     }
   }, [user, navigate]);
 
-  const toggleSidebar = useCallback(() => {
-    setIsSidebarOpen((prev) => !prev);
-  }, []);
+  useEffect(() => {
+    const path = location.pathname.split("/").pop() || "dashboard";
+    setActiveItem(path);
+  }, [location]);
+
+  const handleItemClick = (item: string) => {
+    setActiveItem(item);
+    navigate(`/${item}`);
+  };
 
   const renderContent = () => {
     const path = location.pathname.split("/").pop();
@@ -82,22 +88,22 @@ export function ReciclaSystemLayout() {
       case "entidades":
         return (
           <div className="space-y-6">
-            <EntidadesForm />
-            <EntidadesList />
+            <EntidadeForm />
+            <EntidadesList onAddNew={() => {}} onEdit={() => {}} />
           </div>
         );
       case "tipos-entidades":
         return (
           <div className="space-y-6">
-            <TiposEntidadesForm />
-            <TiposEntidadesList />
+            <TipoEntidadeForm />
+            <TipoEntidadeList />
           </div>
         );
       case "tipos-residuos":
         return (
           <div className="space-y-6">
-            <TiposResiduosForm />
-            <TiposResiduosList />
+            <TipoResiduoForm />
+            <TipoResiduoList />
           </div>
         );
       case "perfis":
@@ -105,11 +111,11 @@ export function ReciclaSystemLayout() {
       case "usuarios":
         return (
           <div className="space-y-6">
-            <UsuariosForm />
-            <UsuariosList />
+            <UsuarioForm />
+            <UsuariosList onAddNew={() => {}} onEdit={() => {}} />
           </div>
         );
-      case "tipo-pontos-coleta":
+      case "tipos-ponto-coleta":
         return <TipoPontoColetaManagerView />;
       default:
         return <div>Conteúdo não encontrado</div>;
@@ -124,9 +130,9 @@ export function ReciclaSystemLayout() {
     <div className="h-screen flex overflow-hidden bg-gray-100">
       {/* Sidebar */}
       <Sidebar 
-        isSidebarOpen={isSidebarOpen}
-        toggleSidebar={toggleSidebar}
-        signOut={signOut}
+        activeItem={activeItem}
+        onItemClick={handleItemClick}
+        allowedFeatures={[]} // This will be populated by permissions
       />
 
       {/* Content area */}
