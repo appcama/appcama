@@ -1,7 +1,6 @@
-import { ReciclaSystemLayout } from "@/components/ReciclaSystemLayout";
 
-const Index = () => {
-  return <ReciclaSystemLayout />;
-};
+import { ReciclaELayout } from "@/components/ReciclaELayout";
 
-export default Index;
+export default function Index() {
+  return <ReciclaELayout />;
+}

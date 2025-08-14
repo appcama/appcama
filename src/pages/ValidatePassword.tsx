@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Leaf, Mail, Shield } from 'lucide-react';
+import { Leaf, Mail, Shield, Recycle } from 'lucide-react';
 
 export default function ValidatePassword() {
   const [form, setForm] = useState({
@@ -115,11 +114,13 @@ export default function ValidatePassword() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50 p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
-            <Leaf className="h-12 w-12 text-green-600 mr-2" />
-            <h1 className="text-3xl font-bold text-green-800">ReciclaSystem</h1>
+          <div className="mx-auto w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mb-4">
+            <Recycle className="w-8 h-8 text-white" />
           </div>
-          <p className="text-gray-600">Validação de Conta</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">ReciclaÊ</h1>
+          <p className="text-gray-600">
+            Sistema de Gestão de Reciclagem
+          </p>
         </div>
 
         <Card>

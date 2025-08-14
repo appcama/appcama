@@ -1,196 +1,185 @@
-import { useState, useMemo } from "react";
-import { cn } from "@/lib/utils";
-import {
-  BarChart3,
-  Building2,
-  Calendar,
-  ChevronLeft,
-  FileText,
-  HelpCircle,
-  Home,
-  Leaf,
-  MapPin,
+import { useState } from "react";
+import { 
+  Home, 
+  Users, 
+  Building2, 
+  Calendar, 
+  Trash2, 
+  BarChart3, 
+  Settings, 
   Recycle,
-  Settings,
-  Trash2,
-  TrendingUp,
-  Users,
+  ChevronDown,
+  ChevronRight,
+  MapPin,
+  UserCheck,
+  Shield,
+  FileText
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { featureByItemId } from "@/lib/featureMap";
+import { cn } from "@/lib/utils";
 
 interface SidebarProps {
   activeItem: string;
   onItemClick: (item: string) => void;
-  allowedFeatures?: string[];
+  allowedFeatures: string[];
 }
 
-const navigationItems = [
-  {
-    section: "Principal",
-    items: [
-      { id: "dashboard", label: "Dashboard", icon: Home },
-      { id: "entidades", label: "Entidades", icon: Users },    
-      { id: "pontos-coleta", label: "Pontos de Coleta", icon: MapPin },
-      { id: "eventos-coleta", label: "Eventos de Coleta", icon: Calendar },
-    ],
-  },
-  {
-    section: "Auxiliares",
-    items: [
-      { id: "tipos-ponto-coleta", label: "Tipos de Ponto de Coleta", icon: MapPin },
-      { id: "tipos-entidades", label: "Tipos de Entidades", icon: Building2 },
-      { id: "tipos-residuos", label: "Tipos de Resíduos", icon: Trash2 },
-    ],
-  },
-  {
-    section: "Segurança",
-    items: [
-      { id: "perfis", label: "Perfis", icon: Trash2 },
-      { id: "usuarios", label: "Usuários", icon: Recycle },
-      { id: "funcionalidades", label: "Funcionalidades", icon: Settings },
-    ],
-  },
-  {
-    section: "Dados",
-    items: [
-      { id: "geradores", label: "Geradores de Resíduos", icon: Trash2 },
-      { id: "recebimentos", label: "Recebimento de Resíduos", icon: Recycle },
-      { id: "ecoindicadores", label: "Ecoindicadores", icon: Leaf },
-    ],
-  },
-  {
-    section: "Relatórios",
-    items: [
-      { id: "relatorios", label: "Relatórios", icon: FileText },
-      { id: "reciclometro", label: "Reciclômetro", icon: TrendingUp },
-    ],
-  },
-];
-
-const bottomItems = [
-  { id: "configuracoes", label: "Configurações", icon: Settings },
-  { id: "ajuda", label: "Ajuda", icon: HelpCircle },
-];
+interface MenuItem {
+  id: string;
+  label: string;
+  icon: any;
+  children?: MenuItem[];
+}
 
 export function Sidebar({ activeItem, onItemClick, allowedFeatures }: SidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
-  const filterByPermissions = useMemo(() => {
-    if (!allowedFeatures) {
-      console.log("[Sidebar] Permissions still loading, showing all items");
-      return (id: string) => true;
+  const toggleExpanded = (itemId: string) => {
+    setExpandedItems(prev => 
+      prev.includes(itemId) 
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
+    );
+  };
+
+  const menuItems: MenuItem[] = [
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      icon: Home,
+    },
+    {
+      id: "cooperativas-catadores",
+      label: "Cooperativas/Catadores",
+      icon: Users,
+    },
+    {
+      id: "cadastros",
+      label: "Cadastros",
+      icon: Building2,
+      children: [
+        { id: "entidades", label: "Entidades", icon: Building2 },
+        { id: "pontos-coleta", label: "Pontos de Coleta", icon: MapPin },
+        { id: "tipos-ponto-coleta", label: "Tipos Ponto Coleta", icon: MapPin },
+        { id: "tipos-entidades", label: "Tipos de Entidades", icon: Building2 },
+        { id: "tipos-residuos", label: "Tipos de Resíduos", icon: Trash2 },
+      ]
+    },
+    {
+      id: "eventos-coleta",
+      label: "Eventos de Coleta",
+      icon: Calendar,
+    },
+    {
+      id: "geradores-residuos",
+      label: "Geradores de Resíduos",
+      icon: Building2,
+    },
+    {
+      id: "recebimento-residuos",
+      label: "Recebimento de Resíduos",
+      icon: Trash2,
+    },
+    {
+      id: "ecoindicadores",
+      label: "Ecoindicadores",
+      icon: BarChart3,
+    },
+    {
+      id: "relatorios",
+      label: "Relatórios",
+      icon: FileText,
+    },
+    {
+      id: "reciclometro",
+      label: "Reciclômetro",
+      icon: Recycle,
+    },
+    {
+      id: "administracao",
+      label: "Administração",
+      icon: Shield,
+      children: [
+        { id: "perfis", label: "Perfis", icon: UserCheck },
+        { id: "funcionalidades", label: "Funcionalidades", icon: Shield },
+        { id: "usuarios", label: "Usuários", icon: Users },
+      ]
+    },
+    {
+      id: "configuracoes",
+      label: "Configurações",
+      icon: Settings,
+    },
+  ];
+
+  const isFeatureAllowed = (featureId: string) => {
+    return allowedFeatures.includes(featureId);
+  };
+
+  const renderMenuItem = (item: MenuItem, level = 0) => {
+    if (!isFeatureAllowed(item.id)) {
+      return null;
     }
-    
-    if (allowedFeatures.length === 0) {
-      console.log("[Sidebar] No permissions loaded, hiding all items");
-      return (id: string) => false;
-    }
-    
-    return (id: string) => {
-      const featureName = featureByItemId(id);
-      if (!featureName) {
-        console.log(`[Sidebar] No feature mapping for ${id}, keeping visible`);
-        return true;
-      }
-      
-      const allowed = allowedFeatures.includes(featureName);
-      console.log(`[Sidebar] Item ${id} (${featureName}): ${allowed ? 'visible' : 'hidden'}`);
-      return allowed;
-    };
-  }, [allowedFeatures]);
+
+    const hasChildren = item.children && item.children.length > 0;
+    const isExpanded = expandedItems.includes(item.id);
+    const isActive = activeItem === item.id;
+    const Icon = item.icon;
+
+    return (
+      <div key={item.id}>
+        <button
+          onClick={() => {
+            if (hasChildren) {
+              toggleExpanded(item.id);
+            } else {
+              onItemClick(item.id);
+            }
+          }}
+          className={cn(
+            "w-full flex items-center gap-3 px-3 py-2 text-left rounded-lg transition-colors",
+            level > 0 && "ml-4 text-sm",
+            isActive 
+              ? "bg-green-100 text-green-800 font-medium" 
+              : "text-gray-700 hover:bg-gray-100",
+          )}
+        >
+          <Icon className="w-5 h-5 flex-shrink-0" />
+          <span className="flex-1">{item.label}</span>
+          {hasChildren && (
+            isExpanded ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronRight className="w-4 h-4" />
+            )
+          )}
+        </button>
+        
+        {hasChildren && isExpanded && (
+          <div className="mt-1 space-y-1">
+            {item.children?.map(child => renderMenuItem(child, level + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
-    <div
-      className={cn(
-        "flex flex-col h-screen bg-background border-r border-border transition-all duration-300",
-        isCollapsed ? "w-16" : "w-64"
-      )}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        {!isCollapsed && (
-          <h2 className="text-lg font-semibold text-recycle-green">
-            ReciclaSystem
-          </h2>
-        )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="ml-auto"
-        >
-          <ChevronLeft
-            className={cn(
-              "h-4 w-4 transition-transform",
-              isCollapsed && "rotate-180"
-            )}
-          />
-        </Button>
-      </div>
-
-      {/* Navigation */}
-      <div className="flex-1 overflow-y-auto">
-        {navigationItems.map((section) => (
-          <div key={section.section} className="p-2">
-            {!isCollapsed && (
-              <h3 className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                {section.section}
-              </h3>
-            )}
-            <div className="space-y-1">
-              {section.items
-                .filter((item) => filterByPermissions(item.id))
-                .map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Button
-                      key={item.id}
-                      variant={activeItem === item.id ? "secondary" : "ghost"}
-                      className={cn(
-                        "w-full justify-start",
-                        isCollapsed && "px-2",
-                        activeItem === item.id && "bg-recycle-green-light border-l-2 border-recycle-green"
-                      )}
-                      onClick={() => onItemClick(item.id)}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {!isCollapsed && (
-                        <span className="ml-2 text-sm">{item.label}</span>
-                      )}
-                    </Button>
-                  );
-                })}
-            </div>
+    <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
+      <div className="p-4 border-b border-gray-200">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
+            <Recycle className="w-5 h-5 text-white" />
           </div>
-        ))}
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">ReciclaÊ</h1>
+            <p className="text-xs text-gray-500">Sistema de Gestão</p>
+          </div>
+        </div>
       </div>
-
-      {/* Bottom Section */}
-      <div className="p-2 border-t border-border">
-        {bottomItems
-          .filter((item) => filterByPermissions(item.id))
-          .map((item) => {
-            const Icon = item.icon;
-            return (
-              <Button
-                key={item.id}
-                variant={activeItem === item.id ? "secondary" : "ghost"}
-                className={cn(
-                  "w-full justify-start mb-1",
-                  isCollapsed && "px-2",
-                  activeItem === item.id && "bg-recycle-green-light"
-                )}
-                onClick={() => onItemClick(item.id)}
-              >
-                <Icon className="h-4 w-4" />
-                {!isCollapsed && (
-                  <span className="ml-2 text-sm">{item.label}</span>
-                )}
-              </Button>
-            );
-          })}
-      </div>
+      
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+        {menuItems.map(item => renderMenuItem(item))}
+      </nav>
     </div>
   );
 }
