@@ -178,7 +178,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
     try {
       const dataToSave = {
         nom_ponto_coleta: formData.nom_ponto_coleta.trim(),
-        num_cep: formData.num_cep.trim(),
+        num_cep: formData.num_cep.replace(/\D/g, ''), // Remove hífen e caracteres não numéricos
         des_logradouro: formData.des_logradouro.trim(),
         des_bairro: formData.des_bairro.trim(),
         des_status: formData.des_status,
