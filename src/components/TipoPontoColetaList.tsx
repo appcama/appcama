@@ -1,5 +1,4 @@
 
-import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -12,8 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Edit, Plus, Power } from "lucide-react";
+import { Edit, Plus, Power, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface TipoPontoColeta {
@@ -36,25 +34,28 @@ export function TipoPontoColetaList({ onEdit, onAddNew }: TipoPontoColetaListPro
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: tiposPontoColeta, isLoading } = useQuery({
+  const { data: tiposPontoColeta = [], isLoading, error } = useQuery({
     queryKey: ['tipos-ponto-coleta'],
     queryFn: async () => {
+      console.log('Fetching tipos de ponto de coleta...');
       const { data, error } = await supabase
         .from('tipo_ponto_coleta')
         .select('*')
         .order('des_tipo_ponto_coleta');
       
       if (error) {
-        console.error('Erro ao buscar tipos de ponto de coleta:', error);
+        console.error('Error fetching tipos de ponto de coleta:', error);
         throw error;
       }
       
+      console.log('Tipos de ponto de coleta fetched:', data);
       return data as TipoPontoColeta[];
     },
   });
 
   const toggleStatusMutation = useMutation({
-    mutationFn: async ({ id, newStatus }: { id: number; newStatus: string }) => {
+    mutationFn: async ({ id, currentStatus }: { id: number; currentStatus: string }) => {
+      const newStatus = currentStatus === 'A' ? 'I' : 'A';
       const { error } = await supabase
         .from('tipo_ponto_coleta')
         .update({ 
@@ -74,7 +75,7 @@ export function TipoPontoColetaList({ onEdit, onAddNew }: TipoPontoColetaListPro
       });
     },
     onError: (error) => {
-      console.error('Erro ao atualizar status:', error);
+      console.error('Error updating tipo ponto coleta status:', error);
       toast({
         title: "Erro",
         description: "Erro ao atualizar status do tipo de ponto de coleta.",
@@ -84,86 +85,109 @@ export function TipoPontoColetaList({ onEdit, onAddNew }: TipoPontoColetaListPro
   });
 
   const handleToggleStatus = (tipoPontoColeta: TipoPontoColeta) => {
-    const newStatus = tipoPontoColeta.des_status === 'A' ? 'I' : 'A';
-    toggleStatusMutation.mutate({ id: tipoPontoColeta.id_tipo_ponto_coleta, newStatus });
+    toggleStatusMutation.mutate({
+      id: tipoPontoColeta.id_tipo_ponto_coleta,
+      currentStatus: tipoPontoColeta.des_status
+    });
   };
 
   if (isLoading) {
-    return <div>Carregando tipos de ponto de coleta...</div>;
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center p-8">
+          <div className="text-muted-foreground">Carregando tipos de ponto de coleta...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  if (error) {
+    console.error('Query error:', error);
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center p-8">
+          <div className="text-center text-red-500">
+            Erro ao carregar tipos de ponto de coleta: {error.message}
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Tipos de Ponto de Coleta</h1>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div className="flex items-center gap-2">
+          <MapPin className="h-5 w-5" />
+          <CardTitle>Tipos de Ponto de Coleta</CardTitle>
+        </div>
         <Button onClick={onAddNew} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
           Novo Tipo de Ponto de Coleta
         </Button>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Tipos de Ponto de Coleta</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Data Criação</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {tiposPontoColeta?.map((tipoPontoColeta) => (
-                <TableRow key={tipoPontoColeta.id_tipo_ponto_coleta}>
-                  <TableCell className="font-medium">
-                    {tipoPontoColeta.des_tipo_ponto_coleta}
-                  </TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant={tipoPontoColeta.des_status === 'A' ? 'default' : 'secondary'}
-                      className={tipoPontoColeta.des_status === 'A' ? 'bg-green-500' : 'bg-red-500'}
-                    >
-                      {tipoPontoColeta.des_status === 'A' ? 'Ativo' : 'Inativo'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {new Date(tipoPontoColeta.dat_criacao).toLocaleDateString('pt-BR')}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onEdit(tipoPontoColeta)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleToggleStatus(tipoPontoColeta)}
-                        disabled={toggleStatusMutation.isPending}
-                      >
-                        <Power className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+      </CardHeader>
+      <CardContent>
+        {tiposPontoColeta.length === 0 ? (
+          <div className="text-center text-muted-foreground py-8">
+            Nenhum tipo de ponto de coleta encontrado
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          
-          {tiposPontoColeta?.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              Nenhum tipo de ponto de coleta encontrado. Clique em "Novo Tipo de Ponto de Coleta" para adicionar o primeiro.
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+              </TableHeader>
+              <TableBody>
+                {tiposPontoColeta.map((tipo) => (
+                  <TableRow key={tipo.id_tipo_ponto_coleta}>
+                    <TableCell className="font-medium">
+                      {tipo.des_tipo_ponto_coleta}
+                    </TableCell>
+                    <TableCell>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        tipo.des_status === 'A' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {tipo.des_status === 'A' ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onEdit(tipo)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleToggleStatus(tipo)}
+                          disabled={toggleStatusMutation.isPending}
+                          className={`h-8 w-8 p-0 ${
+                            tipo.des_status === 'A' 
+                              ? 'hover:bg-red-50 hover:text-red-600' 
+                              : 'hover:bg-green-50 hover:text-green-600'
+                          }`}
+                        >
+                          <Power className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
