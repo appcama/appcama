@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { Dashboard } from "@/components/Dashboard";
@@ -28,6 +29,11 @@ interface FormState {
   editingItem?: any;
 }
 
+interface PerfilFilter {
+  id_perfil: number;
+  nom_perfil: string;
+}
+
 export function ReciclaSystemLayout() {
   const [activeItem, setActiveItem] = useState("dashboard");
   const { allowedFeatures } = usePermissions();
@@ -41,6 +47,21 @@ export function ReciclaSystemLayout() {
   const [tipoPontoColetaForm, setTipoPontoColetaForm] = useState<FormState>({ mode: "list" });
   const [perfilForm, setPerfilForm] = useState<FormState>({ mode: "list" });
   const [usuarioForm, setUsuarioForm] = useState<FormState>({ mode: "list" });
+
+  // Estado para filtro de perfil nos usuários
+  const [perfilFilter, setPerfilFilter] = useState<PerfilFilter | null>(null);
+
+  const handleViewUsersByPerfil = (perfil: any) => {
+    setPerfilFilter({
+      id_perfil: perfil.id_perfil,
+      nom_perfil: perfil.nom_perfil
+    });
+    setActiveItem("usuarios");
+  };
+
+  const handleClearPerfilFilter = () => {
+    setPerfilFilter(null);
+  };
 
   const renderContent = () => {
     switch (activeItem) {
@@ -165,6 +186,7 @@ export function ReciclaSystemLayout() {
           <PerfilList
             onEdit={(perfil) => setPerfilForm({ mode: "form", editingItem: perfil })}
             onAddNew={() => setPerfilForm({ mode: "form" })}
+            onViewUsers={handleViewUsersByPerfil}
           />
         );
       
@@ -185,6 +207,8 @@ export function ReciclaSystemLayout() {
           <UsuariosList
             onEdit={(usuario) => setUsuarioForm({ mode: "form", editingItem: usuario })}
             onAddNew={() => setUsuarioForm({ mode: "form" })}
+            perfilFilter={perfilFilter}
+            onClearFilter={handleClearPerfilFilter}
           />
         );
       
