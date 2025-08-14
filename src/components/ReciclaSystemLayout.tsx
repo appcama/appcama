@@ -1,188 +1,208 @@
-import {
-  useEffect,
-  useState,
-  useCallback
-} from "react";
-import {
-  useNavigate,
-  useLocation
-} from "react-router-dom";
-import {
-  Sidebar
-} from "./Sidebar";
-import {
-  useAuth
-} from "@/hooks/useAuth";
-import {
-  usePermissions
-} from "@/hooks/usePermissions";
-import {
-  Dashboard
-} from "./Dashboard";
-import {
-  EntidadesList
-} from "./EntidadesList";
-import {
-  EntidadesForm
-} from "./EntidadesForm";
-import {
-  TiposEntidadesList
-} from "./TiposEntidadesList";
-import {
-  TiposEntidadesForm
-} from "./TiposEntidadesForm";
-import {
-  TiposResiduosList
-} from "./TiposResiduosList";
-import {
-  TiposResiduosForm
-} from "./TiposResiduosForm";
-import {
-  PerfilFuncionalidades
-} from "./PerfilFuncionalidades";
-import {
-  UsuariosList
-} from "./UsuariosList";
-import {
-  UsuariosForm
-} from "./UsuariosForm";
-import {
-  TipoPontoColetaList
-} from './TipoPontoColetaList';
-import {
-  TipoPontoColetaForm
-} from './TipoPontoColetaForm';
+import { useState } from "react";
+import { Sidebar } from "@/components/Sidebar";
+import { Dashboard } from "@/components/Dashboard";
+import { CooperativasCatadores } from "@/components/CooperativasCatadores";
+import { EntidadesList } from "@/components/EntidadesList";
+import { EntidadeForm } from "@/components/EntidadeForm";
+import { TipoEntidadeList } from "@/components/TipoEntidadeList";
+import { TipoEntidadeForm } from "@/components/TipoEntidadeForm";
+import { TipoResiduoList } from "@/components/TipoResiduoList";
+import { TipoResiduoForm } from "@/components/TipoResiduoForm";
+import { TipoPontoColetaList } from "@/components/TipoPontoColetaList";
+import { TipoPontoColetaForm } from "@/components/TipoPontoColetaForm";
+import { PerfilList } from "@/components/PerfilList";
+import { PerfilForm } from "@/components/PerfilForm";
+import { PerfilFuncionalidades } from "@/components/PerfilFuncionalidades";
+import { UsuariosList } from "@/components/UsuariosList";
+import { UsuarioForm } from "@/components/UsuarioForm";
+import { EventosList } from "@/components/EventosList";
+import { EventoForm } from "@/components/EventoForm";
+import { usePermissions } from "@/hooks/usePermissions";
+import { PontosColetaList } from "@/components/PontosColetaList";
+import { PontosColetaForm } from "@/components/PontosColetaForm";
+
+type ViewMode = "list" | "form";
+
+interface FormState {
+  mode: ViewMode;
+  editingItem?: any;
+}
 
 export function ReciclaSystemLayout() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const {
-    user,
-    signOut
-  } = useAuth();
-  const {
-    isAllowed
-  } = usePermissions();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
-  useEffect(() => {
-    if (!user) {
-      navigate("/login");
-    }
-  }, [user, navigate]);
-
-  const toggleSidebar = useCallback(() => {
-    setIsSidebarOpen((prev) => !prev);
-  }, []);
+  const [activeItem, setActiveItem] = useState("dashboard");
+  const { allowedFeatures } = usePermissions();
+  
+  // Estados dos formulários para cada módulo
+  const [entidadeForm, setEntidadeForm] = useState<FormState>({ mode: "list" });
+  const [tipoEntidadeForm, setTipoEntidadeForm] = useState<FormState>({ mode: "list" });
+  const [eventosForm, setEventosForm] = useState<FormState>({ mode: "list" });
+  const [pontosColetaForm, setPontosColetaForm] = useState<FormState>({ mode: "list" });
+  const [tipoResiduoForm, setTipoResiduoForm] = useState<FormState>({ mode: "list" });
+  const [tipoPontoColetaForm, setTipoPontoColetaForm] = useState<FormState>({ mode: "list" });
+  const [perfilForm, setPerfilForm] = useState<FormState>({ mode: "list" });
+  const [usuarioForm, setUsuarioForm] = useState<FormState>({ mode: "list" });
 
   const renderContent = () => {
-    const path = location.pathname.split("/").pop();
-
-    switch (path) {
+    switch (activeItem) {
       case "dashboard":
-        return < Dashboard / > ;
+        return <Dashboard />;
+      
+      case "cooperativas-catadores":
+        return <CooperativasCatadores />;
+      
       case "entidades":
-        return ( <
-          div className="space-y-6" >
-          <
-          EntidadesForm / >
-          <
-          EntidadesList / >
-          <
-          /div>
+        if (entidadeForm.mode === "form") {
+          return (
+            <EntidadeForm
+              editingEntidade={entidadeForm.editingItem}
+              onBack={() => setEntidadeForm({ mode: "list" })}
+              onSuccess={() => setEntidadeForm({ mode: "list" })}
+            />
+          );
+        }
+        return (
+          <EntidadesList
+            onEdit={(entidade) => setEntidadeForm({ mode: "form", editingItem: entidade })}
+            onAddNew={() => setEntidadeForm({ mode: "form" })}
+          />
         );
+      
+      case "pontos-coleta":
+        if (pontosColetaForm.mode === "form") {
+          return (
+            <PontosColetaForm
+              editingPontoColeta={pontosColetaForm.editingItem}
+              onBack={() => setPontosColetaForm({ mode: "list" })}
+              onSuccess={() => setPontosColetaForm({ mode: "list" })}
+            />
+          );
+        }
+        return (
+          <PontosColetaList
+            onEdit={(pontoColeta) => setPontosColetaForm({ mode: "form", editingItem: pontoColeta })}
+            onAddNew={() => setPontosColetaForm({ mode: "form" })}
+          />
+        );
+      
+      case "tipos-ponto-coleta":
+        if (tipoPontoColetaForm.mode === "form") {
+          return (
+            <TipoPontoColetaForm
+              editingTipoPontoColeta={tipoPontoColetaForm.editingItem}
+              onBack={() => setTipoPontoColetaForm({ mode: "list" })}
+              onSuccess={() => setTipoPontoColetaForm({ mode: "list" })}
+            />
+          );
+        }
+        return (
+          <TipoPontoColetaList
+            onEdit={(tipoPontoColeta) => setTipoPontoColetaForm({ mode: "form", editingItem: tipoPontoColeta })}
+            onAddNew={() => setTipoPontoColetaForm({ mode: "form" })}
+          />
+        );
+      
       case "tipos-entidades":
-        return ( <
-          div className="space-y-6" >
-          <
-          TiposEntidadesForm / >
-          <
-          TiposEntidadesList / >
-          <
-          /div>
+        if (tipoEntidadeForm.mode === "form") {
+          return (
+            <TipoEntidadeForm
+              editingTipoEntidade={tipoEntidadeForm.editingItem}
+              onBack={() => setTipoEntidadeForm({ mode: "list" })}
+              onSuccess={() => setTipoEntidadeForm({ mode: "list" })}
+            />
+          );
+        }
+        return (
+          <TipoEntidadeList
+            onEdit={(tipoEntidade) => setTipoEntidadeForm({ mode: "form", editingItem: tipoEntidade })}
+            onAddNew={() => setTipoEntidadeForm({ mode: "form" })}
+          />
         );
+      
+      case "eventos-coleta":
+        if (eventosForm.mode === "form") {
+          return (
+            <EventoForm
+              evento={eventosForm.editingItem}
+              onBack={() => setEventosForm({ mode: "list" })}
+            />
+          );
+        }
+        return (
+          <EventosList
+            onEdit={(evento) => setEventosForm({ mode: "form", editingItem: evento })}
+            onAddNew={() => setEventosForm({ mode: "form" })}
+          />
+        );
+      
       case "tipos-residuos":
-        return ( <
-          div className="space-y-6" >
-          <
-          TiposResiduosForm / >
-          <
-          TiposResiduosList / >
-          <
-          /div>
+        if (tipoResiduoForm.mode === "form") {
+          return (
+            <TipoResiduoForm
+              editingTipoResiduo={tipoResiduoForm.editingItem}
+              onBack={() => setTipoResiduoForm({ mode: "list" })}
+              onSuccess={() => setTipoResiduoForm({ mode: "list" })}
+            />
+          );
+        }
+        return (
+          <TipoResiduoList
+            onEdit={(tipoResiduo) => setTipoResiduoForm({ mode: "form", editingItem: tipoResiduo })}
+            onAddNew={() => setTipoResiduoForm({ mode: "form" })}
+          />
         );
+      
       case "perfis":
-        return < PerfilFuncionalidades / > ;
+        if (perfilForm.mode === "form") {
+          return (
+            <PerfilForm
+              editingPerfil={perfilForm.editingItem}
+              onBack={() => setPerfilForm({ mode: "list" })}
+              onSuccess={() => setPerfilForm({ mode: "list" })}
+            />
+          );
+        }
+        return (
+          <PerfilList
+            onEdit={(perfil) => setPerfilForm({ mode: "form", editingItem: perfil })}
+            onAddNew={() => setPerfilForm({ mode: "form" })}
+          />
+        );
+      
+      case "funcionalidades":
+        return <PerfilFuncionalidades />;
+      
       case "usuarios":
-        return ( <
-          div className="space-y-6" >
-          <
-          UsuariosForm / >
-          <
-          UsuariosList / >
-          <
-          /div>
+        if (usuarioForm.mode === "form") {
+          return (
+            <UsuarioForm
+              editingUsuario={usuarioForm.editingItem}
+              onBack={() => setUsuarioForm({ mode: "list" })}
+              onSuccess={() => setUsuarioForm({ mode: "list" })}
+            />
+          );
+        }
+        return (
+          <UsuariosList
+            onEdit={(usuario) => setUsuarioForm({ mode: "form", editingItem: usuario })}
+            onAddNew={() => setUsuarioForm({ mode: "form" })}
+          />
         );
-      case "tipo-pontos-coleta":
-        return ( <
-          div className="space-y-6" >
-          <
-          TipoPontoColetaForm / >
-          <
-          TipoPontoColetaList / >
-          <
-          /div>
-        );
+      
       default:
-        return < div > Conteúdo não encontrado < /div>;
+        return <Dashboard />;
     }
   };
 
-  if (!user) {
-    return < div > Redirecionando para o login... < /div>;
-  }
-
-  return ( <
-    div className="h-screen flex overflow-hidden bg-gray-100" > {
-      /* Sidebar */ } <
-    Sidebar isSidebarOpen={
-      isSidebarOpen
-    }
-    toggleSidebar={
-      toggleSidebar
-    }
-    signOut={
-      signOut
-    }
-    />
-
-    {
-      /* Content area */ } <
-    div className="flex flex-col flex-1 overflow-hidden" > {
-      /* Main content */ } <
-    main className="flex-1 relative overflow-y-auto focus:outline-none" >
-    <
-    div className="py-6" >
-    <
-    div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8" >
-    <
-    h1 className="text-2xl font-semibold text-gray-900" > {
-      location.pathname.split("/").pop()
-    } < /h1> <
-    /div> <
-    div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8" > {
-      /* Replace with your content */ } <
-    div className="py-4" >
-    <
-    div className="h-full" > {
-      renderContent()
-    } < /div> <
-    /div> {
-      /* /End replace */ } <
-    /div> <
-    /div> <
-    /main> <
-    /div> <
-    /div>
+  return (
+    <div className="flex h-screen bg-background">
+      <Sidebar 
+        activeItem={activeItem} 
+        onItemClick={setActiveItem}
+        allowedFeatures={allowedFeatures}
+      />
+      <main className="flex-1 overflow-y-auto p-6">
+        {renderContent()}
+      </main>
+    </div>
   );
 }
