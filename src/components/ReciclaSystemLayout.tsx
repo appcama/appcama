@@ -1,4 +1,3 @@
-
 import {
   useEffect,
   useState,
@@ -21,32 +20,20 @@ import {
   Dashboard
 } from "./Dashboard";
 import {
-  EntidadesList
-} from "./EntidadesList";
+  EntidadeManagerView
+} from "./EntidadeManagerView";
 import {
-  EntidadeForm
-} from "./EntidadeForm";
+  TipoEntidadeManagerView
+} from "./TipoEntidadeManagerView";
 import {
-  TipoEntidadeList
-} from "./TipoEntidadeList";
-import {
-  TipoEntidadeForm
-} from "./TipoEntidadeForm";
-import {
-  TipoResiduoList
-} from "./TipoResiduoList";
-import {
-  TipoResiduoForm
-} from "./TipoResiduoForm";
+  TipoResiduoManagerView
+} from "./TipoResiduoManagerView";
 import {
   PerfilFuncionalidades
 } from "./PerfilFuncionalidades";
 import {
-  UsuariosList
-} from "./UsuariosList";
-import {
-  UsuarioForm
-} from "./UsuarioForm";
+  UsuarioManagerView
+} from "./UsuarioManagerView";
 import {
   TipoPontoColetaManagerView
 } from './TipoPontoColetaManagerView';
@@ -86,35 +73,15 @@ export function ReciclaSystemLayout() {
       case "dashboard":
         return <Dashboard />;
       case "entidades":
-        return (
-          <div className="space-y-6">
-            <EntidadeForm />
-            <EntidadesList onAddNew={() => {}} onEdit={() => {}} />
-          </div>
-        );
+        return <EntidadeManagerView />;
       case "tipos-entidades":
-        return (
-          <div className="space-y-6">
-            <TipoEntidadeForm />
-            <TipoEntidadeList />
-          </div>
-        );
+        return <TipoEntidadeManagerView />;
       case "tipos-residuos":
-        return (
-          <div className="space-y-6">
-            <TipoResiduoForm />
-            <TipoResiduoList />
-          </div>
-        );
+        return <TipoResiduoManagerView />;
       case "perfis":
         return <PerfilFuncionalidades />;
       case "usuarios":
-        return (
-          <div className="space-y-6">
-            <UsuarioForm />
-            <UsuariosList onAddNew={() => {}} onEdit={() => {}} />
-          </div>
-        );
+        return <UsuarioManagerView />;
       case "tipos-ponto-coleta":
         return <TipoPontoColetaManagerView />;
       default:
