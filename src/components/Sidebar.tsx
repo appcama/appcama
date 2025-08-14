@@ -1,5 +1,4 @@
 
-
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import {
@@ -75,16 +74,18 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures }: SidebarPro
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const filterByPermissions = useMemo(() => {
-    // Se allowedFeatures for undefined ou null, mostra tudo (ainda carregando)
-    if (!allowedFeatures) {
+    // Se allowedFeatures for undefined, mostra tudo (ainda carregando permissões)
+    if (allowedFeatures === undefined) {
       console.log("[Sidebar] Permissions still loading, showing all items");
       return (id: string) => true;
     }
     
-    // Se for array vazio, esconde tudo (sem permissões)
+    // Se for array vazio, ainda mostra alguns itens básicos
     if (allowedFeatures.length === 0) {
-      console.log("[Sidebar] No permissions loaded, hiding all items");
-      return (id: string) => false;
+      console.log("[Sidebar] No permissions loaded, showing basic items only");
+      // Mostra pelo menos dashboard, configurações e ajuda
+      const basicItems = ['dashboard', 'configuracoes', 'ajuda'];
+      return (id: string) => basicItems.includes(id);
     }
     
     return (id: string) => {
@@ -131,17 +132,23 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures }: SidebarPro
 
       {/* Navigation */}
       <div className="flex-1 overflow-y-auto">
-        {navigationItems.map((section) => (
-          <div key={section.section} className="p-2">
-            {!isCollapsed && (
-              <h3 className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                {section.section}
-              </h3>
-            )}
-            <div className="space-y-1">
-              {section.items
-                .filter((item) => filterByPermissions(item.id))
-                .map((item) => {
+        {navigationItems.map((section) => {
+          const visibleItems = section.items.filter((item) => filterByPermissions(item.id));
+          
+          // Só mostra a seção se houver itens visíveis
+          if (visibleItems.length === 0) {
+            return null;
+          }
+
+          return (
+            <div key={section.section} className="p-2">
+              {!isCollapsed && (
+                <h3 className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  {section.section}
+                </h3>
+              )}
+              <div className="space-y-1">
+                {visibleItems.map((item) => {
                   const Icon = item.icon;
                   return (
                     <Button
@@ -161,9 +168,10 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures }: SidebarPro
                     </Button>
                   );
                 })}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Bottom Section */}
@@ -194,4 +202,3 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures }: SidebarPro
     </div>
   );
 }
-
