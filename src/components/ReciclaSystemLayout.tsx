@@ -48,15 +48,16 @@ export function ReciclaSystemLayout() {
         if (entidadeForm.mode === "form") {
           return (
             <EntidadeForm
-              entidade={entidadeForm.editingItem}
+              editingEntidade={entidadeForm.editingItem}
               onBack={() => setEntidadeForm({ mode: "list" })}
+              onSuccess={() => setEntidadeForm({ mode: "list" })}
             />
           );
         }
         return (
           <EntidadesList
             onEdit={(entidade) => setEntidadeForm({ mode: "form", editingItem: entidade })}
-            onNew={() => setEntidadeForm({ mode: "form" })}
+            onAddNew={() => setEntidadeForm({ mode: "form" })}
           />
         );
       
@@ -64,15 +65,16 @@ export function ReciclaSystemLayout() {
         if (tipoEntidadeForm.mode === "form") {
           return (
             <TipoEntidadeForm
-              tipoEntidade={tipoEntidadeForm.editingItem}
+              editingTipoEntidade={tipoEntidadeForm.editingItem}
               onBack={() => setTipoEntidadeForm({ mode: "list" })}
+              onSuccess={() => setTipoEntidadeForm({ mode: "list" })}
             />
           );
         }
         return (
           <TipoEntidadeList
             onEdit={(tipoEntidade) => setTipoEntidadeForm({ mode: "form", editingItem: tipoEntidade })}
-            onNew={() => setTipoEntidadeForm({ mode: "form" })}
+            onAddNew={() => setTipoEntidadeForm({ mode: "form" })}
           />
         );
       
@@ -88,7 +90,7 @@ export function ReciclaSystemLayout() {
         return (
           <EventosList
             onEdit={(evento) => setEventosForm({ mode: "form", editingItem: evento })}
-            onNew={() => setEventosForm({ mode: "form" })}
+            onAddNew={() => setEventosForm({ mode: "form" })}
           />
         );
       
@@ -96,15 +98,16 @@ export function ReciclaSystemLayout() {
         if (tipoResiduoForm.mode === "form") {
           return (
             <TipoResiduoForm
-              tipoResiduo={tipoResiduoForm.editingItem}
+              editingTipoResiduo={tipoResiduoForm.editingItem}
               onBack={() => setTipoResiduoForm({ mode: "list" })}
+              onSuccess={() => setTipoResiduoForm({ mode: "list" })}
             />
           );
         }
         return (
           <TipoResiduoList
             onEdit={(tipoResiduo) => setTipoResiduoForm({ mode: "form", editingItem: tipoResiduo })}
-            onNew={() => setTipoResiduoForm({ mode: "form" })}
+            onAddNew={() => setTipoResiduoForm({ mode: "form" })}
           />
         );
       
@@ -112,15 +115,16 @@ export function ReciclaSystemLayout() {
         if (perfilForm.mode === "form") {
           return (
             <PerfilForm
-              perfil={perfilForm.editingItem}
+              editingPerfil={perfilForm.editingItem}
               onBack={() => setPerfilForm({ mode: "list" })}
+              onSuccess={() => setPerfilForm({ mode: "list" })}
             />
           );
         }
         return (
           <PerfilList
             onEdit={(perfil) => setPerfilForm({ mode: "form", editingItem: perfil })}
-            onNew={() => setPerfilForm({ mode: "form" })}
+            onAddNew={() => setPerfilForm({ mode: "form" })}
           />
         );
       
@@ -128,15 +132,16 @@ export function ReciclaSystemLayout() {
         if (usuarioForm.mode === "form") {
           return (
             <UsuarioForm
-              usuario={usuarioForm.editingItem}
+              editingUsuario={usuarioForm.editingItem}
               onBack={() => setUsuarioForm({ mode: "list" })}
+              onSuccess={() => setUsuarioForm({ mode: "list" })}
             />
           );
         }
         return (
           <UsuariosList
             onEdit={(usuario) => setUsuarioForm({ mode: "form", editingItem: usuario })}
-            onNew={() => setUsuarioForm({ mode: "form" })}
+            onAddNew={() => setUsuarioForm({ mode: "form" })}
           />
         );
       
