@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,7 +51,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
     num_cep: '',
     des_logradouro: '',
     des_bairro: '',
-    des_status: 'A',
+    num_endereco: '',
     id_entidade_gestora: 0,
     id_municipio: 1,
     id_unidade_federativa: 1,
@@ -79,7 +78,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
         num_cep: editingPontoColeta.num_cep,
         des_logradouro: editingPontoColeta.des_logradouro,
         des_bairro: editingPontoColeta.des_bairro,
-        des_status: editingPontoColeta.des_status,
+        num_endereco: '',
         id_entidade_gestora: editingPontoColeta.id_entidade_gestora,
         id_municipio: editingPontoColeta.id_municipio,
         id_unidade_federativa: editingPontoColeta.id_unidade_federativa,
@@ -181,7 +180,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
         num_cep: formData.num_cep.replace(/\D/g, ''), // Remove hífen e caracteres não numéricos
         des_logradouro: formData.des_logradouro.trim(),
         des_bairro: formData.des_bairro.trim(),
-        des_status: formData.des_status,
+        des_status: 'A', // Default to active status
         id_entidade_gestora: formData.id_entidade_gestora,
         id_municipio: formData.id_municipio,
         id_unidade_federativa: formData.id_unidade_federativa,
@@ -342,16 +341,14 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="des_status">Status</Label>
-            <Select value={formData.des_status} onValueChange={(value) => handleInputChange('des_status', value)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="A">Ativo</SelectItem>
-                <SelectItem value="D">Inativo</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label htmlFor="num_endereco">Número</Label>
+            <Input
+              id="num_endereco"
+              value={formData.num_endereco}
+              onChange={(e) => handleInputChange('num_endereco', e.target.value)}
+              placeholder="Número do endereço"
+              maxLength={10}
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
