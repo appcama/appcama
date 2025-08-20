@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +40,11 @@ interface Entidade {
   };
 }
 
+interface TipoPontoColeta {
+  id_tipo_ponto_coleta: number;
+  des_tipo_ponto_coleta: string;
+}
+
 interface PontosColetaFormProps {
   editingPontoColeta?: PontoColeta;
   onBack: () => void;
@@ -55,20 +61,23 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
     id_entidade_gestora: 0,
     id_municipio: 1,
     id_unidade_federativa: 1,
-    id_tipo_ponto_coleta: 1,
+    id_tipo_ponto_coleta: 0,
     id_tipo_situacao: 1,
     num_latitude: null as number | null,
     num_longitude: null as number | null
   });
   
   const [entidadesGestoras, setEntidadesGestoras] = useState<Entidade[]>([]);
+  const [tiposPontoColeta, setTiposPontoColeta] = useState<TipoPontoColeta[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingEntidades, setLoadingEntidades] = useState(true);
+  const [loadingTipos, setLoadingTipos] = useState(true);
   const { toast } = useToast();
   const { searchCep, loading: cepLoading } = useViaCep();
 
   useEffect(() => {
     fetchEntidadesGestoras();
+    fetchTiposPontoColeta();
   }, []);
 
   useEffect(() => {
@@ -116,6 +125,28 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
       });
     } finally {
       setLoadingEntidades(false);
+    }
+  };
+
+  const fetchTiposPontoColeta = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tipo_ponto_coleta')
+        .select('id_tipo_ponto_coleta, des_tipo_ponto_coleta')
+        .eq('des_status', 'A')
+        .order('des_tipo_ponto_coleta');
+
+      if (error) throw error;
+      setTiposPontoColeta(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar tipos de ponto de coleta:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar tipos de ponto de coleta",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingTipos(false);
     }
   };
 
@@ -167,6 +198,15 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
       toast({
         title: "Erro",
         description: "Entidade gestora é obrigatória",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.id_tipo_ponto_coleta || formData.id_tipo_ponto_coleta === 0) {
+      toast({
+        title: "Erro",
+        description: "Tipo de ponto de coleta é obrigatório",
         variant: "destructive",
       });
       return;
@@ -291,6 +331,32 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
                       <span className="text-muted-foreground ml-2">
                         - {entidade.tipo_entidade.des_tipo_entidade}
                       </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="id_tipo_ponto_coleta">Tipo de Ponto de Coleta *</Label>
+            {loadingTipos ? (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Carregando tipos...
+              </div>
+            ) : (
+              <Select 
+                value={formData.id_tipo_ponto_coleta.toString()} 
+                onValueChange={(value) => handleInputChange('id_tipo_ponto_coleta', parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um tipo de ponto de coleta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tiposPontoColeta.map((tipo) => (
+                    <SelectItem key={tipo.id_tipo_ponto_coleta} value={tipo.id_tipo_ponto_coleta.toString()}>
+                      {tipo.des_tipo_ponto_coleta}
                     </SelectItem>
                   ))}
                 </SelectContent>
