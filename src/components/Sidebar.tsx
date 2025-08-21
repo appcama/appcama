@@ -13,7 +13,8 @@ import {
   MapPin,
   UserCheck,
   Shield,
-  FileText
+  FileText,
+  TrendingUp
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { featureByItemId } from "@/lib/featureMap";
@@ -88,6 +89,11 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose 
           id: "tipos-residuos",
           label: "Tipos de Resíduos",
           icon: Trash2,
+        },
+        {
+          id: "indicadores",
+          label: "Indicadores",
+          icon: TrendingUp,
         },
       ]
     },
