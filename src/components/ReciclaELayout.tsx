@@ -9,6 +9,7 @@ import { EventosList } from '@/components/EventosList';
 import { TipoPontoColetaList } from '@/components/TipoPontoColetaList';
 import { TipoEntidadeList } from '@/components/TipoEntidadeList';
 import { TipoResiduoList } from '@/components/TipoResiduoList';
+import { Indicadores } from '@/components/Indicadores';
 import { PerfilList } from '@/components/PerfilList';
 import { UsuariosList } from '@/components/UsuariosList';
 import { EntidadeForm } from '@/components/EntidadeForm';
@@ -152,6 +153,8 @@ export function ReciclaELayout() {
         return <TipoEntidadeList onAddNew={handleAddNew} onEdit={handleEdit} />;
       case 'tipos-residuos':
         return <TipoResiduoList onAddNew={handleAddNew} onEdit={handleEdit} />;
+      case 'indicadores':
+        return <Indicadores />;
       case 'perfis':
         return <PerfilList onAddNew={handleAddNew} onEdit={handleEdit} />;
       case 'usuarios':
