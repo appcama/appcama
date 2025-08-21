@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -221,39 +222,4 @@ export function IndicadorList({ onEdit, onNew }: IndicadorListProps) {
       </Card>
     </div>
   );
-
-  async function handleToggleStatus(indicador: Indicador) {
-    setUpdatingStatus(indicador.id_indicador);
-    
-    try {
-      const newStatus = indicador.des_status === 'A' ? 'I' : 'A';
-      
-      const { error } = await supabase
-        .from('indicador')
-        .update({ 
-          des_status: newStatus,
-          id_usuario_atualizador: 1,
-          dat_atualizacao: new Date().toISOString()
-        })
-        .eq('id_indicador', indicador.id_indicador);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: `Indicador ${newStatus === 'A' ? 'ativado' : 'desativado'} com sucesso!`,
-      });
-
-      fetchIndicadores();
-    } catch (error) {
-      console.error('Erro ao alterar status:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao alterar status do indicador",
-        variant: "destructive",
-      });
-    } finally {
-      setUpdatingStatus(null);
-    }
-  }
 }

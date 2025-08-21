@@ -41,6 +41,27 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
       console.log("[Permissions] Profile found:", profileData);
     }
 
+    // Let's also check what funcionalidades exist
+    const { data: allFuncionalidades, error: funcError } = await supabase
+      .from("funcionalidade")
+      .select("id_funcionalidade, nom_funcionalidade, des_status");
+
+    console.log("[Permissions] All funcionalidades:", allFuncionalidades);
+    if (funcError) {
+      console.error("[Permissions] Error loading all funcionalidades:", funcError);
+    }
+
+    // Check what associations exist for this profile
+    const { data: profileAssociations, error: assocError } = await supabase
+      .from("perfil__funcionalidade")
+      .select("id_perfil, id_funcionalidade")
+      .eq("id_perfil", user.profileId);
+
+    console.log("[Permissions] Profile associations:", profileAssociations);
+    if (assocError) {
+      console.error("[Permissions] Error loading profile associations:", assocError);
+    }
+
     // Now get the permissions
     const { data, error } = await supabase
       .from("perfil__funcionalidade")
