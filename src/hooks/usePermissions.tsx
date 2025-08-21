@@ -70,6 +70,10 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
 
     console.log("[Permissions] Allowed features after filtering:", names);
     
+    // Check specifically for "Indicadores" functionality
+    const hasIndicadores = names.includes("Indicadores");
+    console.log("[Permissions] Has Indicadores permission:", hasIndicadores);
+    
     // For admin profile, let's add all available features if it's empty
     if (names.length === 0 && profileData?.nom_perfil?.toLowerCase().includes('admin')) {
       console.log("[Permissions] Admin profile detected with no permissions, loading all available features");
@@ -92,6 +96,7 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
           "Entidades", 
           "Tipos de Entidades", 
           "Tipos de Resíduos", 
+          "Indicadores",
           "Perfis", 
           "Usuários"
         ];
@@ -127,6 +132,14 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
 
       const allowed = allowedFeatures.includes(featureName);
       console.log(`[Permissions] Access to ${featureName}: ${allowed ? 'ALLOWED' : 'DENIED'}`);
+      
+      // Extra debug for Indicadores specifically
+      if (featureName === "Indicadores") {
+        console.log(`[Permissions] INDICADORES DEBUG - Available features:`, allowedFeatures);
+        console.log(`[Permissions] INDICADORES DEBUG - Looking for: "${featureName}"`);
+        console.log(`[Permissions] INDICADORES DEBUG - Found match:`, allowed);
+      }
+      
       return allowed;
     },
     [allowedFeatures, user]

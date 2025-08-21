@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,11 +33,13 @@ export function IndicadorList({ onEdit, onNew }: IndicadorListProps) {
   const { toast } = useToast();
 
   useEffect(() => {
+    console.log("[IndicadorList] Component mounted, fetching indicadores...");
     fetchIndicadores();
   }, []);
 
   const fetchIndicadores = async () => {
     try {
+      console.log("[IndicadorList] Starting fetch...");
       const { data, error } = await supabase
         .from('indicador')
         .select(`
@@ -50,10 +51,17 @@ export function IndicadorList({ onEdit, onNew }: IndicadorListProps) {
         `)
         .order('nom_indicador');
 
-      if (error) throw error;
+      console.log("[IndicadorList] Supabase response:", { data, error });
+
+      if (error) {
+        console.error("[IndicadorList] Supabase error:", error);
+        throw error;
+      }
+      
+      console.log("[IndicadorList] Successfully fetched indicadores:", data?.length || 0);
       setIndicadores(data || []);
     } catch (error) {
-      console.error('Erro ao buscar indicadores:', error);
+      console.error('[IndicadorList] Error fetching indicadores:', error);
       toast({
         title: "Erro",
         description: "Erro ao carregar indicadores",
@@ -213,4 +221,39 @@ export function IndicadorList({ onEdit, onNew }: IndicadorListProps) {
       </Card>
     </div>
   );
+
+  async function handleToggleStatus(indicador: Indicador) {
+    setUpdatingStatus(indicador.id_indicador);
+    
+    try {
+      const newStatus = indicador.des_status === 'A' ? 'I' : 'A';
+      
+      const { error } = await supabase
+        .from('indicador')
+        .update({ 
+          des_status: newStatus,
+          id_usuario_atualizador: 1,
+          dat_atualizacao: new Date().toISOString()
+        })
+        .eq('id_indicador', indicador.id_indicador);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: `Indicador ${newStatus === 'A' ? 'ativado' : 'desativado'} com sucesso!`,
+      });
+
+      fetchIndicadores();
+    } catch (error) {
+      console.error('Erro ao alterar status:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao alterar status do indicador",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingStatus(null);
+    }
+  }
 }
