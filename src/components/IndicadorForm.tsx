@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,15 +56,24 @@ export function IndicadorForm({ editingIndicador, onBack, onSave }: IndicadorFor
 
   const fetchUnidadesMedida = async () => {
     try {
+      console.log("[IndicadorForm] Fetching unidades de medida...");
+      
       const { data, error } = await supabase
         .from('unidade_medida')
         .select('*')
         .order('des_unidade_medida');
 
-      if (error) throw error;
+      console.log("[IndicadorForm] Unidades response:", { data, error });
+
+      if (error) {
+        console.error('[IndicadorForm] Error fetching unidades:', error);
+        throw error;
+      }
+      
+      console.log("[IndicadorForm] Successfully loaded unidades:", data?.length || 0);
       setUnidadesMedida(data || []);
     } catch (error) {
-      console.error('Erro ao buscar unidades de medida:', error);
+      console.error('[IndicadorForm] Erro ao buscar unidades de medida:', error);
       toast({
         title: "Erro",
         description: "Erro ao carregar unidades de medida",

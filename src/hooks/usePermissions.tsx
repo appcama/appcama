@@ -98,7 +98,8 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
           "Tipos de Resíduos", 
           "Indicadores",
           "Perfis", 
-          "Usuários"
+          "Usuários",
+          "Funcionalidades"
         ];
         console.log("[Permissions] Setting basic features as fallback:", basicFeatures);
         setAllowedFeatures(basicFeatures);
