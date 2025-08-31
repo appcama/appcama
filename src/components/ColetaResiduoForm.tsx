@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Search, Check, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useDecimalMask, useCurrencyMask } from '@/hooks/useInputMask';
 import { cn } from '@/lib/utils';
 
 interface TipoResiduo {
@@ -49,10 +49,12 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
   const [filteredResiduos, setFilteredResiduos] = useState<Residuo[]>([]);
   const [selectedTipoResiduo, setSelectedTipoResiduo] = useState('');
   const [selectedResiduo, setSelectedResiduo] = useState<Residuo | null>(null);
-  const [quantidade, setQuantidade] = useState('');
-  const [valorUnitario, setValorUnitario] = useState('');
   const [openResiduoCombo, setOpenResiduoCombo] = useState(false);
   const { toast } = useToast();
+
+  // Usando as máscaras personalizadas
+  const quantidade = useDecimalMask();
+  const valorUnitario = useCurrencyMask();
 
   useEffect(() => {
     loadData();
@@ -64,8 +66,11 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
       const residuo = residuos.find(r => r.id_residuo === editingResiduo.id_residuo);
       if (residuo) {
         setSelectedResiduo(residuo);
-        setQuantidade(editingResiduo.qtd_total.toString());
-        setValorUnitario(editingResiduo.vlr_total.toString());
+        quantidade.setValue(editingResiduo.qtd_total.toFixed(2));
+        valorUnitario.setValue(editingResiduo.vlr_total.toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }));
         // Definir o tipo de resíduo automaticamente
         setSelectedTipoResiduo(residuo.id_tipo_residuo.toString());
       }
@@ -148,15 +153,15 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
   };
 
   const calculateSubtotal = () => {
-    const qtd = parseFloat(quantidade) || 0;
-    const valor = parseFloat(valorUnitario) || 0;
+    const qtd = parseFloat(quantidade.value) || 0;
+    const valor = valorUnitario.getNumericValue();
     return qtd * valor;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedResiduo || !quantidade || !valorUnitario) {
+    if (!selectedResiduo || !quantidade.value || !valorUnitario.value) {
       toast({
         title: 'Erro',
         description: 'Preencha todos os campos',
@@ -165,8 +170,8 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
       return;
     }
 
-    const qtd = parseFloat(quantidade);
-    const valor = parseFloat(valorUnitario);
+    const qtd = parseFloat(quantidade.value);
+    const valor = valorUnitario.getNumericValue();
 
     if (qtd <= 0 || valor <= 0) {
       toast({
@@ -315,36 +320,41 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
                   <Label htmlFor="quantidade">Quantidade (kg) *</Label>
                   <Input
                     id="quantidade"
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    value={quantidade}
-                    onChange={(e) => setQuantidade(e.target.value)}
-                    placeholder="0.00"
+                    type="text"
+                    value={quantidade.value}
+                    onChange={(e) => quantidade.handleChange(e.target.value)}
+                    placeholder="0,00"
                     required
                   />
                 </div>
 
                 <div>
                   <Label htmlFor="valor">Valor Unitário (R$) *</Label>
-                  <Input
-                    id="valor"
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    value={valorUnitario}
-                    onChange={(e) => setValorUnitario(e.target.value)}
-                    placeholder="0.00"
-                    required
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                      R$
+                    </span>
+                    <Input
+                      id="valor"
+                      type="text"
+                      value={valorUnitario.value}
+                      onChange={(e) => valorUnitario.handleChange(e.target.value)}
+                      placeholder="0,00"
+                      className="pl-10"
+                      required
+                    />
+                  </div>
                 </div>
 
-                {quantidade && valorUnitario && (
+                {quantidade.value && valorUnitario.value && (
                   <div className="p-3 bg-recycle-green-light rounded-lg">
                     <div className="flex justify-between items-center">
                       <span className="font-medium">Subtotal:</span>
                       <span className="text-lg font-bold text-recycle-green">
-                        R$ {calculateSubtotal().toFixed(2)}
+                        R$ {calculateSubtotal().toLocaleString('pt-BR', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2
+                        })}
                       </span>
                     </div>
                   </div>
