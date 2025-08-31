@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { 
   Home, 
@@ -14,7 +15,8 @@ import {
   UserCheck,
   Shield,
   FileText,
-  TrendingUp
+  TrendingUp,
+  Package
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { featureByItemId } from "@/lib/featureMap";
@@ -69,6 +71,11 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose 
           id: "eventos-coleta",
           label: "Eventos de Coleta",
           icon: Calendar,
+        },
+        {
+          id: "coletas",
+          label: "Coletas",
+          icon: Package,
         },
       ]
     },

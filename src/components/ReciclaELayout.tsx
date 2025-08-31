@@ -12,6 +12,7 @@ import { TipoResiduoList } from '@/components/TipoResiduoList';
 import { Indicadores } from '@/components/Indicadores';
 import { PerfilList } from '@/components/PerfilList';
 import { UsuariosList } from '@/components/UsuariosList';
+import { ColetaList } from '@/components/ColetaList';
 import { EntidadeForm } from '@/components/EntidadeForm';
 import { EventoForm } from '@/components/EventoForm';
 import { PontosColetaForm } from '@/components/PontosColetaForm';
@@ -20,6 +21,7 @@ import { TipoEntidadeForm } from '@/components/TipoEntidadeForm';
 import { TipoResiduoForm } from '@/components/TipoResiduoForm';
 import { PerfilForm } from '@/components/PerfilForm';
 import { UsuarioForm } from '@/components/UsuarioForm';
+import { ColetaForm } from '@/components/ColetaForm';
 import { Sidebar } from '@/components/Sidebar';
 import { MobileHeader } from '@/components/MobileHeader';
 import { useBreakpoints } from '@/hooks/use-breakpoints';
@@ -92,6 +94,14 @@ export function ReciclaELayout() {
               onBack={handleBackToList}
             />
           );
+        case 'coletas':
+          return (
+            <ColetaForm
+              onBack={handleBackToList}
+              onSuccess={handleFormSuccess}
+              editingColeta={editingItem}
+            />
+          );
         case 'tipos-ponto-coleta':
           return (
             <TipoPontoColetaForm
@@ -147,6 +157,8 @@ export function ReciclaELayout() {
         return <PontosColetaList onAddNew={handleAddNew} onEdit={handleEdit} />;
       case 'eventos-coleta':
         return <EventosList onAddNew={handleAddNew} onEdit={handleEdit} />;
+      case 'coletas':
+        return <ColetaList onAddNew={handleAddNew} onEdit={handleEdit} />;
       case 'tipos-ponto-coleta':
         return <TipoPontoColetaList onAddNew={handleAddNew} onEdit={handleEdit} />;
       case 'tipos-entidades':

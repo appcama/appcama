@@ -17,6 +17,7 @@ export const idToFeatureMap: Record<string, string> = {
   funcionalidades: "Perfis", // Funcionalidades usa a mesma permissão de Perfis
   configuracoes: "Configurações",
   ajuda: "Ajuda",
+  coletas: "Coletas", // Nova funcionalidade
 };
 
 export function featureByItemId(itemId: string): string | undefined {
