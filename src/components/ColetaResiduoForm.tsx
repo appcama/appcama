@@ -1,13 +1,16 @@
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Search } from 'lucide-react';
+import { ArrowLeft, Search, Check, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface TipoResiduo {
   id_tipo_residuo: number;
@@ -17,6 +20,7 @@ interface TipoResiduo {
 interface Residuo {
   id_residuo: number;
   nom_residuo: string;
+  id_tipo_residuo: number;
   tipo_residuo: {
     des_tipo_residuo: string;
   };
@@ -44,10 +48,10 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
   const [residuos, setResiduos] = useState<Residuo[]>([]);
   const [filteredResiduos, setFilteredResiduos] = useState<Residuo[]>([]);
   const [selectedTipoResiduo, setSelectedTipoResiduo] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
   const [selectedResiduo, setSelectedResiduo] = useState<Residuo | null>(null);
   const [quantidade, setQuantidade] = useState('');
   const [valorUnitario, setValorUnitario] = useState('');
+  const [openResiduoCombo, setOpenResiduoCombo] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -62,13 +66,15 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
         setSelectedResiduo(residuo);
         setQuantidade(editingResiduo.qtd_total.toString());
         setValorUnitario(editingResiduo.vlr_total.toString());
+        // Definir o tipo de resíduo automaticamente
+        setSelectedTipoResiduo(residuo.id_tipo_residuo.toString());
       }
     }
   }, [editingResiduo, residuos]);
 
   useEffect(() => {
     filterResiduos();
-  }, [residuos, selectedTipoResiduo, searchTerm]);
+  }, [residuos, selectedTipoResiduo]);
 
   const loadData = async () => {
     try {
@@ -81,19 +87,21 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
 
       setTiposResiduos(tiposData || []);
 
-      // Carregar resíduos
+      // Carregar resíduos com join correto
       const { data: residuosData } = await supabase
         .from('residuo')
         .select(`
           id_residuo,
           nom_residuo,
-          tipo_residuo:id_tipo_residuo (
+          id_tipo_residuo,
+          tipo_residuo!inner (
             des_tipo_residuo
           )
         `)
         .eq('des_status', 'A')
         .order('nom_residuo');
 
+      console.log('[ColetaResiduoForm] Residuos loaded:', residuosData);
       setResiduos(residuosData || []);
     } catch (error) {
       console.error('[ColetaResiduoForm] Error loading data:', error);
@@ -103,21 +111,11 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
   const filterResiduos = () => {
     let filtered = [...residuos];
 
-    // Filtrar por tipo de resíduo
+    // Filtrar por tipo de resíduo usando ID diretamente
     if (selectedTipoResiduo) {
-      const selectedTipo = tiposResiduos.find(t => t.id_tipo_residuo.toString() === selectedTipoResiduo);
-      if (selectedTipo) {
-        filtered = filtered.filter(r => 
-          r.tipo_residuo?.des_tipo_residuo === selectedTipo.des_tipo_residuo
-        );
-      }
-    }
-
-    // Filtrar por termo de busca
-    if (searchTerm) {
-      filtered = filtered.filter(r => 
-        r.nom_residuo.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const selectedTipoId = parseInt(selectedTipoResiduo);
+      filtered = filtered.filter(r => r.id_tipo_residuo === selectedTipoId);
+      console.log('[ColetaResiduoForm] Filtered by type:', selectedTipoId, filtered);
     }
 
     // Remover resíduos já adicionados (exceto se estiver editando)
@@ -138,6 +136,7 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
 
   const handleSelectResiduo = (residuo: Residuo) => {
     setSelectedResiduo(residuo);
+    setOpenResiduoCombo(false);
   };
 
   const calculateSubtotal = () => {
@@ -185,6 +184,7 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
 
   const clearTipoResiduoFilter = () => {
     setSelectedTipoResiduo('');
+    setSelectedResiduo(null);
   };
 
   return (
@@ -234,43 +234,70 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
             </div>
 
             <div>
-              <Label htmlFor="search">Buscar Resíduo</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  id="search"
-                  placeholder="Digite o nome do resíduo..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            <div className="max-h-96 overflow-y-auto border rounded-lg">
-              {filteredResiduos.length === 0 ? (
-                <div className="p-4 text-center text-gray-500">
-                  Nenhum resíduo disponível
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {filteredResiduos.map((residuo) => (
-                    <div
-                      key={residuo.id_residuo}
-                      className={`p-3 cursor-pointer hover:bg-gray-50 border-b ${
-                        selectedResiduo?.id_residuo === residuo.id_residuo 
-                          ? 'bg-recycle-green-light border-recycle-green' 
-                          : ''
-                      }`}
-                      onClick={() => handleSelectResiduo(residuo)}
-                    >
-                      <div className="font-medium">{residuo.nom_residuo}</div>
-                      <div className="text-sm text-gray-500">
-                        {residuo.tipo_residuo?.des_tipo_residuo}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <Label>Selecionar Resíduo</Label>
+              <Popover open={openResiduoCombo} onOpenChange={setOpenResiduoCombo}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openResiduoCombo}
+                    className="w-full justify-between"
+                    disabled={!selectedTipoResiduo}
+                  >
+                    {selectedResiduo
+                      ? selectedResiduo.nom_residuo
+                      : selectedTipoResiduo 
+                        ? "Selecione um resíduo..."
+                        : "Primeiro selecione um tipo de resíduo"
+                    }
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0">
+                  <Command>
+                    <CommandInput placeholder="Buscar resíduo..." />
+                    <CommandEmpty>
+                      {selectedTipoResiduo 
+                        ? "Nenhum resíduo encontrado."
+                        : "Selecione um tipo de resíduo primeiro."
+                      }
+                    </CommandEmpty>
+                    <CommandGroup className="max-h-64 overflow-y-auto">
+                      {filteredResiduos.map((residuo) => (
+                        <CommandItem
+                          key={residuo.id_residuo}
+                          value={residuo.nom_residuo}
+                          onSelect={() => handleSelectResiduo(residuo)}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedResiduo?.id_residuo === residuo.id_residuo ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <div className="flex flex-col">
+                            <span className="font-medium">{residuo.nom_residuo}</span>
+                            <span className="text-sm text-gray-500">
+                              {residuo.tipo_residuo?.des_tipo_residuo}
+                            </span>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              
+              {selectedTipoResiduo && filteredResiduos.length === 0 && (
+                <p className="text-sm text-gray-500 mt-2">
+                  Nenhum resíduo disponível para este tipo ou todos já foram adicionados.
+                </p>
+              )}
+              
+              {!selectedTipoResiduo && (
+                <p className="text-sm text-gray-500 mt-2">
+                  Selecione um tipo de resíduo para ver os resíduos disponíveis.
+                </p>
               )}
             </div>
           </CardContent>
@@ -347,7 +374,7 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
               </form>
             ) : (
               <div className="text-center text-gray-500 py-8">
-                Selecione um resíduo na lista ao lado
+                Selecione um tipo de resíduo e depois um resíduo específico
               </div>
             )}
           </CardContent>
