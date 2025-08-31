@@ -58,13 +58,19 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
   const { data: indicadores = [] } = useQuery({
     queryKey: ['indicadores-ativos'],
     queryFn: async () => {
+      console.log('Buscando indicadores ativos...');
       const { data, error } = await supabase
         .from('indicador')
         .select('id_indicador, nom_indicador, des_status')
         .eq('des_status', 'A')
         .order('nom_indicador');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching indicadores:', error);
+        throw error;
+      }
+      
+      console.log('Indicadores ativos encontrados:', data);
       return data as Indicador[];
     }
   });
@@ -75,19 +81,29 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
     queryFn: async () => {
       if (!editingTipoResiduo) return [];
       
+      console.log('Buscando indicadores vinculados para tipo:', editingTipoResiduo.id_tipo_residuo);
       const { data, error } = await supabase
         .from('tipo_residuo__indicador')
         .select('id_indicador')
         .eq('id_tipo_residuo', editingTipoResiduo.id_tipo_residuo);
       
-      if (error) throw error;
-      return data.map(item => item.id_indicador);
+      if (error) {
+        console.error('Error fetching indicadores vinculados:', error);
+        throw error;
+      }
+      
+      const ids = data.map(item => item.id_indicador);
+      console.log('Indicadores vinculados encontrados:', ids);
+      return ids;
     },
     enabled: !!editingTipoResiduo
   });
 
   useEffect(() => {
     if (editingTipoResiduo) {
+      console.log('Carregando dados para edição:', editingTipoResiduo);
+      console.log('Indicadores vinculados:', indicadoresVinculados);
+      
       form.reset({
         des_tipo_residuo: editingTipoResiduo.des_tipo_residuo || "",
         des_recurso_natural: editingTipoResiduo.des_recurso_natural || "",
@@ -98,7 +114,7 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
 
   const saveMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      console.log('Saving tipo residuo:', data);
+      console.log('Salvando tipo residuo:', data);
       
       const tipoResiduoData = {
         des_tipo_residuo: data.des_tipo_residuo,
@@ -110,25 +126,34 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
       let tipoResiduoId: number;
 
       if (isEditing && editingTipoResiduo) {
-        console.log('Updating tipo residuo with data:', tipoResiduoData);
-        const { data: result, error } = await supabase
+        console.log('Atualizando tipo residuo existente:', editingTipoResiduo.id_tipo_residuo);
+        console.log('Dados para atualização:', tipoResiduoData);
+        
+        const { error } = await supabase
           .from('tipo_residuo')
           .update(tipoResiduoData)
-          .eq('id_tipo_residuo', editingTipoResiduo.id_tipo_residuo)
-          .select();
+          .eq('id_tipo_residuo', editingTipoResiduo.id_tipo_residuo);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Erro ao atualizar tipo residuo:', error);
+          throw error;
+        }
+        
         tipoResiduoId = editingTipoResiduo.id_tipo_residuo;
 
         // Remover vinculações existentes
+        console.log('Removendo vinculações existentes para tipo:', tipoResiduoId);
         const { error: deleteError } = await supabase
           .from('tipo_residuo__indicador')
           .delete()
           .eq('id_tipo_residuo', tipoResiduoId);
 
-        if (deleteError) throw deleteError;
+        if (deleteError) {
+          console.error('Erro ao remover vinculações existentes:', deleteError);
+          throw deleteError;
+        }
       } else {
-        console.log('Inserting new tipo residuo with data:', tipoResiduoData);
+        console.log('Criando novo tipo residuo com dados:', tipoResiduoData);
         const { data: result, error } = await supabase
           .from('tipo_residuo')
           .insert([{
@@ -140,27 +165,45 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
           }])
           .select();
 
-        if (error) throw error;
-        if (!result || result.length === 0) throw new Error('Erro ao criar tipo de resíduo');
+        if (error) {
+          console.error('Erro ao criar tipo residuo:', error);
+          throw error;
+        }
+        if (!result || result.length === 0) {
+          console.error('Nenhum resultado retornado ao criar tipo residuo');
+          throw new Error('Erro ao criar tipo de resíduo');
+        }
         
         tipoResiduoId = result[0].id_tipo_residuo;
+        console.log('Novo tipo residuo criado com ID:', tipoResiduoId);
       }
 
       // Inserir novas vinculações com indicadores
+      console.log('Criando vinculações para indicadores:', data.indicadores);
       const indicadorVinculacoes = data.indicadores.map(idIndicador => ({
         id_tipo_residuo: tipoResiduoId,
         id_indicador: idIndicador,
       }));
 
-      const { error: vincularError } = await supabase
-        .from('tipo_residuo__indicador')
-        .insert(indicadorVinculacoes);
+      console.log('Dados das vinculações a serem inseridas:', indicadorVinculacoes);
 
-      if (vincularError) throw vincularError;
+      if (indicadorVinculacoes.length > 0) {
+        const { error: vincularError } = await supabase
+          .from('tipo_residuo__indicador')
+          .insert(indicadorVinculacoes);
+
+        if (vincularError) {
+          console.error('Erro ao criar vinculações:', vincularError);
+          throw vincularError;
+        }
+        
+        console.log('Vinculações criadas com sucesso!');
+      }
     },
     onSuccess: () => {
       console.log('Mutation success, invalidating queries');
       queryClient.invalidateQueries({ queryKey: ['tipos-residuo'] });
+      queryClient.invalidateQueries({ queryKey: ['indicadores-vinculados'] });
       toast.success(
         isEditing 
           ? 'Tipo de resíduo atualizado com sucesso!'
@@ -175,7 +218,7 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
   });
 
   const onSubmit = (data: FormData) => {
-    console.log('Form submitted:', data);
+    console.log('Form submitted com dados:', data);
     saveMutation.mutate(data);
   };
 

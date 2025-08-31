@@ -47,39 +47,62 @@ export function TipoResiduoList({ onAddNew, onEdit }: TipoResiduoListProps) {
         throw tiposError;
       }
 
-      // Para cada tipo, buscar seus indicadores
+      console.log('Tipos encontrados:', tipos);
+
+      // Para cada tipo, buscar seus indicadores usando query separada mais confiável
       const tiposComIndicadores = await Promise.all(
         tipos.map(async (tipo) => {
+          console.log(`Buscando indicadores para tipo ${tipo.id_tipo_residuo}: ${tipo.des_tipo_residuo}`);
+          
+          // Query separada para buscar as vinculações
           const { data: vinculacoes, error: vinculacoesError } = await supabase
             .from('tipo_residuo__indicador')
-            .select(`
-              id_indicador,
-              indicador!inner (
-                id_indicador,
-                nom_indicador
-              )
-            `)
+            .select('id_indicador')
             .eq('id_tipo_residuo', tipo.id_tipo_residuo);
 
           if (vinculacoesError) {
-            console.error('Error fetching indicadores for tipo:', tipo.id_tipo_residuo, vinculacoesError);
+            console.error('Error fetching vinculações for tipo:', tipo.id_tipo_residuo, vinculacoesError);
             return {
               ...tipo,
               indicadores: []
             };
           }
 
+          console.log(`Vinculações encontradas para tipo ${tipo.id_tipo_residuo}:`, vinculacoes);
+
+          // Se não há vinculações, retornar com indicadores vazios
+          if (!vinculacoes || vinculacoes.length === 0) {
+            return {
+              ...tipo,
+              indicadores: []
+            };
+          }
+
+          // Buscar detalhes dos indicadores
+          const idsIndicadores = vinculacoes.map(v => v.id_indicador);
+          const { data: indicadores, error: indicadoresError } = await supabase
+            .from('indicador')
+            .select('id_indicador, nom_indicador')
+            .in('id_indicador', idsIndicadores);
+
+          if (indicadoresError) {
+            console.error('Error fetching indicadores details:', indicadoresError);
+            return {
+              ...tipo,
+              indicadores: []
+            };
+          }
+
+          console.log(`Indicadores encontrados para tipo ${tipo.id_tipo_residuo}:`, indicadores);
+
           return {
             ...tipo,
-            indicadores: vinculacoes.map(v => ({
-              id_indicador: v.indicador.id_indicador,
-              nom_indicador: v.indicador.nom_indicador
-            }))
+            indicadores: indicadores || []
           };
         })
       );
       
-      console.log('Tipos de resíduo com indicadores:', tiposComIndicadores);
+      console.log('Tipos de resíduo com indicadores finais:', tiposComIndicadores);
       return tiposComIndicadores as TipoResiduoComIndicadores[];
     }
   });
