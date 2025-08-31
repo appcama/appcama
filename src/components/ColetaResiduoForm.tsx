@@ -105,9 +105,12 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
 
     // Filtrar por tipo de resíduo
     if (selectedTipoResiduo) {
-      filtered = filtered.filter(r => 
-        r.tipo_residuo?.des_tipo_residuo === selectedTipoResiduo
-      );
+      const selectedTipo = tiposResiduos.find(t => t.id_tipo_residuo.toString() === selectedTipoResiduo);
+      if (selectedTipo) {
+        filtered = filtered.filter(r => 
+          r.tipo_residuo?.des_tipo_residuo === selectedTipo.des_tipo_residuo
+        );
+      }
     }
 
     // Filtrar por termo de busca
@@ -180,6 +183,10 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
     onAdd(coletaResiduo);
   };
 
+  const clearTipoResiduoFilter = () => {
+    setSelectedTipoResiduo('');
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -201,19 +208,29 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="tipo_residuo">Filtrar por Tipo de Resíduo</Label>
-              <Select value={selectedTipoResiduo} onValueChange={setSelectedTipoResiduo}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos os tipos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Todos os tipos</SelectItem>
-                  {tiposResiduos.map((tipo) => (
-                    <SelectItem key={tipo.id_tipo_residuo} value={tipo.des_tipo_residuo}>
-                      {tipo.des_tipo_residuo}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={selectedTipoResiduo} onValueChange={setSelectedTipoResiduo}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Selecione um tipo de resíduo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tiposResiduos.map((tipo) => (
+                      <SelectItem key={tipo.id_tipo_residuo} value={tipo.id_tipo_residuo.toString()}>
+                        {tipo.des_tipo_residuo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedTipoResiduo && (
+                  <Button 
+                    variant="outline" 
+                    onClick={clearTipoResiduoFilter}
+                    className="px-3"
+                  >
+                    Limpar
+                  </Button>
+                )}
+              </div>
             </div>
 
             <div>
