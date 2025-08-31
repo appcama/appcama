@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Edit, Power } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 interface TipoResiduo {
   id_tipo_residuo: number;
@@ -13,6 +14,13 @@ interface TipoResiduo {
   des_recurso_natural: string;
   des_status: string;
   des_locked: string;
+}
+
+interface TipoResiduoComIndicadores extends TipoResiduo {
+  indicadores: Array<{
+    id_indicador: number;
+    nom_indicador: string;
+  }>;
 }
 
 interface TipoResiduoListProps {
@@ -26,19 +34,53 @@ export function TipoResiduoList({ onAddNew, onEdit }: TipoResiduoListProps) {
   const { data: tiposResiduo = [], isLoading, error } = useQuery({
     queryKey: ['tipos-residuo'],
     queryFn: async () => {
-      console.log('Fetching tipos de resíduo...');
-      const { data, error } = await supabase
+      console.log('Fetching tipos de resíduo com indicadores...');
+      
+      // Buscar todos os tipos de resíduos
+      const { data: tipos, error: tiposError } = await supabase
         .from('tipo_residuo')
         .select('*')
         .order('des_tipo_residuo');
       
-      if (error) {
-        console.error('Error fetching tipos de resíduo:', error);
-        throw error;
+      if (tiposError) {
+        console.error('Error fetching tipos de resíduo:', tiposError);
+        throw tiposError;
       }
+
+      // Para cada tipo, buscar seus indicadores
+      const tiposComIndicadores = await Promise.all(
+        tipos.map(async (tipo) => {
+          const { data: vinculacoes, error: vinculacoesError } = await supabase
+            .from('tipo_residuo__indicador')
+            .select(`
+              id_indicador,
+              indicador!inner (
+                id_indicador,
+                nom_indicador
+              )
+            `)
+            .eq('id_tipo_residuo', tipo.id_tipo_residuo);
+
+          if (vinculacoesError) {
+            console.error('Error fetching indicadores for tipo:', tipo.id_tipo_residuo, vinculacoesError);
+            return {
+              ...tipo,
+              indicadores: []
+            };
+          }
+
+          return {
+            ...tipo,
+            indicadores: vinculacoes.map(v => ({
+              id_indicador: v.indicador.id_indicador,
+              nom_indicador: v.indicador.nom_indicador
+            }))
+          };
+        })
+      );
       
-      console.log('Tipos de resíduo fetched:', data);
-      return data as TipoResiduo[];
+      console.log('Tipos de resíduo com indicadores:', tiposComIndicadores);
+      return tiposComIndicadores as TipoResiduoComIndicadores[];
     }
   });
 
@@ -66,7 +108,7 @@ export function TipoResiduoList({ onAddNew, onEdit }: TipoResiduoListProps) {
     }
   });
 
-  const handleToggleStatus = (tipoResiduo: TipoResiduo) => {
+  const handleToggleStatus = (tipoResiduo: TipoResiduoComIndicadores) => {
     toggleStatusMutation.mutate({
       id: tipoResiduo.id_tipo_residuo,
       currentStatus: tipoResiduo.des_status
@@ -120,6 +162,7 @@ export function TipoResiduoList({ onAddNew, onEdit }: TipoResiduoListProps) {
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>Recurso Natural</TableHead>
+                  <TableHead>Indicadores</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
@@ -132,6 +175,28 @@ export function TipoResiduoList({ onAddNew, onEdit }: TipoResiduoListProps) {
                     </TableCell>
                     <TableCell>
                       {tipo.des_recurso_natural || '-'}
+                    </TableCell>
+                    <TableCell>
+                      {tipo.indicadores.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {tipo.indicadores.map((indicador) => (
+                            <Badge 
+                              key={indicador.id_indicador} 
+                              variant="secondary"
+                              className="text-xs"
+                            >
+                              {indicador.nom_indicador}
+                            </Badge>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <span className="text-amber-600">⚠️</span>
+                          <span className="text-sm text-amber-600 font-medium">
+                            Sem indicador vinculado
+                          </span>
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${

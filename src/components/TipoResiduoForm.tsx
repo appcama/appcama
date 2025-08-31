@@ -2,7 +2,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,10 +11,12 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const formSchema = z.object({
   des_tipo_residuo: z.string().min(2, "Nome do tipo deve ter pelo menos 2 caracteres"),
   des_recurso_natural: z.string().optional(),
+  indicadores: z.array(z.number()).min(1, "Pelo menos um indicador deve ser selecionado"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -25,6 +27,12 @@ interface TipoResiduo {
   des_recurso_natural: string;
   des_status: string;
   des_locked: string;
+}
+
+interface Indicador {
+  id_indicador: number;
+  nom_indicador: string;
+  des_status: string;
 }
 
 interface TipoResiduoFormProps {
@@ -42,7 +50,40 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
     defaultValues: {
       des_tipo_residuo: "",
       des_recurso_natural: "",
+      indicadores: [],
     },
+  });
+
+  // Query para carregar indicadores disponíveis
+  const { data: indicadores = [] } = useQuery({
+    queryKey: ['indicadores-ativos'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('indicador')
+        .select('id_indicador, nom_indicador, des_status')
+        .eq('des_status', 'A')
+        .order('nom_indicador');
+      
+      if (error) throw error;
+      return data as Indicador[];
+    }
+  });
+
+  // Query para carregar indicadores já vinculados (quando editando)
+  const { data: indicadoresVinculados = [] } = useQuery({
+    queryKey: ['indicadores-vinculados', editingTipoResiduo?.id_tipo_residuo],
+    queryFn: async () => {
+      if (!editingTipoResiduo) return [];
+      
+      const { data, error } = await supabase
+        .from('tipo_residuo__indicador')
+        .select('id_indicador')
+        .eq('id_tipo_residuo', editingTipoResiduo.id_tipo_residuo);
+      
+      if (error) throw error;
+      return data.map(item => item.id_indicador);
+    },
+    enabled: !!editingTipoResiduo
   });
 
   useEffect(() => {
@@ -50,15 +91,14 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
       form.reset({
         des_tipo_residuo: editingTipoResiduo.des_tipo_residuo || "",
         des_recurso_natural: editingTipoResiduo.des_recurso_natural || "",
+        indicadores: indicadoresVinculados,
       });
     }
-  }, [editingTipoResiduo, form]);
+  }, [editingTipoResiduo, indicadoresVinculados, form]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: FormData) => {
       console.log('Saving tipo residuo:', data);
-      console.log('Is editing:', isEditing);
-      console.log('Editing object:', editingTipoResiduo);
       
       const tipoResiduoData = {
         des_tipo_residuo: data.des_tipo_residuo,
@@ -67,21 +107,28 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
         id_usuario_atualizador: 1, // TODO: get from auth context
       };
 
+      let tipoResiduoId: number;
+
       if (isEditing && editingTipoResiduo) {
-        console.log('Updating with data:', tipoResiduoData);
+        console.log('Updating tipo residuo with data:', tipoResiduoData);
         const { data: result, error } = await supabase
           .from('tipo_residuo')
           .update(tipoResiduoData)
           .eq('id_tipo_residuo', editingTipoResiduo.id_tipo_residuo)
           .select();
 
-        console.log('Update result:', result);
-        if (error) {
-          console.error('Update error:', error);
-          throw error;
-        }
+        if (error) throw error;
+        tipoResiduoId = editingTipoResiduo.id_tipo_residuo;
+
+        // Remover vinculações existentes
+        const { error: deleteError } = await supabase
+          .from('tipo_residuo__indicador')
+          .delete()
+          .eq('id_tipo_residuo', tipoResiduoId);
+
+        if (deleteError) throw deleteError;
       } else {
-        console.log('Inserting new record with data:', tipoResiduoData);
+        console.log('Inserting new tipo residuo with data:', tipoResiduoData);
         const { data: result, error } = await supabase
           .from('tipo_residuo')
           .insert([{
@@ -93,12 +140,23 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
           }])
           .select();
 
-        console.log('Insert result:', result);
-        if (error) {
-          console.error('Insert error:', error);
-          throw error;
-        }
+        if (error) throw error;
+        if (!result || result.length === 0) throw new Error('Erro ao criar tipo de resíduo');
+        
+        tipoResiduoId = result[0].id_tipo_residuo;
       }
+
+      // Inserir novas vinculações com indicadores
+      const indicadorVinculacoes = data.indicadores.map(idIndicador => ({
+        id_tipo_residuo: tipoResiduoId,
+        id_indicador: idIndicador,
+      }));
+
+      const { error: vincularError } = await supabase
+        .from('tipo_residuo__indicador')
+        .insert(indicadorVinculacoes);
+
+      if (vincularError) throw vincularError;
     },
     onSuccess: () => {
       console.log('Mutation success, invalidating queries');
@@ -150,7 +208,7 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -187,6 +245,66 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
                 />
               </div>
 
+              <FormField
+                control={form.control}
+                name="indicadores"
+                render={() => (
+                  <FormItem>
+                    <FormLabel>Indicadores *</FormLabel>
+                    <FormControl>
+                      <div className="space-y-3">
+                        {indicadores.length === 0 ? (
+                          <div className="text-sm text-muted-foreground p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                            ⚠️ Nenhum indicador encontrado. É necessário cadastrar indicadores antes de criar tipos de resíduos.
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {indicadores.map((indicador) => (
+                              <FormField
+                                key={indicador.id_indicador}
+                                control={form.control}
+                                name="indicadores"
+                                render={({ field }) => {
+                                  return (
+                                    <FormItem
+                                      key={indicador.id_indicador}
+                                      className="flex flex-row items-start space-x-3 space-y-0 border rounded-md p-3"
+                                    >
+                                      <FormControl>
+                                        <Checkbox
+                                          checked={field.value?.includes(indicador.id_indicador)}
+                                          onCheckedChange={(checked) => {
+                                            const currentValue = field.value || [];
+                                            if (checked) {
+                                              field.onChange([...currentValue, indicador.id_indicador]);
+                                            } else {
+                                              field.onChange(
+                                                currentValue.filter((value) => value !== indicador.id_indicador)
+                                              );
+                                            }
+                                          }}
+                                        />
+                                      </FormControl>
+                                      <FormLabel className="text-sm font-normal cursor-pointer">
+                                        {indicador.nom_indicador}
+                                      </FormLabel>
+                                    </FormItem>
+                                  );
+                                }}
+                              />
+                            ))}
+                          </div>
+                        )}
+                        <div className="text-xs text-muted-foreground">
+                          Selecione pelo menos um indicador para permitir o cálculo de indicadores ambientais.
+                        </div>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <div className="flex justify-end space-x-4 pt-4">
                 <Button
                   type="button"
@@ -197,7 +315,7 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
                 </Button>
                 <Button
                   type="submit"
-                  disabled={saveMutation.isPending}
+                  disabled={saveMutation.isPending || indicadores.length === 0}
                 >
                   {saveMutation.isPending
                     ? 'Salvando...'
