@@ -84,33 +84,66 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
 
   const loadData = async () => {
     try {
-      // Carregar tipos de resíduos
+      // Carregar apenas tipos de resíduos que possuem indicadores configurados
       const { data: tiposData } = await supabase
         .from('tipo_residuo')
-        .select('id_tipo_residuo, des_tipo_residuo')
-        .eq('des_status', 'A')
-        .order('des_tipo_residuo');
-
-      setTiposResiduos(tiposData || []);
-
-      // Carregar resíduos com join correto usando id_tipo_residuo
-      const { data: residuosData } = await supabase
-        .from('residuo')
         .select(`
-          id_residuo,
-          nom_residuo,
-          id_tipo_residuo,
-          tipo_residuo!id_tipo_residuo (
-            des_tipo_residuo
+          id_tipo_residuo, 
+          des_tipo_residuo,
+          tipo_residuo__indicador!inner (
+            id_indicador
           )
         `)
         .eq('des_status', 'A')
-        .order('nom_residuo');
+        .order('des_tipo_residuo');
 
-      console.log('[ColetaResiduoForm] Residuos loaded:', residuosData);
-      setResiduos(residuosData || []);
+      console.log('[ColetaResiduoForm] Tipos de resíduo com indicadores:', tiposData);
+
+      // Remover duplicatas (um tipo pode ter múltiplos indicadores)
+      const tiposUnicos = tiposData?.reduce((acc: TipoResiduo[], current) => {
+        const exists = acc.find(item => item.id_tipo_residuo === current.id_tipo_residuo);
+        if (!exists) {
+          acc.push({
+            id_tipo_residuo: current.id_tipo_residuo,
+            des_tipo_residuo: current.des_tipo_residuo
+          });
+        }
+        return acc;
+      }, []) || [];
+
+      setTiposResiduos(tiposUnicos);
+
+      // Carregar resíduos apenas dos tipos que possuem indicadores
+      const tiposComIndicadoresIds = tiposUnicos.map(t => t.id_tipo_residuo);
+      
+      if (tiposComIndicadoresIds.length > 0) {
+        const { data: residuosData } = await supabase
+          .from('residuo')
+          .select(`
+            id_residuo,
+            nom_residuo,
+            id_tipo_residuo,
+            tipo_residuo!id_tipo_residuo (
+              des_tipo_residuo
+            )
+          `)
+          .eq('des_status', 'A')
+          .in('id_tipo_residuo', tiposComIndicadoresIds)
+          .order('nom_residuo');
+
+        console.log('[ColetaResiduoForm] Residuos de tipos com indicadores:', residuosData);
+        setResiduos(residuosData || []);
+      } else {
+        console.log('[ColetaResiduoForm] Nenhum tipo de resíduo com indicadores encontrado');
+        setResiduos([]);
+      }
     } catch (error) {
       console.error('[ColetaResiduoForm] Error loading data:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao carregar dados. Verifique se existem tipos de resíduos com indicadores configurados.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -224,7 +257,11 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
               <div className="flex gap-2">
                 <Select value={selectedTipoResiduo} onValueChange={handleSelectTipoResiduo}>
                   <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Selecione um tipo de resíduo" />
+                    <SelectValue placeholder={
+                      tiposResiduos.length === 0 
+                        ? "Nenhum tipo de resíduo com indicadores disponível" 
+                        : "Selecione um tipo de resíduo"
+                    } />
                   </SelectTrigger>
                   <SelectContent>
                     {tiposResiduos.map((tipo) => (
@@ -244,6 +281,13 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
                   </Button>
                 )}
               </div>
+              
+              {tiposResiduos.length === 0 && (
+                <p className="text-sm text-red-500 mt-2">
+                  ⚠️ Nenhum tipo de resíduo possui indicadores configurados. 
+                  Configure indicadores na tabela tipo_residuo__indicador para poder adicionar resíduos às coletas.
+                </p>
+              )}
             </div>
 
             <div>
@@ -256,12 +300,14 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
                     handleSelectResiduo(residuo);
                   }
                 }}
-                disabled={!selectedTipoResiduo}
+                disabled={!selectedTipoResiduo || tiposResiduos.length === 0}
               >
                 <SelectTrigger>
                   <SelectValue 
                     placeholder={
-                      !selectedTipoResiduo 
+                      tiposResiduos.length === 0
+                        ? "Configure indicadores para tipos de resíduos primeiro"
+                        : !selectedTipoResiduo 
                         ? "Primeiro selecione um tipo de resíduo" 
                         : filteredResiduos.length === 0
                         ? "Nenhum resíduo disponível para este tipo"
@@ -283,13 +329,13 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
                 </SelectContent>
               </Select>
               
-              {selectedTipoResiduo && filteredResiduos.length === 0 && (
+              {selectedTipoResiduo && filteredResiduos.length === 0 && tiposResiduos.length > 0 && (
                 <p className="text-sm text-gray-500 mt-2">
                   Nenhum resíduo disponível para este tipo ou todos já foram adicionados.
                 </p>
               )}
               
-              {!selectedTipoResiduo && (
+              {!selectedTipoResiduo && tiposResiduos.length > 0 && (
                 <p className="text-sm text-gray-500 mt-2">
                   Selecione um tipo de resíduo para ver os resíduos disponíveis.
                 </p>
@@ -374,7 +420,10 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
               </form>
             ) : (
               <div className="text-center text-gray-500 py-8">
-                Selecione um tipo de resíduo e depois um resíduo específico
+                {tiposResiduos.length === 0 
+                  ? "Configure indicadores para tipos de resíduos para poder adicionar resíduos às coletas"
+                  : "Selecione um tipo de resíduo e depois um resíduo específico"
+                }
               </div>
             )}
           </CardContent>
