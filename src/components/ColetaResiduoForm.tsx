@@ -73,8 +73,9 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
   }, [editingResiduo, residuos]);
 
   useEffect(() => {
+    console.log('[ColetaResiduoForm] Filtering residuos. selectedTipoResiduo:', selectedTipoResiduo);
     filterResiduos();
-  }, [residuos, selectedTipoResiduo]);
+  }, [residuos, selectedTipoResiduo, existingResiduos]);
 
   const loadData = async () => {
     try {
@@ -131,7 +132,14 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
       );
     }
 
+    console.log('[ColetaResiduoForm] Final filtered residuos:', filtered);
     setFilteredResiduos(filtered);
+  };
+
+  const handleSelectTipoResiduo = (value: string) => {
+    console.log('[ColetaResiduoForm] Tipo residuo selected:', value);
+    setSelectedTipoResiduo(value);
+    setSelectedResiduo(null); // Limpar seleção de resíduo ao mudar tipo
   };
 
   const handleSelectResiduo = (residuo: Residuo) => {
@@ -209,7 +217,7 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
             <div>
               <Label htmlFor="tipo_residuo">Filtrar por Tipo de Resíduo</Label>
               <div className="flex gap-2">
-                <Select value={selectedTipoResiduo} onValueChange={setSelectedTipoResiduo}>
+                <Select value={selectedTipoResiduo} onValueChange={handleSelectTipoResiduo}>
                   <SelectTrigger className="flex-1">
                     <SelectValue placeholder="Selecione um tipo de resíduo" />
                   </SelectTrigger>
@@ -235,58 +243,40 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
 
             <div>
               <Label>Selecionar Resíduo</Label>
-              <Popover open={openResiduoCombo} onOpenChange={setOpenResiduoCombo}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={openResiduoCombo}
-                    className="w-full justify-between"
-                    disabled={!selectedTipoResiduo}
-                  >
-                    {selectedResiduo
-                      ? selectedResiduo.nom_residuo
-                      : selectedTipoResiduo 
-                        ? "Selecione um resíduo..."
-                        : "Primeiro selecione um tipo de resíduo"
+              <Select 
+                value={selectedResiduo?.id_residuo.toString() || ''} 
+                onValueChange={(value) => {
+                  const residuo = filteredResiduos.find(r => r.id_residuo.toString() === value);
+                  if (residuo) {
+                    handleSelectResiduo(residuo);
+                  }
+                }}
+                disabled={!selectedTipoResiduo}
+              >
+                <SelectTrigger>
+                  <SelectValue 
+                    placeholder={
+                      !selectedTipoResiduo 
+                        ? "Primeiro selecione um tipo de resíduo" 
+                        : filteredResiduos.length === 0
+                        ? "Nenhum resíduo disponível para este tipo"
+                        : "Selecione um resíduo..."
                     }
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[400px] p-0">
-                  <Command>
-                    <CommandInput placeholder="Buscar resíduo..." />
-                    <CommandEmpty>
-                      {selectedTipoResiduo 
-                        ? "Nenhum resíduo encontrado."
-                        : "Selecione um tipo de resíduo primeiro."
-                      }
-                    </CommandEmpty>
-                    <CommandGroup className="max-h-64 overflow-y-auto">
-                      {filteredResiduos.map((residuo) => (
-                        <CommandItem
-                          key={residuo.id_residuo}
-                          value={residuo.nom_residuo}
-                          onSelect={() => handleSelectResiduo(residuo)}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              selectedResiduo?.id_residuo === residuo.id_residuo ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          <div className="flex flex-col">
-                            <span className="font-medium">{residuo.nom_residuo}</span>
-                            <span className="text-sm text-gray-500">
-                              {residuo.tipo_residuo?.des_tipo_residuo}
-                            </span>
-                          </div>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredResiduos.map((residuo) => (
+                    <SelectItem key={residuo.id_residuo} value={residuo.id_residuo.toString()}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{residuo.nom_residuo}</span>
+                        <span className="text-sm text-gray-500">
+                          {residuo.tipo_residuo?.des_tipo_residuo}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               
               {selectedTipoResiduo && filteredResiduos.length === 0 && (
                 <p className="text-sm text-gray-500 mt-2">
