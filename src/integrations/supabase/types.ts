@@ -1131,6 +1131,10 @@ export type Database = {
           user_status: string
         }[]
       }
+      calculate_and_insert_indicators: {
+        Args: { p_id_coleta: number }
+        Returns: undefined
+      }
       debug_authenticate_user: {
         Args: { cpf_cnpj_param: string; senha_param: string }
         Returns: {

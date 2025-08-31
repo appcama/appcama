@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Trash2, Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -196,6 +195,33 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
     return { totalQuantidade, totalValor };
   };
 
+  // Função para recalcular indicadores após operações na coleta
+  const recalculateIndicators = async (coletaId: number) => {
+    try {
+      console.log('[ColetaForm] Recalculando indicadores para coleta:', coletaId);
+      
+      // Chamar a função do banco que calcula os indicadores automaticamente
+      const { error } = await supabase.rpc('calculate_and_insert_indicators', {
+        p_id_coleta: coletaId
+      });
+
+      if (error) {
+        console.error('[ColetaForm] Erro ao recalcular indicadores:', error);
+        throw error;
+      }
+
+      console.log('[ColetaForm] Indicadores recalculados com sucesso para coleta:', coletaId);
+    } catch (error) {
+      console.error('[ColetaForm] Erro ao recalcular indicadores:', error);
+      // Não interrumpemos o fluxo principal, apenas logamos o erro
+      toast({
+        title: 'Aviso',
+        description: 'Coleta salva, mas houve um problema ao calcular os indicadores ambientais.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -241,7 +267,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         if (error) throw error;
         coletaId = editingColeta.id_coleta;
 
-        // Remover resíduos existentes
+        // Remover resíduos existentes (os indicadores serão removidos automaticamente pelo trigger)
         await supabase
           .from('coleta_residuo')
           .delete()
@@ -258,7 +284,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         coletaId = data.id_coleta;
       }
 
-      // Inserir resíduos da coleta
+      // Inserir resíduos da coleta (os indicadores serão calculados automaticamente pelo trigger)
       const residuosData = coletaResiduos.map(residuo => ({
         id_coleta: coletaId,
         id_residuo: residuo.id_residuo,
@@ -275,9 +301,15 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
 
       if (residuosError) throw residuosError;
 
+      // Os indicadores serão calculados automaticamente pelo trigger do banco
+      // Mas vamos também chamar a função manualmente para garantir que funcionou
+      await recalculateIndicators(coletaId);
+
       toast({
         title: 'Sucesso',
-        description: editingColeta ? 'Coleta atualizada com sucesso!' : 'Coleta cadastrada com sucesso!',
+        description: editingColeta 
+          ? 'Coleta atualizada com sucesso! Indicadores ambientais recalculados.' 
+          : 'Coleta cadastrada com sucesso! Indicadores ambientais calculados.',
       });
 
       onSuccess();
