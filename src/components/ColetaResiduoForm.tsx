@@ -87,14 +87,14 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
 
       setTiposResiduos(tiposData || []);
 
-      // Carregar resíduos com join correto
+      // Carregar resíduos com join correto usando id_tipo_residuo
       const { data: residuosData } = await supabase
         .from('residuo')
         .select(`
           id_residuo,
           nom_residuo,
           id_tipo_residuo,
-          tipo_residuo!inner (
+          tipo_residuo!id_tipo_residuo (
             des_tipo_residuo
           )
         `)
