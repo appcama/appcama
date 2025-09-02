@@ -60,18 +60,31 @@ export function IndicadorForm({ editingIndicador, onBack, onSave }: IndicadorFor
       
       const { data, error } = await supabase
         .from('unidade_medida')
-        .select('*')
+        .select('id_unidade_medida, des_unidade_medida, cod_unidade_medida')
         .order('des_unidade_medida');
 
       console.log("[IndicadorForm] Unidades response:", { data, error });
 
       if (error) {
         console.error('[IndicadorForm] Error fetching unidades:', error);
-        throw error;
+        toast({
+          title: "Erro",
+          description: `Erro ao carregar unidades de medida: ${error.message}`,
+          variant: "destructive",
+        });
+        return;
       }
       
       console.log("[IndicadorForm] Successfully loaded unidades:", data?.length || 0);
       setUnidadesMedida(data || []);
+      
+      if (!data || data.length === 0) {
+        toast({
+          title: "Aviso",
+          description: "Nenhuma unidade de medida encontrada",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error('[IndicadorForm] Erro ao buscar unidades de medida:', error);
       toast({
