@@ -69,43 +69,103 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
 
   const loadFormData = async () => {
     try {
+      console.log('[ColetaForm] Loading form data...');
+      
       // Carregar pontos de coleta
-      const { data: pontosData } = await supabase
+      console.log('[ColetaForm] Loading pontos de coleta...');
+      const { data: pontosData, error: pontosError } = await supabase
         .from('ponto_coleta')
         .select('id_ponto_coleta, nom_ponto_coleta')
         .eq('des_status', 'A')
         .order('nom_ponto_coleta');
 
-      setPontosColeta(pontosData || []);
+      if (pontosError) {
+        console.error('[ColetaForm] Error loading pontos de coleta:', pontosError);
+        toast({
+          title: "Erro",
+          description: "Erro ao carregar pontos de coleta: " + pontosError.message,
+          variant: "destructive"
+        });
+      } else {
+        console.log('[ColetaForm] Pontos de coleta loaded:', pontosData?.length || 0);
+        setPontosColeta(pontosData || []);
+      }
 
-      // Carregar entidades geradoras
-      const { data: entidadesData } = await supabase
+      // Carregar entidades geradoras (simplificar query para evitar problemas com JOIN)
+      console.log('[ColetaForm] Loading entidades geradoras...');
+      const { data: entidadesData, error: entidadesError } = await supabase
         .from('entidade')
         .select(`
           id_entidade, 
           nom_entidade,
-          tipo_entidade:id_tipo_entidade (
-            des_geradora_residuo
-          )
+          id_tipo_entidade
         `)
         .eq('des_status', 'A')
         .order('nom_entidade');
 
-      const entidadesGeradoras = (entidadesData || []).filter(
-        (entidade: any) => entidade.tipo_entidade?.des_geradora_residuo === 'A'
-      );
-      setEntidades(entidadesGeradoras);
+      if (entidadesError) {
+        console.error('[ColetaForm] Error loading entidades:', entidadesError);
+        toast({
+          title: "Erro",
+          description: "Erro ao carregar entidades: " + entidadesError.message,
+          variant: "destructive"
+        });
+      } else {
+        // Carregar tipos de entidade separadamente para fazer o filtro
+        const { data: tiposEntidadeData, error: tiposError } = await supabase
+          .from('tipo_entidade')
+          .select('id_tipo_entidade, des_geradora_residuo')
+          .eq('des_status', 'A');
+
+        if (tiposError) {
+          console.error('[ColetaForm] Error loading tipos entidade:', tiposError);
+          // Usar todas as entidades se não conseguir carregar os tipos
+          setEntidades(entidadesData || []);
+        } else {
+          // Filtrar entidades geradoras
+          const tiposGeradoras = new Set(
+            tiposEntidadeData
+              .filter(tipo => tipo.des_geradora_residuo === 'A')
+              .map(tipo => tipo.id_tipo_entidade)
+          );
+          
+          const entidadesGeradoras = (entidadesData || []).filter(
+            (entidade: any) => tiposGeradoras.has(entidade.id_tipo_entidade)
+          );
+          
+          console.log('[ColetaForm] Entidades geradoras loaded:', entidadesGeradoras.length);
+          setEntidades(entidadesGeradoras);
+        }
+      }
 
       // Carregar eventos
-      const { data: eventosData } = await supabase
+      console.log('[ColetaForm] Loading eventos...');
+      const { data: eventosData, error: eventosError } = await supabase
         .from('evento')
         .select('id_evento, nom_evento')
         .eq('des_status', 'A')
         .order('nom_evento');
 
-      setEventos(eventosData || []);
+      if (eventosError) {
+        console.error('[ColetaForm] Error loading eventos:', eventosError);
+        toast({
+          title: "Erro",
+          description: "Erro ao carregar eventos: " + eventosError.message,
+          variant: "destructive"
+        });
+      } else {
+        console.log('[ColetaForm] Eventos loaded:', eventosData?.length || 0);
+        setEventos(eventosData || []);
+      }
+
+      console.log('[ColetaForm] Form data loading completed');
     } catch (error) {
       console.error('[ColetaForm] Error loading form data:', error);
+      toast({
+        title: "Erro",
+        description: "Erro inesperado ao carregar dados do formulário",
+        variant: "destructive"
+      });
     }
   };
 
