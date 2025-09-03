@@ -12,6 +12,9 @@ interface Coleta {
   cod_coleta: string;
   dat_coleta: string;
   vlr_total: number;
+  id_ponto_coleta?: number;
+  id_entidade_geradora?: number;
+  id_evento?: number;
   ponto_coleta?: {
     nom_ponto_coleta: string;
   };
@@ -46,6 +49,9 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
           cod_coleta,
           dat_coleta,
           vlr_total,
+          id_ponto_coleta,
+          id_entidade_geradora,
+          id_evento,
           ponto_coleta:id_ponto_coleta (
             nom_ponto_coleta
           ),

@@ -173,14 +173,24 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
     if (!editingColeta) return;
 
     try {
+      console.log('[ColetaForm] Loading coleta data for editing:', editingColeta);
+      console.log('[ColetaForm] FK fields:', {
+        id_ponto_coleta: editingColeta.id_ponto_coleta,
+        id_entidade_geradora: editingColeta.id_entidade_geradora,
+        id_evento: editingColeta.id_evento
+      });
+
       // Carregar dados da coleta
-      setFormData({
+      const newFormData = {
         id_ponto_coleta: editingColeta.id_ponto_coleta?.toString() || '',
         id_entidade_geradora: editingColeta.id_entidade_geradora?.toString() || '',
         id_evento: editingColeta.id_evento?.toString() || '',
         dat_coleta: editingColeta.dat_coleta ? editingColeta.dat_coleta.split('T')[0] : '',
         cod_coleta: editingColeta.cod_coleta || '',
-      });
+      };
+
+      console.log('[ColetaForm] Setting form data:', newFormData);
+      setFormData(newFormData);
 
       // Carregar resíduos da coleta
       const { data: residuosData } = await supabase
