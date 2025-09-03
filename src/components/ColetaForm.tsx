@@ -59,10 +59,13 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
   });
 
   useEffect(() => {
+    console.log('[ColetaForm] useEffect triggered with editingColeta:', editingColeta);
     loadFormData();
     if (editingColeta) {
+      console.log('[ColetaForm] editingColeta exists, calling loadColetaData');
       loadColetaData();
     } else {
+      console.log('[ColetaForm] No editingColeta, generating new codigo');
       generateCodigoColeta();
     }
   }, [editingColeta]);

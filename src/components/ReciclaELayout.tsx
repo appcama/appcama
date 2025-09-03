@@ -53,7 +53,8 @@ export function ReciclaELayout() {
   };
 
   const handleEdit = (item: any) => {
-    console.log('Edit clicked for:', activeItem, item);
+    console.log('[ReciclaELayout] Edit clicked for:', activeItem, item);
+    console.log('[ReciclaELayout] Item data:', JSON.stringify(item, null, 2));
     setCurrentView('form');
     setEditingItem(item);
   };
