@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Building2,
   Calendar,
@@ -11,43 +12,44 @@ import {
   Users,
   Zap,
 } from "lucide-react";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
 
-const statsCards = [
+const statsCardsConfig = [
   {
-    title: "Cooperativas Ativas",
-    value: "45",
+    title: "Total de Entidades",
     description: "Cadastradas no sistema",
     change: "+8.2%",
     period: "este mês",
     icon: Building2,
     color: "text-recycle-green",
+    key: "totalEntidades" as const,
   },
   {
-    title: "Catadores/as",
-    value: "1,287",
-    description: "Total de catadores",
+    title: "Entidades Coletoras",
+    description: "Cooperativas e catadores",
     change: "+5.1%",
     period: "este mês",
     icon: Users,
     color: "text-eco-blue",
+    key: "entidadesColetoras" as const,
   },
   {
     title: "Eventos de Coleta",
-    value: "23",
-    description: "Eventos este mês",
+    description: "Eventos ativos",
     change: "+15.3%",
     period: "este mês",
     icon: Calendar,
     color: "text-eco-orange",
+    key: "eventosColeta" as const,
   },
   {
     title: "Geradores de Resíduo",
-    value: "156",
-    description: "Empresas cadastradas",
+    description: "Empresas e geradores",
     change: "+3.8%",
     period: "este mês",
     icon: Factory,
     color: "text-earth-brown",
+    key: "geradoresResiduos" as const,
   },
 ];
 
@@ -94,6 +96,8 @@ const environmentalImpact = [
 ];
 
 export function Dashboard() {
+  const { data: stats, isLoading, error } = useDashboardStats();
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -106,29 +110,35 @@ export function Dashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {statsCards.map((stat, index) => {
-          const Icon = stat.icon;
+        {statsCardsConfig.map((statConfig, index) => {
+          const Icon = statConfig.icon;
+          const value = stats?.[statConfig.key] ?? 0;
+          
           return (
             <Card key={index} className="relative">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {stat.title}
+                  {statConfig.title}
                 </CardTitle>
-                <Icon className={`h-4 w-4 ${stat.color}`} />
+                <Icon className={`h-4 w-4 ${statConfig.color}`} />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-foreground">
-                  {stat.value}
-                </div>
+                {isLoading ? (
+                  <Skeleton className="h-8 w-16 mb-2" />
+                ) : (
+                  <div className="text-2xl font-bold text-foreground">
+                    {value.toLocaleString()}
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground">
-                  {stat.description}
+                  {statConfig.description}
                 </p>
                 <div className="flex items-center mt-2">
                   <Badge
                     variant="secondary"
                     className="text-xs bg-recycle-green-light text-recycle-green"
                   >
-                    {stat.change} {stat.period}
+                    {statConfig.change} {statConfig.period}
                   </Badge>
                 </div>
               </CardContent>
