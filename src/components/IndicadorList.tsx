@@ -2,10 +2,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Edit, Power, PowerOff, Loader2 } from "lucide-react";
+import { Plus, TrendingUp, Edit, Power, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -13,7 +11,6 @@ interface Indicador {
   id_indicador: number;
   nom_indicador: string;
   id_unidade_medida: number;
-  qtd_referencia: number | null;
   des_status: string;
   unidade_medida?: {
     des_unidade_medida: string;
@@ -29,7 +26,6 @@ interface IndicadorListProps {
 export function IndicadorList({ onEdit, onNew }: IndicadorListProps) {
   const [indicadores, setIndicadores] = useState<Indicador[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [updatingStatus, setUpdatingStatus] = useState<number | null>(null);
   const { toast } = useToast();
 
@@ -108,67 +104,47 @@ export function IndicadorList({ onEdit, onNew }: IndicadorListProps) {
     }
   };
 
-  const filteredIndicadores = indicadores.filter(indicador =>
-    indicador.nom_indicador?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
+      <Card>
+        <CardContent className="flex items-center justify-center p-8">
+          <div className="text-muted-foreground">Carregando indicadores...</div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Indicadores</h2>
-          <p className="text-gray-600">Gerencie os indicadores do sistema</p>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="h-5 w-5" />
+          <CardTitle>Indicadores</CardTitle>
         </div>
         <Button onClick={onNew} className="flex items-center gap-2">
-          <Plus className="w-4 h-4" />
+          <Plus className="h-4 w-4" />
           Novo Indicador
         </Button>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Lista de Indicadores</span>
-            <div className="flex items-center gap-2">
-              <Search className="w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Buscar indicadores..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-64"
-              />
-            </div>
-          </CardTitle>
-        </CardHeader>
-        
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Unidade de Medida</TableHead>
-                <TableHead>Qtd. Referência</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredIndicadores.length === 0 ? (
+      </CardHeader>
+      <CardContent>
+        {indicadores.length === 0 ? (
+          <div className="text-center text-muted-foreground py-8">
+            Nenhum indicador encontrado
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                    {searchTerm ? "Nenhum indicador encontrado" : "Nenhum indicador cadastrado"}
-                  </TableCell>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Unidade de Medida</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
-              ) : (
-                filteredIndicadores.map((indicador) => (
+              </TableHeader>
+              <TableBody>
+                {indicadores.map((indicador) => (
                   <TableRow key={indicador.id_indicador}>
                     <TableCell className="font-medium">
                       {indicador.nom_indicador}
@@ -181,45 +157,50 @@ export function IndicadorList({ onEdit, onNew }: IndicadorListProps) {
                       )}
                     </TableCell>
                     <TableCell>
-                      {indicador.qtd_referencia ? indicador.qtd_referencia.toLocaleString() : 'N/A'}
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        indicador.des_status === 'A' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {indicador.des_status === 'A' ? 'Ativo' : 'Inativo'}
+                      </span>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={indicador.des_status === 'A' ? 'default' : 'secondary'}>
-                        {indicador.des_status === 'A' ? 'Ativo' : 'Inativo'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center gap-2">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => onEdit(indicador)}
+                          className="h-8 w-8 p-0"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Edit className="h-4 w-4" />
                         </Button>
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => handleToggleStatus(indicador)}
                           disabled={updatingStatus === indicador.id_indicador}
+                          className={`h-8 w-8 p-0 ${
+                            indicador.des_status === 'A' 
+                              ? 'hover:bg-red-50 hover:text-red-600' 
+                              : 'hover:bg-green-50 hover:text-green-600'
+                          }`}
                         >
                           {updatingStatus === indicador.id_indicador ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : indicador.des_status === 'A' ? (
-                            <PowerOff className="w-4 h-4" />
+                            <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
-                            <Power className="w-4 h-4" />
+                            <Power className="h-4 w-4" />
                           )}
                         </Button>
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

@@ -12,7 +12,6 @@ interface Indicador {
   id_indicador: number;
   nom_indicador: string;
   id_unidade_medida: number;
-  qtd_referencia: number | null;
   des_status: string;
 }
 
@@ -32,7 +31,6 @@ export function IndicadorForm({ editingIndicador, onBack, onSave }: IndicadorFor
   const [formData, setFormData] = useState({
     nom_indicador: "",
     id_unidade_medida: 0,
-    qtd_referencia: null as number | null,
   });
   
   const [unidadesMedida, setUnidadesMedida] = useState<UnidadeMedida[]>([]);
@@ -49,7 +47,6 @@ export function IndicadorForm({ editingIndicador, onBack, onSave }: IndicadorFor
       setFormData({
         nom_indicador: editingIndicador.nom_indicador || "",
         id_unidade_medida: editingIndicador.id_unidade_medida || 0,
-        qtd_referencia: editingIndicador.qtd_referencia,
       });
     }
   }, [editingIndicador]);
@@ -131,7 +128,6 @@ export function IndicadorForm({ editingIndicador, onBack, onSave }: IndicadorFor
       const dataToSubmit = {
         nom_indicador: formData.nom_indicador.trim(),
         id_unidade_medida: formData.id_unidade_medida,
-        qtd_referencia: formData.qtd_referencia,
         id_usuario_criador: 1,
         dat_criacao: new Date().toISOString(),
         des_status: 'A',
@@ -235,17 +231,6 @@ export function IndicadorForm({ editingIndicador, onBack, onSave }: IndicadorFor
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="qtd_referencia">Quantidade de Referência</Label>
-              <Input
-                id="qtd_referencia"
-                type="number"
-                step="0.01"
-                value={formData.qtd_referencia || ""}
-                onChange={(e) => handleInputChange('qtd_referencia', e.target.value ? parseFloat(e.target.value) : null)}
-                placeholder="Digite a quantidade de referência"
-              />
-            </div>
 
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={onBack}>
