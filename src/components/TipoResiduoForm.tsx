@@ -2,21 +2,20 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Trash2, Plus, Edit2 } from "lucide-react";
 import { toast } from "sonner";
-import { useEffect } from "react";
-import { Checkbox } from "@/components/ui/checkbox";
+import { useState, useEffect } from "react";
+import { TipoResiduoIndicadorForm } from "./TipoResiduoIndicadorForm";
 
 const formSchema = z.object({
   des_tipo_residuo: z.string().min(2, "Nome do tipo deve ter pelo menos 2 caracteres"),
   des_recurso_natural: z.string().optional(),
-  indicadores: z.array(z.number()).min(1, "Pelo menos um indicador deve ser selecionado"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -29,10 +28,11 @@ interface TipoResiduo {
   des_locked: string;
 }
 
-interface Indicador {
+interface TipoResiduoIndicador {
+  id?: number;
   id_indicador: number;
   nom_indicador: string;
-  des_status: string;
+  qtd_referencia: number | null;
 }
 
 interface TipoResiduoFormProps {
@@ -44,77 +44,128 @@ interface TipoResiduoFormProps {
 export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoResiduoFormProps) {
   const queryClient = useQueryClient();
   const isEditing = !!editingTipoResiduo;
+  
+  const [showIndicadorForm, setShowIndicadorForm] = useState(false);
+  const [indicadores, setIndicadores] = useState<TipoResiduoIndicador[]>([]);
+  const [editingIndicador, setEditingIndicador] = useState<TipoResiduoIndicador | null>(null);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       des_tipo_residuo: "",
       des_recurso_natural: "",
-      indicadores: [],
     },
   });
 
-  // Query para carregar indicadores disponíveis
-  const { data: indicadores = [] } = useQuery({
-    queryKey: ['indicadores-ativos'],
-    queryFn: async () => {
-      console.log('Buscando indicadores ativos...');
-      const { data, error } = await supabase
-        .from('indicador')
-        .select('id_indicador, nom_indicador, des_status')
-        .eq('des_status', 'A')
-        .order('nom_indicador');
-      
-      if (error) {
-        console.error('Error fetching indicadores:', error);
-        throw error;
-      }
-      
-      console.log('Indicadores ativos encontrados:', data);
-      return data as Indicador[];
+  // Carregar indicadores vinculados quando editando
+  useEffect(() => {
+    if (editingTipoResiduo) {
+      loadIndicadoresVinculados();
     }
-  });
+  }, [editingTipoResiduo]);
 
-  // Query para carregar indicadores já vinculados (quando editando)
-  const { data: indicadoresVinculados = [] } = useQuery({
-    queryKey: ['indicadores-vinculados', editingTipoResiduo?.id_tipo_residuo],
-    queryFn: async () => {
-      if (!editingTipoResiduo) return [];
-      
+  const loadIndicadoresVinculados = async () => {
+    if (!editingTipoResiduo) return;
+    
+    try {
       console.log('Buscando indicadores vinculados para tipo:', editingTipoResiduo.id_tipo_residuo);
-      const { data, error } = await supabase
+      
+      // Buscar indicadores vinculados com suas informações
+      const { data: vinculacoes, error: vinculacoesError } = await supabase
         .from('tipo_residuo__indicador')
-        .select('id_indicador')
+        .select('id_indicador, qtd_referencia')
         .eq('id_tipo_residuo', editingTipoResiduo.id_tipo_residuo);
       
-      if (error) {
-        console.error('Error fetching indicadores vinculados:', error);
-        throw error;
+      if (vinculacoesError) {
+        console.error('Error fetching vinculacoes:', vinculacoesError);
+        throw vinculacoesError;
       }
-      
-      const ids = data.map(item => item.id_indicador);
-      console.log('Indicadores vinculados encontrados:', ids);
-      return ids;
-    },
-    enabled: !!editingTipoResiduo
-  });
 
+      if (!vinculacoes || vinculacoes.length === 0) {
+        console.log('Nenhuma vinculação encontrada');
+        setIndicadores([]);
+        return;
+      }
+
+      // Buscar informações dos indicadores
+      const indicadorIds = (vinculacoes as any[]).map(v => v.id_indicador);
+      const { data: indicadoresData, error: indicadoresError } = await supabase
+        .from('indicador')
+        .select('id_indicador, nom_indicador')
+        .in('id_indicador', indicadorIds);
+      
+      if (indicadoresError) {
+        console.error('Error fetching indicadores data:', indicadoresError);
+        throw indicadoresError;
+      }
+
+      // Combinar os dados
+      const indicadoresVinculados = (vinculacoes as any[]).map(vinculacao => {
+        const indicadorData = indicadoresData?.find(i => i.id_indicador === vinculacao.id_indicador);
+        return {
+          id_indicador: vinculacao.id_indicador,
+          nom_indicador: indicadorData?.nom_indicador || 'Indicador não encontrado',
+          qtd_referencia: vinculacao.qtd_referencia,
+        };
+      });
+      
+      console.log('Indicadores vinculados carregados:', indicadoresVinculados);
+      setIndicadores(indicadoresVinculados);
+    } catch (error) {
+      console.error('Erro ao carregar indicadores vinculados:', error);
+      toast.error('Erro ao carregar indicadores vinculados');
+    }
+  };
+
+  // Carregar dados do formulário para edição
   useEffect(() => {
     if (editingTipoResiduo) {
       console.log('Carregando dados para edição:', editingTipoResiduo);
-      console.log('Indicadores vinculados:', indicadoresVinculados);
       
       form.reset({
         des_tipo_residuo: editingTipoResiduo.des_tipo_residuo || "",
         des_recurso_natural: editingTipoResiduo.des_recurso_natural || "",
-        indicadores: indicadoresVinculados,
       });
     }
-  }, [editingTipoResiduo, indicadoresVinculados, form]);
+  }, [editingTipoResiduo, form]);
+
+  // Gerenciamento de indicadores
+  const handleAddIndicador = (indicador: TipoResiduoIndicador) => {
+    if (editingIndicador) {
+      // Atualizar indicador existente
+      setIndicadores(prev => prev.map(i => 
+        i.id_indicador === editingIndicador.id_indicador ? indicador : i
+      ));
+    } else {
+      // Adicionar novo indicador
+      setIndicadores(prev => [...prev, indicador]);
+    }
+    setEditingIndicador(null);
+    setShowIndicadorForm(false);
+  };
+
+  const handleEditIndicador = (indicador: TipoResiduoIndicador) => {
+    setEditingIndicador(indicador);
+    setShowIndicadorForm(true);
+  };
+
+  const handleRemoveIndicador = (idIndicador: number) => {
+    setIndicadores(prev => prev.filter(i => i.id_indicador !== idIndicador));
+  };
+
+  const handleBackFromIndicadorForm = () => {
+    setEditingIndicador(null);
+    setShowIndicadorForm(false);
+  };
 
   const saveMutation = useMutation({
     mutationFn: async (data: FormData) => {
       console.log('Salvando tipo residuo:', data);
+      console.log('Indicadores vinculados:', indicadores);
+      
+      if (indicadores.length === 0) {
+        throw new Error('Pelo menos um indicador deve ser vinculado');
+      }
       
       const tipoResiduoData = {
         des_tipo_residuo: data.des_tipo_residuo,
@@ -179,26 +230,25 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
       }
 
       // Inserir novas vinculações com indicadores
-      console.log('Criando vinculações para indicadores:', data.indicadores);
-      const indicadorVinculacoes = data.indicadores.map(idIndicador => ({
+      console.log('Criando vinculações para indicadores:', indicadores);
+      const indicadorVinculacoes = indicadores.map(indicador => ({
         id_tipo_residuo: tipoResiduoId,
-        id_indicador: idIndicador,
+        id_indicador: indicador.id_indicador,
+        qtd_referencia: indicador.qtd_referencia,
       }));
 
       console.log('Dados das vinculações a serem inseridas:', indicadorVinculacoes);
 
-      if (indicadorVinculacoes.length > 0) {
-        const { error: vincularError } = await supabase
-          .from('tipo_residuo__indicador')
-          .insert(indicadorVinculacoes);
+      const { error: vincularError } = await supabase
+        .from('tipo_residuo__indicador')
+        .insert(indicadorVinculacoes);
 
-        if (vincularError) {
-          console.error('Erro ao criar vinculações:', vincularError);
-          throw vincularError;
-        }
-        
-        console.log('Vinculações criadas com sucesso!');
+      if (vincularError) {
+        console.error('Erro ao criar vinculações:', vincularError);
+        throw vincularError;
       }
+      
+      console.log('Vinculações criadas com sucesso!');
     },
     onSuccess: () => {
       console.log('Mutation success, invalidating queries');
@@ -219,8 +269,21 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
 
   const onSubmit = (data: FormData) => {
     console.log('Form submitted com dados:', data);
+    console.log('Indicadores selecionados:', indicadores);
     saveMutation.mutate(data);
   };
+
+  // Renderizar formulário de indicador se necessário
+  if (showIndicadorForm) {
+    return (
+      <TipoResiduoIndicadorForm
+        onBack={handleBackFromIndicadorForm}
+        onAdd={handleAddIndicador}
+        existingIndicadores={indicadores}
+        editingIndicador={editingIndicador}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -288,65 +351,72 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="indicadores"
-                render={() => (
-                  <FormItem>
-                    <FormLabel>Indicadores *</FormLabel>
-                    <FormControl>
-                      <div className="space-y-3">
-                        {indicadores.length === 0 ? (
-                          <div className="text-sm text-muted-foreground p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                            ⚠️ Nenhum indicador encontrado. É necessário cadastrar indicadores antes de criar tipos de resíduos.
+              {/* Lista de Indicadores Vinculados */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <FormLabel>Indicadores Vinculados *</FormLabel>
+                  <Button
+                    type="button"
+                    onClick={() => setShowIndicadorForm(true)}
+                    className="bg-recycle-green hover:bg-recycle-green-dark"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar Indicador
+                  </Button>
+                </div>
+
+                {indicadores.length === 0 ? (
+                  <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
+                    <p className="text-gray-500">
+                      Nenhum indicador vinculado. Clique em "Adicionar Indicador" para vincular indicadores a este tipo de resíduo.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {indicadores.map((indicador) => (
+                      <Card key={indicador.id_indicador} className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-medium">{indicador.nom_indicador}</h4>
+                            <p className="text-sm text-gray-600">
+                              Quantidade de Referência: {
+                                indicador.qtd_referencia 
+                                  ? indicador.qtd_referencia.toLocaleString('pt-BR', {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2
+                                    })
+                                  : 'Não definida'
+                              }
+                            </p>
                           </div>
-                        ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {indicadores.map((indicador) => (
-                              <FormField
-                                key={indicador.id_indicador}
-                                control={form.control}
-                                name="indicadores"
-                                render={({ field }) => {
-                                  return (
-                                    <FormItem
-                                      key={indicador.id_indicador}
-                                      className="flex flex-row items-start space-x-3 space-y-0 border rounded-md p-3"
-                                    >
-                                      <FormControl>
-                                        <Checkbox
-                                          checked={field.value?.includes(indicador.id_indicador)}
-                                          onCheckedChange={(checked) => {
-                                            const currentValue = field.value || [];
-                                            if (checked) {
-                                              field.onChange([...currentValue, indicador.id_indicador]);
-                                            } else {
-                                              field.onChange(
-                                                currentValue.filter((value) => value !== indicador.id_indicador)
-                                              );
-                                            }
-                                          }}
-                                        />
-                                      </FormControl>
-                                      <FormLabel className="text-sm font-normal cursor-pointer">
-                                        {indicador.nom_indicador}
-                                      </FormLabel>
-                                    </FormItem>
-                                  );
-                                }}
-                              />
-                            ))}
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditIndicador(indicador)}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleRemoveIndicador(indicador.id_indicador)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
-                        )}
-                        <div className="text-xs text-muted-foreground">
-                          Selecione pelo menos um indicador para permitir o cálculo de indicadores ambientais.
                         </div>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                      </Card>
+                    ))}
+                  </div>
                 )}
-              />
+
+                <div className="text-xs text-muted-foreground">
+                  É necessário vincular pelo menos um indicador para permitir o cálculo de indicadores ambientais.
+                </div>
+              </div>
 
               <div className="flex justify-end space-x-4 pt-4">
                 <Button
