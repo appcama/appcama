@@ -57,111 +57,123 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
     dat_coleta: new Date().toISOString().split('T')[0],
     cod_coleta: '',
   });
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   useEffect(() => {
     console.log('[ColetaForm] useEffect triggered with editingColeta:', editingColeta);
-    loadFormData();
-    if (editingColeta) {
-      console.log('[ColetaForm] editingColeta exists, calling loadColetaData');
-      loadColetaData();
-    } else {
-      console.log('[ColetaForm] No editingColeta, generating new codigo');
-      generateCodigoColeta();
-    }
+    initializeForm();
   }, [editingColeta]);
 
-  const loadFormData = async () => {
+  const initializeForm = async () => {
     try {
-      console.log('[ColetaForm] Loading form data...');
+      setIsDataLoaded(false);
       
-      // Carregar pontos de coleta
-      console.log('[ColetaForm] Loading pontos de coleta...');
-      const { data: pontosData, error: pontosError } = await supabase
-        .from('ponto_coleta')
-        .select('id_ponto_coleta, nom_ponto_coleta')
-        .eq('des_status', 'A')
-        .order('nom_ponto_coleta');
-
-      if (pontosError) {
-        console.error('[ColetaForm] Error loading pontos de coleta:', pontosError);
-        toast({
-          title: "Erro",
-          description: "Erro ao carregar pontos de coleta: " + pontosError.message,
-          variant: "destructive"
-        });
+      // Aguardar o carregamento de todos os dados simultaneamente
+      await loadAllFormData();
+      
+      if (editingColeta) {
+        console.log('[ColetaForm] editingColeta exists, setting form values');
+        await loadColetaEditingData();
       } else {
-        console.log('[ColetaForm] Pontos de coleta loaded:', pontosData?.length || 0);
-        setPontosColeta(pontosData || []);
+        console.log('[ColetaForm] No editingColeta, generating new codigo');
+        generateCodigoColeta();
       }
+      
+      setIsDataLoaded(true);
+    } catch (error) {
+      console.error('[ColetaForm] Error initializing form:', error);
+      setIsDataLoaded(true);
+    }
+  };
 
-      // Carregar entidades geradoras (simplificar query para evitar problemas com JOIN)
-      console.log('[ColetaForm] Loading entidades geradoras...');
-      const { data: entidadesData, error: entidadesError } = await supabase
-        .from('entidade')
-        .select(`
-          id_entidade, 
-          nom_entidade,
-          id_tipo_entidade
-        `)
-        .eq('des_status', 'A')
-        .order('nom_entidade');
-
-      if (entidadesError) {
-        console.error('[ColetaForm] Error loading entidades:', entidadesError);
-        toast({
-          title: "Erro",
-          description: "Erro ao carregar entidades: " + entidadesError.message,
-          variant: "destructive"
-        });
-      } else {
-        // Carregar tipos de entidade separadamente para fazer o filtro
-        const { data: tiposEntidadeData, error: tiposError } = await supabase
+  const loadAllFormData = async () => {
+    console.log('[ColetaForm] Loading all form data in parallel...');
+    
+    try {
+      // Usar Promise.all para carregar todos os dados simultaneamente
+      const [pontosResult, entidadesResult, tiposEntidadeResult, eventosResult] = await Promise.all([
+        // Carregar pontos de coleta
+        supabase
+          .from('ponto_coleta')
+          .select('id_ponto_coleta, nom_ponto_coleta')
+          .eq('des_status', 'A')
+          .order('nom_ponto_coleta'),
+        
+        // Carregar entidades
+        supabase
+          .from('entidade')
+          .select('id_entidade, nom_entidade, id_tipo_entidade')
+          .eq('des_status', 'A')
+          .order('nom_entidade'),
+        
+        // Carregar tipos de entidade
+        supabase
           .from('tipo_entidade')
           .select('id_tipo_entidade, des_geradora_residuo')
-          .eq('des_status', 'A');
+          .eq('des_status', 'A'),
+        
+        // Carregar eventos
+        supabase
+          .from('evento')
+          .select('id_evento, nom_evento')
+          .eq('des_status', 'A')
+          .order('nom_evento')
+      ]);
 
-        if (tiposError) {
-          console.error('[ColetaForm] Error loading tipos entidade:', tiposError);
-          // Usar todas as entidades se não conseguir carregar os tipos
-          setEntidades(entidadesData || []);
-        } else {
-          // Filtrar entidades geradoras
-          const tiposGeradoras = new Set(
-            tiposEntidadeData
-              .filter(tipo => tipo.des_geradora_residuo === 'A')
-              .map(tipo => tipo.id_tipo_entidade)
-          );
-          
-          const entidadesGeradoras = (entidadesData || []).filter(
-            (entidade: any) => tiposGeradoras.has(entidade.id_tipo_entidade)
-          );
-          
-          console.log('[ColetaForm] Entidades geradoras loaded:', entidadesGeradoras.length);
-          setEntidades(entidadesGeradoras);
-        }
-      }
-
-      // Carregar eventos
-      console.log('[ColetaForm] Loading eventos...');
-      const { data: eventosData, error: eventosError } = await supabase
-        .from('evento')
-        .select('id_evento, nom_evento')
-        .eq('des_status', 'A')
-        .order('nom_evento');
-
-      if (eventosError) {
-        console.error('[ColetaForm] Error loading eventos:', eventosError);
+      // Processar pontos de coleta
+      if (pontosResult.error) {
+        console.error('[ColetaForm] Error loading pontos de coleta:', pontosResult.error);
         toast({
           title: "Erro",
-          description: "Erro ao carregar eventos: " + eventosError.message,
+          description: "Erro ao carregar pontos de coleta: " + pontosResult.error.message,
           variant: "destructive"
         });
+        setPontosColeta([]);
       } else {
-        console.log('[ColetaForm] Eventos loaded:', eventosData?.length || 0);
-        setEventos(eventosData || []);
+        console.log('[ColetaForm] Pontos de coleta loaded:', pontosResult.data?.length || 0);
+        setPontosColeta(pontosResult.data || []);
       }
 
-      console.log('[ColetaForm] Form data loading completed');
+      // Processar entidades geradoras
+      if (entidadesResult.error || tiposEntidadeResult.error) {
+        console.error('[ColetaForm] Error loading entidades/tipos:', entidadesResult.error || tiposEntidadeResult.error);
+        toast({
+          title: "Erro",
+          description: "Erro ao carregar entidades geradoras",
+          variant: "destructive"
+        });
+        setEntidades([]);
+      } else {
+        // Filtrar entidades geradoras
+        const tiposGeradoras = new Set(
+          (tiposEntidadeResult.data || [])
+            .filter((tipo: any) => tipo.des_geradora_residuo === 'A')
+            .map((tipo: any) => tipo.id_tipo_entidade)
+        );
+        
+        const entidadesGeradoras = (entidadesResult.data || []).filter(
+          (entidade: any) => tiposGeradoras.has(entidade.id_tipo_entidade)
+        );
+        
+        console.log('[ColetaForm] Entidades geradoras loaded:', entidadesGeradoras.length);
+        setEntidades(entidadesGeradoras);
+      }
+
+      // Processar eventos
+      if (eventosResult.error) {
+        console.error('[ColetaForm] Error loading eventos:', eventosResult.error);
+        toast({
+          title: "Erro",
+          description: "Erro ao carregar eventos: " + eventosResult.error.message,
+          variant: "destructive"
+        });
+        setEventos([]);
+      } else {
+        console.log('[ColetaForm] Eventos loaded:', eventosResult.data?.length || 0);
+        setEventos(eventosResult.data || []);
+      }
+
+      console.log('[ColetaForm] All form data loaded successfully');
     } catch (error) {
       console.error('[ColetaForm] Error loading form data:', error);
       toast({
@@ -172,18 +184,13 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
     }
   };
 
-  const loadColetaData = async () => {
+  const loadColetaEditingData = async () => {
     if (!editingColeta) return;
 
     try {
-      console.log('[ColetaForm] Loading coleta data for editing:', editingColeta);
-      console.log('[ColetaForm] FK fields:', {
-        id_ponto_coleta: editingColeta.id_ponto_coleta,
-        id_entidade_geradora: editingColeta.id_entidade_geradora,
-        id_evento: editingColeta.id_evento
-      });
+      console.log('[ColetaForm] Loading coleta editing data:', editingColeta);
 
-      // Carregar dados da coleta
+      // Preparar dados do form
       const newFormData = {
         id_ponto_coleta: editingColeta.id_ponto_coleta?.toString() || '',
         id_entidade_geradora: editingColeta.id_entidade_geradora?.toString() || '',
@@ -192,11 +199,10 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         cod_coleta: editingColeta.cod_coleta || '',
       };
 
-      console.log('[ColetaForm] Setting form data:', newFormData);
-      setFormData(newFormData);
-
-      // Carregar resíduos da coleta
-      const { data: residuosData } = await supabase
+      console.log('[ColetaForm] Setting form data after data load:', newFormData);
+      
+      // Carregar resíduos da coleta simultaneamente
+      const { data: residuosData, error: residuosError } = await supabase
         .from('coleta_residuo')
         .select(`
           id_coleta_residuo,
@@ -213,7 +219,9 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         .eq('id_coleta', editingColeta.id_coleta)
         .eq('des_status', 'A');
 
-      if (residuosData) {
+      if (residuosError) {
+        console.error('[ColetaForm] Error loading residuos:', residuosError);
+      } else if (residuosData) {
         const residuosFormatted = residuosData.map((item: any) => ({
           id: item.id_coleta_residuo,
           id_residuo: item.id_residuo,
@@ -225,8 +233,11 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         }));
         setColetaResiduos(residuosFormatted);
       }
+
+      // Setar dados do form APÓS carregar os dados dos selects
+      setFormData(newFormData);
     } catch (error) {
-      console.error('[ColetaForm] Error loading coleta data:', error);
+      console.error('[ColetaForm] Error loading coleta editing data:', error);
     }
   };
 
@@ -268,12 +279,12 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
     return { totalQuantidade, totalValor };
   };
 
-  // Função para recalcular indicadores após operações na coleta
+  // Função para recalcular indicadores apenas quando necessário
   const recalculateIndicators = async (coletaId: number) => {
     try {
       console.log('[ColetaForm] Recalculando indicadores para coleta:', coletaId);
       
-      // Chamar a função do banco que calcula os indicadores automaticamente
+      // Chamar a função melhorada que previne duplicações
       const { error } = await supabase.rpc('calculate_and_insert_indicators', {
         p_id_coleta: coletaId
       });
@@ -340,7 +351,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         if (error) throw error;
         coletaId = editingColeta.id_coleta;
 
-        // Remover resíduos existentes (os indicadores serão removidos automaticamente pelo trigger)
+        // Remover resíduos existentes - isso automaticamente removerá os indicadores através da função
         await supabase
           .from('coleta_residuo')
           .delete()
@@ -357,7 +368,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         coletaId = data.id_coleta;
       }
 
-      // Inserir resíduos da coleta (os indicadores serão calculados automaticamente pelo trigger)
+      // Inserir resíduos da coleta
       const residuosData = coletaResiduos.map(residuo => ({
         id_coleta: coletaId,
         id_residuo: residuo.id_residuo,
@@ -374,8 +385,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
 
       if (residuosError) throw residuosError;
 
-      // Os indicadores serão calculados automaticamente pelo trigger do banco
-      // Mas vamos também chamar a função manualmente para garantir que funcionou
+      // Agora chamar a função de indicadores uma única vez para garantir cálculo correto
       await recalculateIndicators(coletaId);
 
       toast({
@@ -459,9 +469,10 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
               <Select
                 value={formData.id_ponto_coleta}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, id_ponto_coleta: value }))}
+                disabled={!isDataLoaded}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione o ponto de coleta" />
+                  <SelectValue placeholder={isDataLoaded ? "Selecione o ponto de coleta" : "Carregando..."} />
                 </SelectTrigger>
                 <SelectContent>
                   {pontosColeta.map((ponto) => (
@@ -478,9 +489,10 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
               <Select
                 value={formData.id_entidade_geradora}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, id_entidade_geradora: value }))}
+                disabled={!isDataLoaded}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione a entidade geradora" />
+                  <SelectValue placeholder={isDataLoaded ? "Selecione a entidade geradora" : "Carregando..."} />
                 </SelectTrigger>
                 <SelectContent>
                   {entidades.map((entidade) => (
@@ -497,9 +509,10 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
               <Select
                 value={formData.id_evento}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, id_evento: value }))}
+                disabled={!isDataLoaded}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione o evento" />
+                  <SelectValue placeholder={isDataLoaded ? "Selecione o evento" : "Carregando..."} />
                 </SelectTrigger>
                 <SelectContent>
                   {eventos.map((evento) => (
