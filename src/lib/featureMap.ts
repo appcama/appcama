@@ -11,6 +11,7 @@ export const idToFeatureMap: Record<string, string> = {
   "tipos-ponto-coleta": "Tipos de Ponto de Coleta",
   "tipos-entidades": "Tipos de Entidades",
   "tipos-residuos": "Tipos de Resíduos",
+  residuos: "Resíduos",
   indicadores: "Indicadores",
   perfis: "Perfis",
   usuarios: "Usuários",

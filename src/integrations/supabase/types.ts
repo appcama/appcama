@@ -491,7 +491,6 @@ export type Database = {
           id_usuario_atualizador: number | null
           id_usuario_criador: number
           nom_indicador: string | null
-          qtd_referencia: number | null
         }
         Insert: {
           dat_atualizacao?: string | null
@@ -503,7 +502,6 @@ export type Database = {
           id_usuario_atualizador?: number | null
           id_usuario_criador: number
           nom_indicador?: string | null
-          qtd_referencia?: number | null
         }
         Update: {
           dat_atualizacao?: string | null
@@ -515,7 +513,6 @@ export type Database = {
           id_usuario_atualizador?: number | null
           id_usuario_criador?: number
           nom_indicador?: string | null
-          qtd_referencia?: number | null
         }
         Relationships: [
           {
@@ -919,14 +916,17 @@ export type Database = {
         Row: {
           id_indicador: number
           id_tipo_residuo: number
+          qtd_referencia: number | null
         }
         Insert: {
           id_indicador: number
           id_tipo_residuo: number
+          qtd_referencia?: number | null
         }
         Update: {
           id_indicador?: number
           id_tipo_residuo?: number
+          qtd_referencia?: number | null
         }
         Relationships: [
           {

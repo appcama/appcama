@@ -98,6 +98,11 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose 
           icon: Trash2,
         },
         {
+          id: "residuos",
+          label: "Resíduos",
+          icon: Package,
+        },
+        {
           id: "indicadores",
           label: "Indicadores",
           icon: TrendingUp,
