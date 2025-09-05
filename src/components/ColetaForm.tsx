@@ -351,11 +351,25 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         if (error) throw error;
         coletaId = editingColeta.id_coleta;
 
-        // Remover resíduos existentes - isso automaticamente removerá os indicadores através da função
-        await supabase
+        // Remover resíduos existentes - primeiro buscar os IDs e remover indicadores
+        const { data: coletaResiduoIds } = await supabase
           .from('coleta_residuo')
-          .delete()
+          .select('id_coleta_residuo')
           .eq('id_coleta', coletaId);
+
+        if (coletaResiduoIds && coletaResiduoIds.length > 0) {
+          // Primeiro deletar os indicadores
+          await supabase
+            .from('coleta_residuo_indicador')
+            .delete()
+            .in('id_coleta_residuo', coletaResiduoIds.map(r => r.id_coleta_residuo));
+
+          // Depois deletar os resíduos
+          await supabase
+            .from('coleta_residuo')
+            .delete()
+            .eq('id_coleta', coletaId);
+        }
       } else {
         // Criar nova coleta
         const { data, error } = await supabase
