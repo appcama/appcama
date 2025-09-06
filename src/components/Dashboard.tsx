@@ -1,208 +1,124 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  Building2,
-  Calendar,
   Droplet,
-  Factory,
+  Globe,
   Leaf,
-  TrendingUp,
-  Users,
+  Package,
+  Recycle,
   Zap,
 } from "lucide-react";
-import { useDashboardStats } from "@/hooks/useDashboardStats";
+import { useDashboardData, type DashboardFilters } from "@/hooks/useDashboardData";
+import { DashboardFiltersComponent } from "@/components/DashboardFilters";
+import { DashboardCharts } from "@/components/DashboardCharts";
 
-const statsCardsConfig = [
-  {
-    title: "Total de Entidades",
-    description: "Cadastradas no sistema",
-    change: "+8.2%",
-    period: "este mês",
-    icon: Building2,
-    color: "text-recycle-green",
-    key: "totalEntidades" as const,
-  },
-  {
-    title: "Entidades Coletoras",
-    description: "Cooperativas e catadores",
-    change: "+5.1%",
-    period: "este mês",
-    icon: Users,
-    color: "text-eco-blue",
-    key: "entidadesColetoras" as const,
-  },
-  {
-    title: "Eventos de Coleta",
-    description: "Eventos ativos",
-    change: "+15.3%",
-    period: "este mês",
-    icon: Calendar,
-    color: "text-eco-orange",
-    key: "eventosColeta" as const,
-  },
-  {
-    title: "Geradores de Resíduo",
-    description: "Empresas e geradores",
-    change: "+3.8%",
-    period: "este mês",
-    icon: Factory,
-    color: "text-earth-brown",
-    key: "geradoresResiduos" as const,
-  },
-];
+// Environmental indicators configuration with icons
+const getIndicatorIcon = (nomIndicador: string) => {
+  const name = nomIndicador.toLowerCase();
+  if (name.includes('árvore') || name.includes('floresta')) return Leaf;
+  if (name.includes('água') || name.includes('hídric')) return Droplet;
+  if (name.includes('energia') || name.includes('elétric')) return Zap;
+  if (name.includes('co2') || name.includes('carbono') || name.includes('gee')) return Globe;
+  if (name.includes('aterro') || name.includes('espaço')) return Package;
+  return Recycle; // Default icon
+};
 
-const recentActivities = [
-  {
-    title: "Evento de Coleta - Zona Norte",
-    description: "Agendado para amanhã",
-    icon: Calendar,
-    color: "text-eco-orange",
-  },
-  {
-    title: "5 novos catadores cadastrados",
-    description: "Esta semana",
-    icon: Users,
-    color: "text-eco-blue",
-  },
-  {
-    title: "Nova cooperativa registrada",
-    description: "Cooperativa Verde Vida",
-    icon: Building2,
-    color: "text-recycle-green",
-  },
-];
-
-const environmentalImpact = [
-  {
-    value: "285",
-    label: "Árvores preservadas",
-    icon: Leaf,
-    color: "bg-recycle-green-light text-recycle-green",
-  },
-  {
-    value: "142,500L",
-    label: "Água economizada",
-    icon: Droplet,
-    color: "bg-blue-100 text-eco-blue",
-  },
-  {
-    value: "38.2t",
-    label: "CO₂ não emitido",
-    icon: Zap,
-    color: "bg-orange-100 text-eco-orange",
-  },
-];
+const getIndicatorColor = (nomIndicador: string) => {
+  const name = nomIndicador.toLowerCase();
+  if (name.includes('árvore') || name.includes('floresta')) return "bg-recycle-green-light text-recycle-green";
+  if (name.includes('água') || name.includes('hídric')) return "bg-blue-100 text-eco-blue";
+  if (name.includes('energia') || name.includes('elétric')) return "bg-yellow-100 text-eco-orange";
+  if (name.includes('co2') || name.includes('carbono') || name.includes('gee')) return "bg-green-100 text-earth-brown";
+  if (name.includes('aterro') || name.includes('espaço')) return "bg-gray-100 text-stats-gray";
+  return "bg-recycle-green-light text-recycle-green"; // Default color
+};
 
 export function Dashboard() {
-  const { data: stats, isLoading, error } = useDashboardStats();
+  // Initialize filters with current year
+  const currentYear = new Date().getFullYear();
+  const [filters, setFilters] = useState<DashboardFilters>({
+    dataInicial: `${currentYear}-01-01`,
+    dataFinal: `${currentYear}-12-31`,
+  });
+
+  const { data, isLoading, error } = useDashboardData(filters);
+
+  const formatNumber = (value: number, decimals = 1) => {
+    return value.toLocaleString('pt-BR', { 
+      minimumFractionDigits: decimals, 
+      maximumFractionDigits: decimals 
+    });
+  };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard ReciclaE</h1>
         <p className="text-muted-foreground">
           Visão geral do sistema de controle de reciclagem
         </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {statsCardsConfig.map((statConfig, index) => {
-          const Icon = statConfig.icon;
-          const value = stats?.[statConfig.key] ?? 0;
-          
-          return (
-            <Card key={index} className="relative">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {statConfig.title}
-                </CardTitle>
-                <Icon className={`h-4 w-4 ${statConfig.color}`} />
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <Skeleton className="h-8 w-16 mb-2" />
-                ) : (
-                  <div className="text-2xl font-bold text-foreground">
-                    {value.toLocaleString()}
-                  </div>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  {statConfig.description}
-                </p>
-                <div className="flex items-center mt-2">
-                  <Badge
-                    variant="secondary"
-                    className="text-xs bg-recycle-green-light text-recycle-green"
-                  >
-                    {statConfig.change} {statConfig.period}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      {/* Filters */}
+      <DashboardFiltersComponent filters={filters} onFiltersChange={setFilters} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Reciclômetro */}
+      {/* Total Collected Waste Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Recycle className="h-5 w-5 text-recycle-green" />
+            <CardTitle>Total de Resíduos Coletados</CardTitle>
+          </div>
+          <CardDescription>
+            Período: {new Date(filters.dataInicial).toLocaleDateString('pt-BR')} - {new Date(filters.dataFinal).toLocaleDateString('pt-BR')}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <Skeleton className="h-16 w-32" />
+          ) : (
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl sm:text-4xl font-bold text-recycle-green">
+                {formatNumber(data?.totalResiduos || 0)}
+              </span>
+              <span className="text-lg text-muted-foreground">toneladas</span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Environmental Indicators */}
+      {data?.indicadores && data.indicadores.length > 0 && (
         <Card>
           <CardHeader>
-            <div className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5 text-recycle-green" />
-              <CardTitle>Reciclômetro - Meta Mensal</CardTitle>
-            </div>
+            <CardTitle>Indicadores de Impacto Ambiental</CardTitle>
             <CardDescription>
-              Acompanhe o progresso da meta de reciclagem
+              Benefícios ambientais calculados com base nos resíduos coletados
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Progresso atual</span>
-                <span className="text-2xl font-bold text-recycle-green">79%</span>
-              </div>
-              <Progress value={79} className="h-3" />
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>47.5 toneladas</span>
-                <span>Meta: 60 toneladas</span>
-              </div>
-              <div className="text-center p-4 bg-recycle-green-light rounded-lg">
-                <p className="text-sm font-medium text-recycle-green">
-                  Restam 12.5 toneladas
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  para atingir a meta mensal
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Activities */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Resumo de Atividades</CardTitle>
-            <CardDescription>Principais atividades recentes</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentActivities.map((activity, index) => {
-                const Icon = activity.icon;
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {data.indicadores.map((indicador) => {
+                const Icon = getIndicatorIcon(indicador.nom_indicador);
+                const colorClass = getIndicatorColor(indicador.nom_indicador);
+                
                 return (
-                  <div key={index} className="flex items-start space-x-3">
-                    <div className="flex-shrink-0">
-                      <Icon className={`h-5 w-5 ${activity.color}`} />
+                  <div key={indicador.id_indicador} className={`p-4 rounded-lg ${colorClass}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <Icon className="h-6 w-6" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-foreground">
-                        {activity.title}
+                      <p className="text-2xl font-bold">
+                        {formatNumber(indicador.total, 1)}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {activity.description}
+                      <p className="text-sm font-medium">
+                        {indicador.nom_indicador}
+                      </p>
+                      <p className="text-xs opacity-75">
+                        {indicador.des_unidade_medida}
                       </p>
                     </div>
                   </div>
@@ -211,35 +127,84 @@ export function Dashboard() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      )}
 
-      {/* Environmental Impact */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Impacto Ambiental</CardTitle>
-          <CardDescription>
-            Ecoindicadores principais do mês atual
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {environmentalImpact.map((impact, index) => {
-              const Icon = impact.icon;
-              return (
-                <div key={index} className={`p-6 rounded-lg ${impact.color}`}>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-2xl font-bold">{impact.value}</p>
-                      <p className="text-sm font-medium">{impact.label}</p>
-                    </div>
-                    <Icon className="h-8 w-8" />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Waste Totals by Type */}
+      {data?.residuosPorTipo && data.residuosPorTipo.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Totais por Tipo de Resíduo</CardTitle>
+            <CardDescription>
+              Quantidade coletada em toneladas por tipo de material
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tipo de Resíduo</TableHead>
+                    <TableHead className="text-right">Quantidade (t)</TableHead>
+                    <TableHead className="text-right">Valor Total (R$)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.residuosPorTipo
+                    .sort((a, b) => b.total_quantidade - a.total_quantidade)
+                    .map((residuo) => (
+                    <TableRow key={residuo.id_tipo_residuo}>
+                      <TableCell className="font-medium">
+                        {residuo.des_tipo_residuo}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatNumber(residuo.total_quantidade)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        R$ {formatNumber(residuo.total_valor, 2)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Charts */}
+      {data?.residuosPorTipo && (
+        <DashboardCharts residuosPorTipo={data.residuosPorTipo} />
+      )}
+
+      {/* Empty State */}
+      {!isLoading && (!data?.totalResiduos || data.totalResiduos === 0) && (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Recycle className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">
+              Nenhum dado encontrado
+            </h3>
+            <p className="text-muted-foreground text-center max-w-md">
+              Não foram encontrados dados de coleta para o período e filtros selecionados. 
+              Tente ajustar os filtros ou verificar se existem coletas cadastradas.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <h3 className="text-lg font-medium text-destructive mb-2">
+              Erro ao carregar dados
+            </h3>
+            <p className="text-muted-foreground text-center max-w-md">
+              Ocorreu um erro ao carregar os dados do dashboard. Tente recarregar a página.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
