@@ -112,11 +112,11 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
           <div className="space-y-2">
             <label className="text-sm font-medium">Entidade</label>
             <Select
-              value={filters.entidadeId?.toString() || ""}
+              value={filters.entidadeId?.toString() || "all"}
               onValueChange={(value) =>
                 onFiltersChange({
                   ...filters,
-                  entidadeId: value ? parseInt(value) : undefined,
+                  entidadeId: value !== "all" ? parseInt(value) : undefined,
                 })
               }
             >
@@ -124,7 +124,7 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
                 <SelectValue placeholder="Todas as entidades" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas as entidades</SelectItem>
+                <SelectItem value="all">Todas as entidades</SelectItem>
                 {entidades.map((entidade) => (
                   <SelectItem key={entidade.id_entidade} value={entidade.id_entidade.toString()}>
                     {entidade.nom_entidade}
@@ -138,11 +138,11 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
           <div className="space-y-2">
             <label className="text-sm font-medium">Tipo de Entidade</label>
             <Select
-              value={filters.tipoEntidadeId?.toString() || ""}
+              value={filters.tipoEntidadeId?.toString() || "all"}
               onValueChange={(value) =>
                 onFiltersChange({
                   ...filters,
-                  tipoEntidadeId: value ? parseInt(value) : undefined,
+                  tipoEntidadeId: value !== "all" ? parseInt(value) : undefined,
                 })
               }
             >
@@ -150,7 +150,7 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
                 <SelectValue placeholder="Todos os tipos" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os tipos</SelectItem>
+                <SelectItem value="all">Todos os tipos</SelectItem>
                 {tiposEntidade.map((tipo) => (
                   <SelectItem key={tipo.id_tipo_entidade} value={tipo.id_tipo_entidade.toString()}>
                     {tipo.des_tipo_entidade}
