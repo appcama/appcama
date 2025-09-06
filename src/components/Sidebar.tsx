@@ -3,9 +3,9 @@ import { useState } from "react";
 import { 
   Home, 
   Users, 
-  Building2, 
+  Building, 
   Calendar, 
-  Trash2, 
+  Trash2,
   BarChart3, 
   Settings, 
   Recycle,
@@ -60,7 +60,7 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose 
         {
           id: "entidades",
           label: "Entidades",
-          icon: Building2,
+          icon: Building,
         },
         {
           id: "pontos-coleta",
@@ -90,7 +90,7 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose 
         {
           id: "tipos-entidades",
           label: "Tipos de Entidades",
-          icon: Building2,
+          icon: Building,
         },
         {
           id: "tipos-residuos",
