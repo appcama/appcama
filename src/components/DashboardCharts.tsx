@@ -139,35 +139,56 @@ export function DashboardCharts({ residuosPorTipo }: DashboardChartsProps) {
           <CardTitle>Totais Financeiros por Tipo</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={350}>
             <BarChart
-              layout="horizontal"
               data={barData}
               margin={{
-                top: 5,
-                right: 30,
+                top: 20,
+                right: 40,
                 left: 20,
-                bottom: 5,
+                bottom: 60,
               }}
             >
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis 
-                type="number" 
-                tickFormatter={(value) => `R$ ${value.toLocaleString('pt-BR')}`}
-                className="text-xs"
+              <defs>
+                <linearGradient id="barGradient" x1="0" y1="1" x2="0" y2="0">
+                  <stop offset="0%" stopColor="hsl(var(--recycle-green))" stopOpacity={0.8} />
+                  <stop offset="100%" stopColor="hsl(var(--eco-blue))" stopOpacity={0.9} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid 
+                strokeDasharray="2 2" 
+                className="stroke-muted/30" 
+                vertical={false}
               />
-              <YAxis 
+              <XAxis 
                 type="category" 
                 dataKey="name" 
-                width={100}
-                className="text-xs"
-                interval={0}
+                className="text-xs fill-muted-foreground"
+                axisLine={false}
+                tickLine={false}
+                angle={-45}
+                textAnchor="end"
+                height={60}
+              />
+              <YAxis 
+                type="number" 
+                tickFormatter={(value) => `R$ ${value.toLocaleString('pt-BR')}`}
+                className="text-xs fill-muted-foreground"
+                axisLine={false}
+                tickLine={false}
               />
               <Tooltip 
                 content={<CustomTooltip />}
-                formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Valor']}
+                formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Valor Total']}
+                cursor={{ fill: 'hsl(var(--muted))', opacity: 0.1 }}
               />
-              <Bar dataKey="valor" />
+              <Bar 
+                 dataKey="valor" 
+                 fill="url(#barGradient)"
+                 radius={[6, 6, 0, 0]}
+                 stroke="hsl(var(--border))"
+                 strokeWidth={0.5}
+               />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>

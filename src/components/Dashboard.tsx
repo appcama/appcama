@@ -3,14 +3,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
+  Building2,
+  Calendar,
   Droplet,
+  Factory,
   Globe,
   Leaf,
   Package,
   Recycle,
+  Users,
   Zap,
 } from "lucide-react";
 import { useDashboardData, type DashboardFilters } from "@/hooks/useDashboardData";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { DashboardFiltersComponent } from "@/components/DashboardFilters";
 import { DashboardCharts } from "@/components/DashboardCharts";
 
@@ -44,6 +49,7 @@ export function Dashboard() {
   });
 
   const { data, isLoading, error } = useDashboardData(filters);
+  const { data: statsData, isLoading: statsLoading } = useDashboardStats();
 
   const formatNumber = (value: number, decimals = 1) => {
     return value.toLocaleString('pt-BR', { 
@@ -65,6 +71,89 @@ export function Dashboard() {
       {/* Filters */}
       <DashboardFiltersComponent filters={filters} onFiltersChange={setFilters} />
 
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total de Entidades</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold">
+                    {statsLoading ? <Skeleton className="h-8 w-8" /> : (statsData?.totalEntidades || 0)}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Cadastradas no sistema</p>
+                <p className="text-xs text-green-600 mt-1">+8.2% este mês</p>
+              </div>
+              <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
+                <Building2 className="h-4 w-4 text-green-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Entidades Coletoras</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold">
+                    {statsLoading ? <Skeleton className="h-8 w-8" /> : (statsData?.entidadesColetoras || 0)}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Cooperativas e catadores</p>
+                <p className="text-xs text-green-600 mt-1">+5.1% este mês</p>
+              </div>
+              <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
+                <Users className="h-4 w-4 text-blue-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Eventos de Coleta</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold">
+                    {statsLoading ? <Skeleton className="h-8 w-8" /> : (statsData?.eventosColeta || 0)}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Eventos ativos</p>
+                <p className="text-xs text-green-600 mt-1">+13.3% este mês</p>
+              </div>
+              <div className="h-8 w-8 bg-orange-100 rounded-full flex items-center justify-center">
+                <Calendar className="h-4 w-4 text-orange-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Geradores de Resíduo</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold">
+                    {statsLoading ? <Skeleton className="h-8 w-8" /> : (statsData?.geradoresResiduos || 0)}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Empresas e geradores</p>
+                <p className="text-xs text-green-600 mt-1">+3.8% este mês</p>
+              </div>
+              <div className="h-8 w-8 bg-brown-100 rounded-full flex items-center justify-center">
+                <Factory className="h-4 w-4 text-brown-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Total Collected Waste Card */}
       <Card>
         <CardHeader>
@@ -82,7 +171,7 @@ export function Dashboard() {
           ) : (
             <div className="flex items-baseline gap-2">
               <span className="text-3xl sm:text-4xl font-bold text-recycle-green">
-                {formatNumber(data?.totalResiduos || 0)}
+                {(data?.totalResiduos || 0).toFixed(3)}
               </span>
               <span className="text-lg text-muted-foreground">toneladas</span>
             </div>
@@ -157,10 +246,10 @@ export function Dashboard() {
                         {residuo.des_tipo_residuo}
                       </TableCell>
                       <TableCell className="text-right">
-                        {formatNumber(residuo.total_quantidade)}
+                        {(residuo.total_quantidade || 0).toFixed(3)}
                       </TableCell>
                       <TableCell className="text-right">
-                        R$ {formatNumber(residuo.total_valor, 2)}
+                        R$ {(residuo.total_valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </TableCell>
                     </TableRow>
                   ))}

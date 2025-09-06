@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, Filter, RotateCcw } from "lucide-react";
+import { CalendarIcon, Filter, RotateCcw, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -35,6 +35,7 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
   const [dataFinal, setDataFinal] = useState<Date | undefined>(
     filters.dataFinal ? new Date(filters.dataFinal) : undefined
   );
+  const [dateError, setDateError] = useState<string>("");
 
   useEffect(() => {
     fetchEntidades();
@@ -76,11 +77,44 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
     dataFinal: `${new Date().getFullYear()}-12-31`,
   });
 
+  const validateDates = (inicial: Date | undefined, final: Date | undefined): boolean => {
+    if (inicial && final && final < inicial) {
+      setDateError("A data final não pode ser anterior à inicial.");
+      return false;
+    }
+    setDateError("");
+    return true;
+  };
+
+  const handleDataInicialChange = (date: Date | undefined) => {
+    setDataInicial(date);
+    if (date && dataFinal && dataFinal < date) {
+      setDataFinal(date);
+    }
+    validateDates(date, dataFinal && dataFinal < (date || new Date()) ? date : dataFinal);
+  };
+
+  const handleDataFinalChange = (date: Date | undefined) => {
+    if (dataInicial && date && date < dataInicial) {
+      setDateError("A data final não pode ser anterior à inicial.");
+      return;
+    }
+    setDataFinal(date);
+    validateDates(dataInicial, date);
+  };
+
   const handleApplyFilters = () => {
+    const inicial = dataInicial || new Date(getCurrentYearDates().dataInicial);
+    const final = dataFinal || new Date(getCurrentYearDates().dataFinal);
+    
+    if (!validateDates(inicial, final)) {
+      return;
+    }
+
     const newFilters: DashboardFilters = {
       ...filters,
-      dataInicial: dataInicial ? format(dataInicial, "yyyy-MM-dd") : getCurrentYearDates().dataInicial,
-      dataFinal: dataFinal ? format(dataFinal, "yyyy-MM-dd") : getCurrentYearDates().dataFinal,
+      dataInicial: format(inicial, "yyyy-MM-dd"),
+      dataFinal: format(final, "yyyy-MM-dd"),
     };
     onFiltersChange(newFilters);
   };
@@ -89,6 +123,7 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
     const currentYear = getCurrentYearDates();
     setDataInicial(new Date(currentYear.dataInicial));
     setDataFinal(new Date(currentYear.dataFinal));
+    setDateError("");
     
     onFiltersChange({
       entidadeId: undefined,
@@ -180,7 +215,7 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
                 <Calendar
                   mode="single"
                   selected={dataInicial}
-                  onSelect={setDataInicial}
+                  onSelect={handleDataInicialChange}
                   initialFocus
                   className="p-3 pointer-events-auto"
                 />
@@ -208,7 +243,8 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
                 <Calendar
                   mode="single"
                   selected={dataFinal}
-                  onSelect={setDataFinal}
+                  onSelect={handleDataFinalChange}
+                  disabled={(date) => dataInicial ? date < dataInicial : false}
                   initialFocus
                   className="p-3 pointer-events-auto"
                 />
@@ -217,9 +253,17 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
           </div>
         </div>
 
+        {/* Date Error Message */}
+        {dateError && (
+          <div className="flex items-center gap-2 mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+            <AlertCircle className="h-4 w-4 text-red-500" />
+            <span className="text-sm text-red-700">{dateError}</span>
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-2 mt-4">
-          <Button onClick={handleApplyFilters} className="flex items-center gap-2">
+          <Button onClick={handleApplyFilters} disabled={!!dateError} className="flex items-center gap-2">
             <Filter className="h-4 w-4" />
             Aplicar Filtros
           </Button>

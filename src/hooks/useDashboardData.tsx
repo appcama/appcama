@@ -147,29 +147,36 @@ export function useDashboardData(filters: DashboardFilters) {
         const quantidade = item.qtd_total || 0;
         const valor = item.vlr_total || 0;
         
+        // Calculate value for this line: qtd_total * vlr_total
+        const valorCalculado = quantidade * valor;
+        
         totalResiduos += quantidade;
         
         const existing = residuosMap.get(tipoId);
         if (existing) {
           existing.total_quantidade += quantidade;
-          existing.total_valor += valor;
+          existing.total_valor += valorCalculado; // Sum the calculated values
         } else {
           residuosMap.set(tipoId, {
             id_tipo_residuo: tipoId,
             des_tipo_residuo: item.residuo.tipo_residuo.des_tipo_residuo,
             total_quantidade: quantidade,
-            total_valor: valor,
+            total_valor: valorCalculado, // Use calculated value
           });
         }
       });
 
+      // Convert quantities to tons and keep calculated values
+      const residuosProcessados = Array.from(residuosMap.values()).map(r => ({
+        ...r,
+        total_quantidade: r.total_quantidade / 1000, // Convert to tons
+        total_valor: r.total_valor // Keep the sum of calculated values (qtd_total * vlr_total)
+      }));
+
       return {
         indicadores: Array.from(indicadoresMap.values()),
         totalResiduos: totalResiduos / 1000, // Convert to tons
-        residuosPorTipo: Array.from(residuosMap.values()).map(r => ({
-          ...r,
-          total_quantidade: r.total_quantidade / 1000 // Convert to tons
-        })),
+        residuosPorTipo: residuosProcessados,
       };
     },
     refetchInterval: 30000, // Refetch every 30 seconds
