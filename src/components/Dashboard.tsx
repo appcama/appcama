@@ -18,6 +18,7 @@ import { useDashboardData, type DashboardFilters } from "@/hooks/useDashboardDat
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { DashboardFiltersComponent } from "@/components/DashboardFilters";
 import { DashboardCharts } from "@/components/DashboardCharts";
+import { DashboardInfographic } from "@/components/DashboardInfographic";
 
 // Environmental indicators configuration with icons
 const getIndicatorIcon = (nomIndicador: string) => {
@@ -60,7 +61,6 @@ export function Dashboard() {
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard ReciclaE</h1>
         <p className="text-muted-foreground">
@@ -68,10 +68,8 @@ export function Dashboard() {
         </p>
       </div>
 
-      {/* Filters */}
       <DashboardFiltersComponent filters={filters} onFiltersChange={setFilters} />
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <Card>
           <CardContent className="p-6">
@@ -154,7 +152,6 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Total Collected Waste Card */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -179,7 +176,6 @@ export function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Environmental Indicators */}
       {data?.indicadores && data.indicadores.length > 0 && (
         <Card>
           <CardHeader>
@@ -218,7 +214,6 @@ export function Dashboard() {
         </Card>
       )}
 
-      {/* Waste Totals by Type */}
       {data?.residuosPorTipo && data.residuosPorTipo.length > 0 && (
         <Card>
           <CardHeader>
@@ -260,12 +255,12 @@ export function Dashboard() {
         </Card>
       )}
 
-      {/* Charts */}
       {data?.residuosPorTipo && (
         <DashboardCharts residuosPorTipo={data.residuosPorTipo} />
       )}
 
-      {/* Empty State */}
+      <DashboardInfographic filters={filters} />
+
       {!isLoading && (!data?.totalResiduos || data.totalResiduos === 0) && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -281,7 +276,6 @@ export function Dashboard() {
         </Card>
       )}
 
-      {/* Error State */}
       {error && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
