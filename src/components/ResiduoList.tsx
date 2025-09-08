@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Edit, Power, Trash2, Package } from "lucide-react";
+import { Edit, Power, Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Residuo {
@@ -26,7 +25,6 @@ interface ResiduoListProps {
 }
 
 export function ResiduoList({ onAddNew, onEdit }: ResiduoListProps) {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [residuoToDelete, setResiduoToDelete] = useState<Residuo | null>(null);
@@ -64,18 +62,11 @@ export function ResiduoList({ onAddNew, onEdit }: ResiduoListProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['residuos'] });
-      toast({
-        title: "Sucesso",
-        description: "Status do resíduo atualizado com sucesso!",
-      });
+      toast.success("Status do resíduo atualizado com sucesso!");
     },
     onError: (error) => {
       console.error('Erro ao atualizar status:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao atualizar status do resíduo.",
-        variant: "destructive",
-      });
+      toast.error("Erro ao atualizar status do resíduo.");
     },
   });
 
@@ -104,20 +95,13 @@ export function ResiduoList({ onAddNew, onEdit }: ResiduoListProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['residuos'] });
-      toast({
-        title: "Sucesso",
-        description: "Resíduo excluído com sucesso!",
-      });
+      toast.success("Resíduo excluído com sucesso!");
       setDeleteDialogOpen(false);
       setResiduoToDelete(null);
     },
     onError: (error: any) => {
       console.error('Erro ao excluir resíduo:', error);
-      toast({
-        title: "Erro",
-        description: error.message || "Erro ao excluir resíduo.",
-        variant: "destructive",
-      });
+      toast.error(error.message || "Erro ao excluir resíduo.");
       setDeleteDialogOpen(false);
       setResiduoToDelete(null);
     },
@@ -141,38 +125,34 @@ export function ResiduoList({ onAddNew, onEdit }: ResiduoListProps) {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-6">
-        <Card>
-          <CardContent className="flex items-center justify-center h-32">
-            <div className="text-muted-foreground">Carregando resíduos...</div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardContent className="flex items-center justify-center h-32">
+          <div className="text-muted-foreground">Carregando resíduos...</div>
+        </CardContent>
+      </Card>
     );
   }
 
   if (error) {
     return (
-      <div className="container mx-auto py-6">
-        <Card>
-          <CardContent className="flex items-center justify-center h-32">
-            <div className="text-destructive">Erro ao carregar resíduos</div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardContent className="flex items-center justify-center h-32">
+          <div className="text-destructive">Erro ao carregar resíduos</div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-6">
           <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
+            <Plus className="h-5 w-5" />
             Resíduos
           </CardTitle>
-          <Button onClick={onAddNew} className="gap-2">
-            <Package className="h-4 w-4" />
+          <Button onClick={onAddNew} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
             Novo Resíduo
           </Button>
         </CardHeader>
@@ -182,7 +162,7 @@ export function ResiduoList({ onAddNew, onEdit }: ResiduoListProps) {
               Nenhum resíduo encontrado.
             </div>
           ) : (
-            <div className="rounded-md border">
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -202,11 +182,15 @@ export function ResiduoList({ onAddNew, onEdit }: ResiduoListProps) {
                         {residuo.tipo_residuo?.des_tipo_residuo || 'N/A'}
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge
-                          variant={residuo.des_status === 'A' ? 'default' : 'secondary'}
+                        <span
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            residuo.des_status === 'A'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}
                         >
                           {residuo.des_status === 'A' ? 'Ativo' : 'Inativo'}
-                        </Badge>
+                        </span>
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex justify-center gap-2">
@@ -214,30 +198,31 @@ export function ResiduoList({ onAddNew, onEdit }: ResiduoListProps) {
                             variant="outline"
                             size="sm"
                             onClick={() => onEdit(residuo)}
-                            className="gap-1"
+                            className="h-8 w-8 p-0"
                           >
-                            <Edit className="h-3 w-3" />
-                            Editar
+                            <Edit className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleToggleStatus(residuo)}
                             disabled={toggleStatusMutation.isPending}
-                            className="gap-1"
+                            className={`h-8 w-8 p-0 ${
+                              residuo.des_status === 'A'
+                                ? 'hover:bg-red-50 hover:text-red-600 hover:border-red-300'
+                                : 'hover:bg-green-50 hover:text-green-600 hover:border-green-300'
+                            }`}
                           >
-                            <Power className="h-3 w-3" />
-                            {residuo.des_status === 'A' ? 'Inativar' : 'Ativar'}
+                            <Power className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleDeleteClick(residuo)}
                             disabled={deleteMutation.isPending}
-                            className="gap-1 text-destructive hover:text-destructive"
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                           >
-                            <Trash2 className="h-3 w-3" />
-                            Excluir
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>
@@ -271,6 +256,6 @@ export function ResiduoList({ onAddNew, onEdit }: ResiduoListProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }
