@@ -27,7 +27,13 @@ const formSchema = z.object({
   des_bairro: z.string().min(2, "Bairro é obrigatório").max(50, "Bairro deve ter no máximo 50 caracteres"),
   num_cep: z.string().min(8, "CEP é obrigatório"),
   id_municipio: z.string().min(1, "Município é obrigatório"),
-  num_telefone: z.string().optional(),
+  num_telefone: z.string()
+    .optional()
+    .refine((val) => {
+      if (!val || val.trim() === '') return true; // Campo opcional
+      const numbers = val.replace(/\D/g, '');
+      return numbers.length === 10 || numbers.length === 11; // 10 dígitos (fixo) ou 11 dígitos (celular)
+    }, "Telefone deve ter 10 dígitos (fixo) ou 11 dígitos (celular)"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -478,6 +484,7 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                       <FormControl>
                         <Input 
                           placeholder="(00) 00000-0000" 
+                          maxLength={15}
                           {...field}
                           onChange={(e) => {
                             const masked = applyPhoneMask(e.target.value);
