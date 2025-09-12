@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Calendar, Edit, Power } from "lucide-react";
@@ -29,6 +30,7 @@ interface EventosListProps {
 export function EventosList({ onAddNew, onEdit }: EventosListProps) {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -92,6 +94,11 @@ export function EventosList({ onAddNew, onEdit }: EventosListProps) {
     return new Date(dateString).toLocaleString('pt-BR');
   };
 
+  const filteredEventos = eventos.filter(evento =>
+    evento.nom_evento?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    evento.des_evento?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (loading) {
     return (
       <Card>
@@ -104,20 +111,30 @@ export function EventosList({ onAddNew, onEdit }: EventosListProps) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Calendar className="h-5 w-5" />
-          <CardTitle>Eventos de Coleta</CardTitle>
+      <CardHeader>
+        <div className="flex flex-row items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            <CardTitle>Eventos de Coleta</CardTitle>
+          </div>
+          <Button onClick={onAddNew} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Novo Evento
+          </Button>
         </div>
-        <Button onClick={onAddNew} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Novo Evento
-        </Button>
+        <div className="flex gap-4 mt-4">
+          <Input
+            placeholder="Buscar por nome ou descrição..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-md"
+          />
+        </div>
       </CardHeader>
       <CardContent>
-        {eventos.length === 0 ? (
+        {filteredEventos.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">
-            Nenhum evento cadastrado
+            {searchTerm ? 'Nenhum evento encontrado com os critérios de busca' : 'Nenhum evento cadastrado'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -133,7 +150,7 @@ export function EventosList({ onAddNew, onEdit }: EventosListProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {eventos.map((evento) => (
+                {filteredEventos.map((evento) => (
                   <TableRow key={evento.id_evento}>
                     <TableCell className="font-medium">
                       {evento.nom_evento || '-'}

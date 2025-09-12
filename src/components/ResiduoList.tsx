@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Edit, Power, Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -28,6 +29,7 @@ export function ResiduoList({ onAddNew, onEdit }: ResiduoListProps) {
   const queryClient = useQueryClient();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [residuoToDelete, setResiduoToDelete] = useState<Residuo | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const { data: residuos = [], isLoading, error } = useQuery({
     queryKey: ['residuos'],
@@ -123,6 +125,11 @@ export function ResiduoList({ onAddNew, onEdit }: ResiduoListProps) {
     }
   };
 
+  const filteredResiduos = residuos.filter(residuo =>
+    residuo.nom_residuo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    residuo.tipo_residuo?.des_tipo_residuo?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (isLoading) {
     return (
       <Card>
@@ -146,20 +153,30 @@ export function ResiduoList({ onAddNew, onEdit }: ResiduoListProps) {
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-6">
-          <CardTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5" />
-            Resíduos
-          </CardTitle>
-          <Button onClick={onAddNew} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Novo Resíduo
-          </Button>
+        <CardHeader>
+          <div className="flex flex-row items-center justify-between space-y-0 pb-6">
+            <CardTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5" />
+              Resíduos
+            </CardTitle>
+            <Button onClick={onAddNew} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Novo Resíduo
+            </Button>
+          </div>
+          <div className="flex gap-4">
+            <Input
+              placeholder="Buscar por nome do resíduo ou tipo..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-md"
+            />
+          </div>
         </CardHeader>
         <CardContent>
-          {residuos.length === 0 ? (
+          {filteredResiduos.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              Nenhum resíduo encontrado.
+              {searchTerm ? 'Nenhum resíduo encontrado com os critérios de busca.' : 'Nenhum resíduo encontrado.'}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -173,7 +190,7 @@ export function ResiduoList({ onAddNew, onEdit }: ResiduoListProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {residuos.map((residuo) => (
+                  {filteredResiduos.map((residuo) => (
                     <TableRow key={residuo.id_residuo}>
                       <TableCell className="font-medium">
                         {residuo.nom_residuo}

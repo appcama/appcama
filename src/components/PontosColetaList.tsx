@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, MapPin, Edit, Power } from "lucide-react";
@@ -36,6 +37,7 @@ interface PontosColetaListProps {
 export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
   const [pontosColeta, setPontosColeta] = useState<PontoColeta[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -91,6 +93,12 @@ export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
     }
   };
 
+  const filteredPontosColeta = pontosColeta.filter(ponto =>
+    ponto.nom_ponto_coleta?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    ponto.des_logradouro?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    ponto.des_bairro?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (loading) {
     return (
       <Card>
@@ -103,20 +111,30 @@ export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div className="flex items-center gap-2">
-          <MapPin className="h-5 w-5" />
-          <CardTitle>Pontos de Coleta</CardTitle>
+      <CardHeader>
+        <div className="flex flex-row items-center justify-between">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            <CardTitle>Pontos de Coleta</CardTitle>
+          </div>
+          <Button onClick={onAddNew} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Novo Ponto de Coleta
+          </Button>
         </div>
-        <Button onClick={onAddNew} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Novo Ponto de Coleta
-        </Button>
+        <div className="flex gap-4 mt-4">
+          <Input
+            placeholder="Buscar por nome, logradouro ou bairro..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-md"
+          />
+        </div>
       </CardHeader>
       <CardContent>
-        {pontosColeta.length === 0 ? (
+        {filteredPontosColeta.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">
-            Nenhum ponto de coleta cadastrado
+            {searchTerm ? 'Nenhum ponto de coleta encontrado com os critérios de busca' : 'Nenhum ponto de coleta cadastrado'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -132,7 +150,7 @@ export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pontosColeta.map((pontoColeta) => (
+                {filteredPontosColeta.map((pontoColeta) => (
                   <TableRow key={pontoColeta.id_ponto_coleta}>
                     <TableCell className="font-medium">
                       {pontoColeta.nom_ponto_coleta}

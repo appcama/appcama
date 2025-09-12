@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, TrendingUp, Edit, Power, Loader2 } from "lucide-react";
@@ -26,6 +27,7 @@ interface IndicadorListProps {
 export function IndicadorList({ onEdit, onNew }: IndicadorListProps) {
   const [indicadores, setIndicadores] = useState<Indicador[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   const [updatingStatus, setUpdatingStatus] = useState<number | null>(null);
   const { toast } = useToast();
 
@@ -104,6 +106,10 @@ export function IndicadorList({ onEdit, onNew }: IndicadorListProps) {
     }
   };
 
+  const filteredIndicadores = indicadores.filter(indicador =>
+    indicador.nom_indicador?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    indicador.unidade_medida?.des_unidade_medida?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (loading) {
     return (
@@ -117,20 +123,30 @@ export function IndicadorList({ onEdit, onNew }: IndicadorListProps) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div className="flex items-center gap-2">
-          <TrendingUp className="h-5 w-5" />
-          <CardTitle>Indicadores</CardTitle>
+      <CardHeader>
+        <div className="flex flex-row items-center justify-between">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            <CardTitle>Indicadores</CardTitle>
+          </div>
+          <Button onClick={onNew} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Novo Indicador
+          </Button>
         </div>
-        <Button onClick={onNew} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Novo Indicador
-        </Button>
+        <div className="flex gap-4 mt-4">
+          <Input
+            placeholder="Buscar por nome ou unidade de medida..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-md"
+          />
+        </div>
       </CardHeader>
       <CardContent>
-        {indicadores.length === 0 ? (
+        {filteredIndicadores.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">
-            Nenhum indicador encontrado
+            {searchTerm ? 'Nenhum indicador encontrado com os critérios de busca' : 'Nenhum indicador encontrado'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -144,7 +160,7 @@ export function IndicadorList({ onEdit, onNew }: IndicadorListProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {indicadores.map((indicador) => (
+                {filteredIndicadores.map((indicador) => (
                   <TableRow key={indicador.id_indicador}>
                     <TableCell className="font-medium">
                       {indicador.nom_indicador}

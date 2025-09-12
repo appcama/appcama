@@ -1,8 +1,10 @@
 
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Edit, Power } from "lucide-react";
 import { toast } from "sonner";
@@ -29,6 +31,7 @@ interface TipoResiduoListProps {
 }
 
 export function TipoResiduoList({ onAddNew, onEdit }: TipoResiduoListProps) {
+  const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
 
   const { data: tiposResiduo = [], isLoading, error } = useQuery({
@@ -138,6 +141,11 @@ export function TipoResiduoList({ onAddNew, onEdit }: TipoResiduoListProps) {
     });
   };
 
+  const filteredTiposResiduo = tiposResiduo.filter(tipo =>
+    tipo.des_tipo_residuo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    tipo.des_recurso_natural?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (isLoading) {
     return (
       <Card>
@@ -163,20 +171,30 @@ export function TipoResiduoList({ onAddNew, onEdit }: TipoResiduoListProps) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Trash2 className="h-5 w-5" />
-          <CardTitle>Tipos de Resíduos</CardTitle>
+      <CardHeader>
+        <div className="flex flex-row items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Trash2 className="h-5 w-5" />
+            <CardTitle>Tipos de Resíduos</CardTitle>
+          </div>
+          <Button onClick={onAddNew} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Novo Tipo de Resíduo
+          </Button>
         </div>
-        <Button onClick={onAddNew} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Novo Tipo de Resíduo
-        </Button>
+        <div className="flex gap-4 mt-4">
+          <Input
+            placeholder="Buscar por tipo ou recurso natural..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-md"
+          />
+        </div>
       </CardHeader>
       <CardContent>
-        {tiposResiduo.length === 0 ? (
+        {filteredTiposResiduo.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">
-            Nenhum tipo de resíduo encontrado
+            {searchTerm ? 'Nenhum tipo de resíduo encontrado com os critérios de busca' : 'Nenhum tipo de resíduo encontrado'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -191,7 +209,7 @@ export function TipoResiduoList({ onAddNew, onEdit }: TipoResiduoListProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {tiposResiduo.map((tipo) => (
+                {filteredTiposResiduo.map((tipo) => (
                   <TableRow key={tipo.id_tipo_residuo}>
                     <TableCell className="font-medium">
                       {tipo.des_tipo_residuo}

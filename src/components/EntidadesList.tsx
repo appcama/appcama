@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -34,6 +35,7 @@ interface EntidadesListProps {
 export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
   const [entidades, setEntidades] = useState<Entidade[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -109,6 +111,12 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
     }
   };
 
+  const filteredEntidades = entidades.filter(entidade =>
+    entidade.nom_entidade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    entidade.num_cpf_cnpj?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    entidade.des_tipo_entidade?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (loading) {
     return (
       <Card>
@@ -121,20 +129,30 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Users className="h-5 w-5" />
-          <CardTitle>Entidades</CardTitle>
+      <CardHeader>
+        <div className="flex flex-row items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            <CardTitle>Entidades</CardTitle>
+          </div>
+          <Button onClick={onAddNew} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Nova Entidade
+          </Button>
         </div>
-        <Button onClick={onAddNew} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Nova Entidade
-        </Button>
+        <div className="flex gap-4 mt-4">
+          <Input
+            placeholder="Buscar por nome, CPF/CNPJ ou tipo..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-md"
+          />
+        </div>
       </CardHeader>
       <CardContent>
-        {entidades.length === 0 ? (
+        {filteredEntidades.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">
-            Nenhuma entidade cadastrada
+            {searchTerm ? 'Nenhuma entidade encontrada com os critérios de busca' : 'Nenhuma entidade cadastrada'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -153,7 +171,7 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {entidades.map((entidade) => (
+                {filteredEntidades.map((entidade) => (
                   <TableRow key={entidade.id_entidade}>
                     <TableCell className="font-medium">
                       {entidade.nom_entidade}

@@ -1,7 +1,9 @@
 
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -31,6 +33,7 @@ interface TipoPontoColetaListProps {
 }
 
 export function TipoPontoColetaList({ onEdit, onAddNew }: TipoPontoColetaListProps) {
+  const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -91,6 +94,10 @@ export function TipoPontoColetaList({ onEdit, onAddNew }: TipoPontoColetaListPro
     });
   };
 
+  const filteredTiposPontoColeta = tiposPontoColeta.filter(tipo =>
+    tipo.des_tipo_ponto_coleta?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (isLoading) {
     return (
       <Card>
@@ -116,20 +123,30 @@ export function TipoPontoColetaList({ onEdit, onAddNew }: TipoPontoColetaListPro
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div className="flex items-center gap-2">
-          <MapPin className="h-5 w-5" />
-          <CardTitle>Tipos de Ponto de Coleta</CardTitle>
+      <CardHeader>
+        <div className="flex flex-row items-center justify-between">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            <CardTitle>Tipos de Ponto de Coleta</CardTitle>
+          </div>
+          <Button onClick={onAddNew} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Novo Tipo de Ponto de Coleta
+          </Button>
         </div>
-        <Button onClick={onAddNew} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Novo Tipo de Ponto de Coleta
-        </Button>
+        <div className="flex gap-4 mt-4">
+          <Input
+            placeholder="Buscar por nome do tipo..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-md"
+          />
+        </div>
       </CardHeader>
       <CardContent>
-        {tiposPontoColeta.length === 0 ? (
+        {filteredTiposPontoColeta.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">
-            Nenhum tipo de ponto de coleta encontrado
+            {searchTerm ? 'Nenhum tipo de ponto de coleta encontrado com os critérios de busca' : 'Nenhum tipo de ponto de coleta encontrado'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -142,7 +159,7 @@ export function TipoPontoColetaList({ onEdit, onAddNew }: TipoPontoColetaListPro
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {tiposPontoColeta.map((tipo) => (
+                {filteredTiposPontoColeta.map((tipo) => (
                   <TableRow key={tipo.id_tipo_ponto_coleta}>
                     <TableCell className="font-medium">
                       {tipo.des_tipo_ponto_coleta}

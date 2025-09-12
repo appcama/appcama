@@ -1,8 +1,10 @@
 
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Building2, Edit, Power } from "lucide-react";
 import { toast } from "sonner";
@@ -22,6 +24,7 @@ interface TipoEntidadeListProps {
 }
 
 export function TipoEntidadeList({ onAddNew, onEdit }: TipoEntidadeListProps) {
+  const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
 
   const { data: tiposEntidade = [], isLoading, error } = useQuery({
@@ -74,6 +77,10 @@ export function TipoEntidadeList({ onAddNew, onEdit }: TipoEntidadeListProps) {
     });
   };
 
+  const filteredTiposEntidade = tiposEntidade.filter(tipo =>
+    tipo.des_tipo_entidade?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (isLoading) {
     return (
       <Card>
@@ -99,20 +106,30 @@ export function TipoEntidadeList({ onAddNew, onEdit }: TipoEntidadeListProps) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Building2 className="h-5 w-5" />
-          <CardTitle>Tipos de Entidades</CardTitle>
+      <CardHeader>
+        <div className="flex flex-row items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-5 w-5" />
+            <CardTitle>Tipos de Entidades</CardTitle>
+          </div>
+          <Button onClick={onAddNew} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Novo Tipo de Entidade
+          </Button>
         </div>
-        <Button onClick={onAddNew} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Novo Tipo de Entidade
-        </Button>
+        <div className="flex gap-4 mt-4">
+          <Input
+            placeholder="Buscar por nome do tipo..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-md"
+          />
+        </div>
       </CardHeader>
       <CardContent>
-        {tiposEntidade.length === 0 ? (
+        {filteredTiposEntidade.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">
-            Nenhum tipo de entidade encontrado
+            {searchTerm ? 'Nenhum tipo de entidade encontrado com os critérios de busca' : 'Nenhum tipo de entidade encontrado'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -127,7 +144,7 @@ export function TipoEntidadeList({ onAddNew, onEdit }: TipoEntidadeListProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {tiposEntidade.map((tipo) => (
+                {filteredTiposEntidade.map((tipo) => (
                   <TableRow key={tipo.id_tipo_entidade}>
                     <TableCell className="font-medium">
                       {tipo.des_tipo_entidade}
