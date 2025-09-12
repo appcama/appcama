@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Users, Edit, Power } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { formatCpfCnpj, formatPhone, formatCep } from "@/lib/cpf-cnpj-utils";
 
 interface Entidade {
   id_entidade: number;
@@ -75,16 +76,6 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
     }
   };
 
-  const formatCpfCnpj = (value: string) => {
-    if (value.length === 11) {
-      // CPF: 000.000.000-00
-      return value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-    } else if (value.length === 14) {
-      // CNPJ: 00.000.000/0000-00
-      return value.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
-    }
-    return value;
-  };
 
   const getTipoPessoa = (tipo: number) => {
     return tipo === 1 ? 'Pessoa Física' : 'Pessoa Jurídica';
@@ -179,10 +170,10 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
                     <TableCell className="text-sm">
                       {entidade.des_logradouro}, {entidade.des_bairro}
                       <div className="text-xs text-muted-foreground">
-                        CEP: {entidade.num_cep}
+                        CEP: {formatCep(entidade.num_cep)}
                       </div>
                     </TableCell>
-                    <TableCell>{entidade.num_telefone || '-'}</TableCell>
+                    <TableCell>{entidade.num_telefone ? formatPhone(entidade.num_telefone) : '-'}</TableCell>
                     <TableCell>{entidade.des_tipo_situacao}</TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${

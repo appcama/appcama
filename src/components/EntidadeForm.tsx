@@ -12,18 +12,18 @@ import { ArrowLeft, Save, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { applyCpfCnpjMask, validateCpfOrCnpj } from "@/lib/cpf-cnpj-utils";
+import { applyCpfCnpjMask, validateCpfOrCnpj, applyPhoneMask } from "@/lib/cpf-cnpj-utils";
 
 const formSchema = z.object({
-  nom_entidade: z.string().min(2, "Nome é obrigatório"),
+  nom_entidade: z.string().min(2, "Nome é obrigatório").max(60, "Nome deve ter no máximo 60 caracteres"),
   num_cpf_cnpj: z.string().min(11, "CPF/CNPJ é obrigatório")
     .refine((val) => validateCpfOrCnpj(val), "CPF/CNPJ inválido"),
   id_tipo_entidade: z.string().min(1, "Tipo de entidade é obrigatório"),
   id_tipo_pessoa: z.string().min(1, "Tipo de pessoa é obrigatório"),
-  nom_razao_social: z.string().optional(),
+  nom_razao_social: z.string().max(60, "Razão social deve ter no máximo 60 caracteres").optional(),
   id_tipo_situacao: z.string().min(1, "Situação é obrigatória"),
-  des_logradouro: z.string().min(5, "Logradouro é obrigatório"),
-  des_bairro: z.string().min(2, "Bairro é obrigatório"),
+  des_logradouro: z.string().min(5, "Logradouro é obrigatório").max(100, "Logradouro deve ter no máximo 100 caracteres"),
+  des_bairro: z.string().min(2, "Bairro é obrigatório").max(50, "Bairro deve ter no máximo 50 caracteres"),
   num_cep: z.string().min(8, "CEP é obrigatório"),
   id_municipio: z.string().min(1, "Município é obrigatório"),
   num_telefone: z.string().optional(),
@@ -189,6 +189,24 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
       // Remover formatação do CPF/CNPJ
       const cpfCnpjLimpo = data.num_cpf_cnpj.replace(/[^\d]/g, '');
       
+      // Verificar se CPF/CNPJ já existe (excluindo a própria entidade em caso de edição)
+      const { data: existingEntity } = await supabase
+        .from('entidade')
+        .select('id_entidade')
+        .eq('num_cpf_cnpj', cpfCnpjLimpo)
+        .neq('id_entidade', editingEntidade?.id_entidade || 0);
+
+      if (existingEntity && existingEntity.length > 0) {
+        toast({
+          title: "Erro",
+          description: "CPF/CNPJ já cadastrado no sistema",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const telefoneLimpo = data.num_telefone?.replace(/\D/g, '') || null;
+      
       const insertData: any = {
         nom_entidade: data.nom_entidade,
         num_cpf_cnpj: cpfCnpjLimpo,
@@ -201,7 +219,7 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
         num_cep: data.num_cep.replace(/[^\d]/g, ''),
         id_municipio: parseInt(data.id_municipio),
         id_unidade_federativa: 29, // Bahia
-        num_telefone: data.num_telefone || null,
+        num_telefone: telefoneLimpo,
         id_usuario_criador: user.id,
         dat_criacao: new Date().toISOString(),
       };
@@ -271,7 +289,7 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                     <FormItem>
                       <FormLabel>Nome da Entidade *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Digite o nome da entidade" {...field} />
+                        <Input placeholder="Digite o nome da entidade" maxLength={60} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -353,7 +371,7 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                     <FormItem>
                       <FormLabel>Razão Social</FormLabel>
                       <FormControl>
-                        <Input placeholder="Digite a razão social (opcional)" {...field} />
+                        <Input placeholder="Digite a razão social (opcional)" maxLength={60} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -428,7 +446,7 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                     <FormItem>
                       <FormLabel>Logradouro *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Rua, Avenida, etc." {...field} />
+                        <Input placeholder="Rua, Avenida, etc." maxLength={100} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -442,7 +460,7 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                     <FormItem>
                       <FormLabel>Bairro *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Digite o bairro" {...field} />
+                        <Input placeholder="Digite o bairro" maxLength={50} {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -456,7 +474,14 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                     <FormItem>
                       <FormLabel>Telefone</FormLabel>
                       <FormControl>
-                        <Input placeholder="(00) 00000-0000" {...field} />
+                        <Input 
+                          placeholder="(00) 00000-0000" 
+                          {...field}
+                          onChange={(e) => {
+                            const masked = applyPhoneMask(e.target.value);
+                            field.onChange(masked);
+                          }}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

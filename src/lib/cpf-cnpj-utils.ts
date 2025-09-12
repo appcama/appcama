@@ -112,3 +112,34 @@ export function getDocumentType(value: string): 'cpf' | 'cnpj' | null {
   
   return null;
 }
+
+export function applyPhoneMask(value: string): string {
+  const numbers = value.replace(/\D/g, '');
+  
+  if (numbers.length <= 10) {
+    // Telefone fixo: (00) 0000-0000
+    if (numbers.length <= 2) return numbers;
+    if (numbers.length <= 6) return numbers.replace(/(\d{2})(\d{0,4})/, '($1) $2');
+    return numbers.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+  } else {
+    // Celular: (00) 00000-0000
+    if (numbers.length <= 2) return numbers;
+    if (numbers.length <= 7) return numbers.replace(/(\d{2})(\d{0,5})/, '($1) $2');
+    return numbers.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+  }
+}
+
+export function formatPhone(value: string): string {
+  const numbers = value.replace(/\D/g, '');
+  
+  if (numbers.length <= 10) {
+    return numbers.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+  } else {
+    return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+  }
+}
+
+export function formatCep(value: string): string {
+  const numbers = value.replace(/\D/g, '');
+  return numbers.replace(/(\d{5})(\d{3})/, '$1-$2');
+}
