@@ -12,11 +12,12 @@ import { ArrowLeft, Save, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { applyCpfCnpjMask, validateCpfOrCnpj, applyPhoneMask } from "@/lib/cpf-cnpj-utils";
+import { applyCpfCnpjMask, validateCpfOrCnpj, applyPhoneMask, formatCep } from "@/lib/cpf-cnpj-utils";
 
 const formSchema = z.object({
   nom_entidade: z.string().min(2, "Nome é obrigatório").max(60, "Nome deve ter no máximo 60 caracteres"),
   num_cpf_cnpj: z.string().min(11, "CPF/CNPJ é obrigatório")
+    .max(18, "CPF/CNPJ deve ter no máximo 18 caracteres")
     .refine((val) => validateCpfOrCnpj(val), "CPF/CNPJ inválido"),
   id_tipo_entidade: z.string().min(1, "Tipo de entidade é obrigatório"),
   id_tipo_pessoa: z.string().min(1, "Tipo de pessoa é obrigatório"),
@@ -72,16 +73,16 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
     resolver: zodResolver(formSchema),
     defaultValues: {
       nom_entidade: editingEntidade?.nom_entidade || "",
-      num_cpf_cnpj: editingEntidade?.num_cpf_cnpj || "",
+      num_cpf_cnpj: editingEntidade?.num_cpf_cnpj ? applyCpfCnpjMask(editingEntidade.num_cpf_cnpj) : "",
       id_tipo_entidade: editingEntidade?.id_tipo_entidade?.toString() || "",
       id_tipo_pessoa: editingEntidade?.id_tipo_pessoa?.toString() || "1",
       nom_razao_social: editingEntidade?.nom_razao_social || "",
       id_tipo_situacao: editingEntidade?.id_tipo_situacao?.toString() || "",
       des_logradouro: editingEntidade?.des_logradouro || "",
       des_bairro: editingEntidade?.des_bairro || "",
-      num_cep: editingEntidade?.num_cep || "",
+      num_cep: editingEntidade?.num_cep ? formatCep(editingEntidade.num_cep) : "",
       id_municipio: editingEntidade?.id_municipio?.toString() || "2927408",
-      num_telefone: editingEntidade?.num_telefone || "",
+      num_telefone: editingEntidade?.num_telefone ? applyPhoneMask(editingEntidade.num_telefone) : "",
     },
   });
 
@@ -305,6 +306,7 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                       <FormControl>
                         <Input
                           placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                          maxLength={18}
                           {...field}
                           onChange={(e) => {
                             const value = applyCpfCnpjMask(e.target.value);
