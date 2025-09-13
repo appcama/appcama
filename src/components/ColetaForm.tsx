@@ -547,7 +547,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
               <Button
                 type="button"
                 onClick={() => setShowResiduoForm(true)}
-                className="bg-recycle-green hover:bg-recycle-green-dark"
+                className="bg-black hover:bg-gray-800 text-white"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Adicionar Resíduo
@@ -632,14 +632,14 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
           </CardContent>
         </Card>
 
-        <div className="flex gap-4">
+        <div className="flex gap-4 justify-end">
           <Button type="button" variant="outline" onClick={onBack}>
             Cancelar
           </Button>
           <Button 
             type="submit" 
             disabled={loading || coletaResiduos.length === 0}
-            className="bg-recycle-green hover:bg-recycle-green-dark"
+            className="bg-black hover:bg-gray-800 text-white"
           >
             {loading ? 'Salvando...' : (editingColeta ? 'Atualizar' : 'Salvar')} Coleta
           </Button>

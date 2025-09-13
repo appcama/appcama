@@ -14,8 +14,8 @@ import { ArrowLeft, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const eventoSchema = z.object({
-  nom_evento: z.string().min(1, "Nome do evento é obrigatório"),
-  des_evento: z.string().optional(),
+  nom_evento: z.string().min(1, "Nome do evento é obrigatório").max(60, "Nome deve ter no máximo 60 caracteres"),
+  des_evento: z.string().max(250, "Descrição deve ter no máximo 250 caracteres").optional(),
   dat_inicio: z.string().min(1, "Data de início é obrigatória"),
   dat_termino: z.string().min(1, "Data de término é obrigatória"),
 }).refine((data) => {
@@ -207,6 +207,7 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
                   <FormControl>
                     <Input 
                       placeholder="Digite o nome do evento"
+                      maxLength={60}
                       {...field}
                     />
                   </FormControl>
@@ -226,6 +227,7 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
                       placeholder="Digite a descrição do evento (opcional)"
                       className="resize-none"
                       rows={3}
+                      maxLength={250}
                       {...field}
                     />
                   </FormControl>
@@ -282,7 +284,6 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="bg-recycle-green hover:bg-recycle-green-dark"
               >
                 {isSubmitting 
                   ? (isEditing ? "Atualizando..." : "Salvando...") 

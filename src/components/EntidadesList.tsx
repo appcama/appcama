@@ -24,7 +24,6 @@ interface Entidade {
   id_municipio: number;
   des_status: string;
   des_tipo_entidade?: string;
-  des_tipo_situacao?: string;
 }
 
 interface EntidadesListProps {
@@ -50,9 +49,6 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
           *,
           tipo_entidade!id_tipo_entidade (
             des_tipo_entidade
-          ),
-          tipo_situacao!id_tipo_situacao (
-            des_tipo_situacao
           )
         `)
         .in('des_status', ['A', 'D'])
@@ -62,8 +58,7 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
 
       const formattedData = data.map((item: any) => ({
         ...item,
-        des_tipo_entidade: item.tipo_entidade?.des_tipo_entidade || 'N/A',
-        des_tipo_situacao: item.tipo_situacao?.des_tipo_situacao || 'N/A'
+        des_tipo_entidade: item.tipo_entidade?.des_tipo_entidade || 'N/A'
       }));
 
       setEntidades(formattedData);
@@ -165,7 +160,6 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
                   <TableHead>Razão Social</TableHead>
                   <TableHead>Endereço</TableHead>
                   <TableHead>Telefone</TableHead>
-                  <TableHead>Situação</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
@@ -193,7 +187,6 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
                       </div>
                     </TableCell>
                     <TableCell>{entidade.num_telefone ? formatPhone(entidade.num_telefone) : '-'}</TableCell>
-                    <TableCell>{entidade.des_tipo_situacao}</TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                         entidade.des_status === 'A' 

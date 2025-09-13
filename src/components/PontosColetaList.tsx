@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Plus, MapPin, Edit, Power } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { formatCep } from "@/lib/cpf-cnpj-utils";
 
 interface PontoColeta {
   id_ponto_coleta: number;
@@ -157,7 +159,7 @@ export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
                     </TableCell>
                     <TableCell>{pontoColeta.des_logradouro}</TableCell>
                     <TableCell>{pontoColeta.des_bairro}</TableCell>
-                    <TableCell>{pontoColeta.num_cep}</TableCell>
+                    <TableCell>{formatCep(pontoColeta.num_cep)}</TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                         pontoColeta.des_status === 'A' 
@@ -169,26 +171,44 @@ export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onEdit(pontoColeta)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleToggleStatus(pontoColeta)}
-                          className={`h-8 w-8 p-0 ${
-                            pontoColeta.des_status === 'A' 
-                              ? 'hover:bg-red-50 hover:text-red-600' 
-                              : 'hover:bg-green-50 hover:text-green-600'
-                          }`}
-                        >
-                          <Power className="h-4 w-4" />
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => onEdit(pontoColeta)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Editar ponto de coleta</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleToggleStatus(pontoColeta)}
+                                className={`h-8 w-8 p-0 ${
+                                  pontoColeta.des_status === 'A' 
+                                    ? 'hover:bg-red-50 hover:text-red-600' 
+                                    : 'hover:bg-green-50 hover:text-green-600'
+                                }`}
+                              >
+                                <Power className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{pontoColeta.des_status === 'A' ? 'Desativar ponto de coleta' : 'Ativar ponto de coleta'}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     </TableCell>
                   </TableRow>

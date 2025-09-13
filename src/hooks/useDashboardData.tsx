@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface DashboardFilters {
   entidadeId?: number;
   tipoEntidadeId?: number;
+  eventoId?: number;
   dataInicial: string;  
   dataFinal: string;
 }
@@ -65,6 +66,11 @@ export function useDashboardData(filters: DashboardFilters) {
             residuosPorTipo: [],
           };
         }
+      }
+
+      // Apply event filter if provided
+      if (filters.eventoId) {
+        coletaQuery = coletaQuery.eq("id_evento", filters.eventoId);
       }
 
       const { data: coletasIds, error: coletasError } = await coletaQuery;

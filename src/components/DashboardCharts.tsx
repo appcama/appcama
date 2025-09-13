@@ -43,7 +43,7 @@ export function DashboardCharts({ residuosPorTipo }: DashboardChartsProps) {
             <p key={index} className="text-sm" style={{ color: entry.color }}>
               {entry.dataKey === 'valor' 
                 ? `Valor: R$ ${entry.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-                : `${entry.name}: ${entry.value.toFixed(2)} toneladas (${entry.payload.percentage}%)`
+                : `${entry.name}: ${entry.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} toneladas (${entry.payload.percentage}%)`
               }
             </p>
           ))}

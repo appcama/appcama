@@ -41,16 +41,26 @@ const getIndicatorColor = (nomIndicador: string) => {
   return "bg-recycle-green-light text-recycle-green"; // Default color
 };
 
+// Função utilitária para formatação de porcentagens
+const formatPercentage = (percentage: number) => {
+  const isPositive = percentage >= 0;
+  const color = isPositive ? 'text-green-600' : 'text-red-600';
+  const sign = isPositive ? '+' : '';
+  
+  return {
+    text: `${sign}${percentage.toFixed(1)}% este período`,
+    className: `text-xs mt-1 ${color}`
+  };
+};
+
 export function Dashboard() {
-  // Initialize filters with current year
-  const currentYear = new Date().getFullYear();
   const [filters, setFilters] = useState<DashboardFilters>({
-    dataInicial: `${currentYear}-01-01`,
-    dataFinal: `${currentYear}-12-31`,
+    dataInicial: new Date().getFullYear() + "-01-01",
+    dataFinal: new Date().getFullYear() + "-12-31",
   });
 
   const { data, isLoading, error } = useDashboardData(filters);
-  const { data: statsData, isLoading: statsLoading } = useDashboardStats();
+  const { data: statsData, isLoading: statsLoading } = useDashboardStats(filters);
 
   const formatNumber = (value: number, decimals = 1) => {
     return value.toLocaleString('pt-BR', { 
@@ -62,7 +72,7 @@ export function Dashboard() {
   return (
     <div className="p-4 sm:p-6 space-y-6">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard ReciclaE</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Reciclômetro e Ecoindicadores do RcyclaÊ</h1>
         <p className="text-muted-foreground">
           Visão geral do sistema de controle de reciclagem
         </p>
@@ -82,7 +92,9 @@ export function Dashboard() {
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Cadastradas no sistema</p>
-                <p className="text-xs text-green-600 mt-1">+8.2% este mês</p>
+                <p className={formatPercentage(statsData?.totalEntidadesPercentage || 0).className}>
+                  {formatPercentage(statsData?.totalEntidadesPercentage || 0).text}
+                </p>
               </div>
               <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
                 <Building2 className="h-4 w-4 text-green-600" />
@@ -102,7 +114,9 @@ export function Dashboard() {
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Cooperativas e catadores</p>
-                <p className="text-xs text-green-600 mt-1">+5.1% este mês</p>
+                <p className={formatPercentage(statsData?.entidadesColetorasPercentage || 0).className}>
+                  {formatPercentage(statsData?.entidadesColetorasPercentage || 0).text}
+                </p>
               </div>
               <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
                 <Users className="h-4 w-4 text-blue-600" />
@@ -122,7 +136,9 @@ export function Dashboard() {
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Eventos ativos</p>
-                <p className="text-xs text-green-600 mt-1">+13.3% este mês</p>
+                <p className={formatPercentage(statsData?.eventosColetaPercentage || 0).className}>
+                  {formatPercentage(statsData?.eventosColetaPercentage || 0).text}
+                </p>
               </div>
               <div className="h-8 w-8 bg-orange-100 rounded-full flex items-center justify-center">
                 <Calendar className="h-4 w-4 text-orange-600" />
@@ -142,7 +158,9 @@ export function Dashboard() {
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">Empresas e geradores</p>
-                <p className="text-xs text-green-600 mt-1">+3.8% este mês</p>
+                <p className={formatPercentage(statsData?.geradoresResiduosPercentage || 0).className}>
+                  {formatPercentage(statsData?.geradoresResiduosPercentage || 0).text}
+                </p>
               </div>
               <div className="h-8 w-8 bg-brown-100 rounded-full flex items-center justify-center">
                 <Factory className="h-4 w-4 text-brown-600" />
@@ -156,10 +174,16 @@ export function Dashboard() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Recycle className="h-5 w-5 text-recycle-green" />
-            <CardTitle>Total de Resíduos Coletados</CardTitle>
+            <CardTitle>Reciclômetro</CardTitle>
           </div>
           <CardDescription>
-            Período: {new Date(filters.dataInicial).toLocaleDateString('pt-BR')} - {new Date(filters.dataFinal).toLocaleDateString('pt-BR')}
+            Período: {(() => {
+              const [yearInicial, monthInicial, dayInicial] = filters.dataInicial.split('-').map(Number);
+              const [yearFinal, monthFinal, dayFinal] = filters.dataFinal.split('-').map(Number);
+              const dataInicialLocal = new Date(yearInicial, monthInicial - 1, dayInicial);
+              const dataFinalLocal = new Date(yearFinal, monthFinal - 1, dayFinal);
+              return `${dataInicialLocal.toLocaleDateString('pt-BR')} - ${dataFinalLocal.toLocaleDateString('pt-BR')}`;
+            })()} 
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -168,7 +192,7 @@ export function Dashboard() {
           ) : (
             <div className="flex items-baseline gap-2">
               <span className="text-3xl sm:text-4xl font-bold text-recycle-green">
-                {(data?.totalResiduos || 0).toFixed(3)}
+                {formatNumber(data?.totalResiduos || 0, 3)}
               </span>
               <span className="text-lg text-muted-foreground">toneladas</span>
             </div>
@@ -176,10 +200,57 @@ export function Dashboard() {
         </CardContent>
       </Card>
 
+
+
+      {data?.residuosPorTipo && data.residuosPorTipo.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Totais por Tipo de Resíduo</CardTitle>
+            <CardDescription>
+              Quantidade coletada em toneladas por tipo de material
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tipo de Resíduo</TableHead>
+                    <TableHead className="text-right">Quantidade (t)</TableHead>
+                    <TableHead className="text-right">Valor Total (R$)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.residuosPorTipo
+                    .sort((a, b) => b.total_quantidade - a.total_quantidade)
+                    .map((residuo) => (
+                    <TableRow key={residuo.id_tipo_residuo}>
+                      <TableCell className="font-medium">
+                        {residuo.des_tipo_residuo}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatNumber(residuo.total_quantidade || 0, 3)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        R$ {(residuo.total_valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {data?.residuosPorTipo && (
+        <DashboardCharts residuosPorTipo={data.residuosPorTipo} />
+      )}
+
       {data?.indicadores && data.indicadores.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Indicadores de Impacto Ambiental</CardTitle>
+            <CardTitle>Ecoindicadores</CardTitle>
             <CardDescription>
               Benefícios ambientais calculados com base nos resíduos coletados
             </CardDescription>
@@ -212,51 +283,6 @@ export function Dashboard() {
             </div>
           </CardContent>
         </Card>
-      )}
-
-      {data?.residuosPorTipo && data.residuosPorTipo.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Totais por Tipo de Resíduo</CardTitle>
-            <CardDescription>
-              Quantidade coletada em toneladas por tipo de material
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tipo de Resíduo</TableHead>
-                    <TableHead className="text-right">Quantidade (t)</TableHead>
-                    <TableHead className="text-right">Valor Total (R$)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.residuosPorTipo
-                    .sort((a, b) => b.total_quantidade - a.total_quantidade)
-                    .map((residuo) => (
-                    <TableRow key={residuo.id_tipo_residuo}>
-                      <TableCell className="font-medium">
-                        {residuo.des_tipo_residuo}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {(residuo.total_quantidade || 0).toFixed(3)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        R$ {(residuo.total_valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {data?.residuosPorTipo && (
-        <DashboardCharts residuosPorTipo={data.residuosPorTipo} />
       )}
 
       <DashboardInfographic filters={filters} />

@@ -206,7 +206,7 @@ export function DashboardInfographic({ filters }: DashboardInfographicProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Infográfico de Impacto Ambiental</CardTitle>
+          <CardTitle>Infográfico de Ecoindicadores</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -240,9 +240,15 @@ export function DashboardInfographic({ filters }: DashboardInfographicProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Infográfico de Impacto Ambiental</CardTitle>
+        <CardTitle>Infográfico de Ecoindicadores</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Período: {new Date(filters.dataInicial).toLocaleDateString('pt-BR')} - {new Date(filters.dataFinal).toLocaleDateString('pt-BR')}
+          Período: {(() => {
+            const [yearInicial, monthInicial, dayInicial] = filters.dataInicial.split('-').map(Number);
+            const [yearFinal, monthFinal, dayFinal] = filters.dataFinal.split('-').map(Number);
+            const dataInicialLocal = new Date(yearInicial, monthInicial - 1, dayInicial);
+            const dataFinalLocal = new Date(yearFinal, monthFinal - 1, dayFinal);
+            return `${dataInicialLocal.toLocaleDateString('pt-BR')} - ${dataFinalLocal.toLocaleDateString('pt-BR')}`;
+          })()} 
         </p>
       </CardHeader>
       <CardContent>

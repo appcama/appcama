@@ -188,6 +188,7 @@ export function PerfilList({ onAddNew, onEdit, onViewUsers }: PerfilListProps) {
                           size="sm"
                           onClick={() => onEdit(perfil)}
                           className="h-8 w-8 p-0"
+                          title="Editar perfil"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -200,6 +201,7 @@ export function PerfilList({ onAddNew, onEdit, onViewUsers }: PerfilListProps) {
                               ? 'hover:bg-red-50 hover:text-red-600' 
                               : 'hover:bg-green-50 hover:text-green-600'
                           }`}
+                          title={perfil.des_status === 'A' ? 'Desativar perfil' : 'Ativar perfil'}
                         >
                           <Power className="h-4 w-4" />
                         </Button>

@@ -21,6 +21,11 @@ interface TipoEntidade {
   des_tipo_entidade: string;
 }
 
+interface Evento {
+  id_evento: number;
+  nom_evento: string;
+}
+
 interface DashboardFiltersProps {
   filters: DashboardFilters;
   onFiltersChange: (filters: DashboardFilters) => void;
@@ -29,18 +34,42 @@ interface DashboardFiltersProps {
 export function DashboardFiltersComponent({ filters, onFiltersChange }: DashboardFiltersProps) {
   const [entidades, setEntidades] = useState<Entidade[]>([]);
   const [tiposEntidade, setTiposEntidade] = useState<TipoEntidade[]>([]);
-  const [dataInicial, setDataInicial] = useState<Date | undefined>(
-    filters.dataInicial ? new Date(filters.dataInicial) : undefined
-  );
-  const [dataFinal, setDataFinal] = useState<Date | undefined>(
-    filters.dataFinal ? new Date(filters.dataFinal) : undefined
-  );
+  const [eventos, setEventos] = useState<Evento[]>([]);
+  const [dataInicial, setDataInicial] = useState<Date | undefined>(() => {
+    if (filters.dataInicial) {
+      const [year, month, day] = filters.dataInicial.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    }
+    return undefined;
+  });
+  const [dataFinal, setDataFinal] = useState<Date | undefined>(() => {
+    if (filters.dataFinal) {
+      const [year, month, day] = filters.dataFinal.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    }
+    return undefined;
+  });
   const [dateError, setDateError] = useState<string>("");
 
   useEffect(() => {
     fetchEntidades();
     fetchTiposEntidade();
+    fetchEventos();
   }, []);
+
+  // Sync local date states with filters from parent component
+  useEffect(() => {
+    if (filters.dataInicial) {
+      // Parse date string as local date to avoid timezone issues
+      const [year, month, day] = filters.dataInicial.split('-').map(Number);
+      setDataInicial(new Date(year, month - 1, day));
+    }
+    if (filters.dataFinal) {
+      // Parse date string as local date to avoid timezone issues
+      const [year, month, day] = filters.dataFinal.split('-').map(Number);
+      setDataFinal(new Date(year, month - 1, day));
+    }
+  }, [filters.dataInicial, filters.dataFinal]);
 
   const fetchEntidades = async () => {
     try {
@@ -69,6 +98,21 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
       setTiposEntidade(data || []);
     } catch (error) {
       console.error("Erro ao carregar tipos de entidade:", error);
+    }
+  };
+
+  const fetchEventos = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("evento")
+        .select("id_evento, nom_evento")
+        .eq("des_status", "A")
+        .order("nom_evento");
+
+      if (error) throw error;
+      setEventos(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar eventos:", error);
     }
   };
 
@@ -128,6 +172,7 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
     onFiltersChange({
       entidadeId: undefined,
       tipoEntidadeId: undefined,
+      eventoId: undefined,
       dataInicial: currentYear.dataInicial,
       dataFinal: currentYear.dataFinal,
     });
@@ -142,7 +187,7 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {/* Entidade Filter */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Entidade</label>
@@ -189,6 +234,32 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
                 {tiposEntidade.map((tipo) => (
                   <SelectItem key={tipo.id_tipo_entidade} value={tipo.id_tipo_entidade.toString()}>
                     {tipo.des_tipo_entidade}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Evento Filter */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Evento</label>
+            <Select
+              value={filters.eventoId?.toString() || "all"}
+              onValueChange={(value) =>
+                onFiltersChange({
+                  ...filters,
+                  eventoId: value !== "all" ? parseInt(value) : undefined,
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Todos os eventos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os eventos</SelectItem>
+                {eventos.map((evento) => (
+                  <SelectItem key={evento.id_evento} value={evento.id_evento.toString()}>
+                    {evento.nom_evento}
                   </SelectItem>
                 ))}
               </SelectContent>

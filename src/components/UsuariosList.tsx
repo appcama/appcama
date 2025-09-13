@@ -3,9 +3,11 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit2, Power, PowerOff, RotateCcw, X } from "lucide-react";
+import { Plus, Edit, Power, PowerOff, RotateCcw, X, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -46,8 +48,20 @@ interface UsuariosListProps {
 }
 
 export function UsuariosList({ onAddNew, onEdit, perfilFilter, onClearFilter }: UsuariosListProps) {
+  const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   const { data: usuarios, isLoading } = useQuery({
     queryKey: ['usuarios', perfilFilter?.id_perfil],
@@ -102,6 +116,12 @@ export function UsuariosList({ onAddNew, onEdit, perfilFilter, onClearFilter }: 
     },
   });
 
+  const filteredUsuarios = usuarios?.filter(usuario =>
+    usuario.des_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    usuario.entidade?.nom_entidade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    usuario.perfil?.nom_perfil?.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
+
   const resetPasswordMutation = useMutation({
     mutationFn: async (userId: number) => {
       const { error } = await supabase.rpc('reset_user_password', {
@@ -141,132 +161,156 @@ export function UsuariosList({ onAddNew, onEdit, perfilFilter, onClearFilter }: 
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>
-                Usuários
-                {perfilFilter && (
-                  <span className="text-base font-normal text-muted-foreground ml-2">
-                    - Perfil: {perfilFilter.nom_perfil}
-                  </span>
-                )}
-              </CardTitle>
-              <CardDescription>
-                {perfilFilter 
-                  ? `Usuários com o perfil "${perfilFilter.nom_perfil}"` 
-                  : "Gerencie os usuários do sistema"
-                }
-              </CardDescription>
-            </div>
-            <div className="flex gap-2">
-              {perfilFilter && onClearFilter && (
-                <Button 
-                  variant="outline" 
-                  onClick={onClearFilter}
-                  className="flex items-center gap-2"
-                >
-                  <X className="h-4 w-4" />
-                  Limpar Filtro
-                </Button>
-              )}
-              <Button onClick={onAddNew}>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Usuário
-              </Button>
-            </div>
+    <Card>
+      <CardHeader>
+        <div className="flex justify-between items-start">
+          <div className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            <CardTitle>Usuários</CardTitle>
+            {perfilFilter && (
+              <span className="text-base font-normal text-muted-foreground ml-2">
+                - Perfil: {perfilFilter.nom_perfil}
+              </span>
+            )}
           </div>
-        </CardHeader>
-        <CardContent>
-          {perfilFilter && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-sm text-blue-800">
-                <strong>Filtro ativo:</strong> Exibindo apenas usuários do perfil "{perfilFilter.nom_perfil}"
-              </p>
-            </div>
-          )}
-          {usuarios && usuarios.length > 0 ? (
-            <div className="grid gap-4">
-              {usuarios.map((usuario) => (
-                <Card key={usuario.id_usuario} className="p-4">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <h3 className="font-semibold">
-                          {usuario.des_email || `Usuário ${usuario.id_usuario}`}
-                        </h3>
-                        <Badge variant={usuario.des_status === 'A' ? 'default' : 'secondary'}>
-                          {usuario.des_status === 'A' ? 'Ativo' : 'Inativo'}
-                        </Badge>
-                        <Badge variant={usuario.des_senha_validada === 'A' ? 'default' : 'destructive'}>
-                          {usuario.des_senha_validada === 'A' ? 'Senha Validada' : 'Senha Pendente'}
-                        </Badge>
-                      </div>
-                      <div className="text-sm text-muted-foreground space-y-1">
-                        <p><strong>Entidade:</strong> {usuario.entidade?.nom_entidade || 'N/A'}</p>
-                        <p><strong>Perfil:</strong> {usuario.perfil?.nom_perfil || 'N/A'}</p>
-                      </div>
-                    </div>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onEdit(usuario)}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            <RotateCcw className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Resetar Senha</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Tem certeza que deseja resetar a senha deste usuário? 
-                              A nova senha será "123456789" e o usuário precisará validá-la no próximo login.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleResetPassword(usuario.id_usuario)}>
-                              Resetar
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+          <div className="flex gap-2">
+            {perfilFilter && onClearFilter && (
+              <Button 
+                variant="outline" 
+                onClick={onClearFilter}
+                className="flex items-center gap-2"
+              >
+                <X className="h-4 w-4" />
+                Limpar Filtro
+              </Button>
+            )}
+            <Button onClick={onAddNew} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Novo Usuário
+            </Button>
+          </div>
+        </div>
+        <div className="flex gap-4 mt-4">
+          <Input
+            placeholder="Buscar por email, entidade ou perfil..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-md"
+          />
+        </div>
+      </CardHeader>
+      <CardContent>
+        {perfilFilter && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm text-blue-800">
+              <strong>Filtro ativo:</strong> Exibindo apenas usuários do perfil "{perfilFilter.nom_perfil}"
+            </p>
+          </div>
+        )}
+        {filteredUsuarios.length === 0 ? (
+          <div className="text-center text-muted-foreground py-8">
+            {searchTerm ? 'Nenhum usuário encontrado com os critérios de busca' : (isLoading ? 'Carregando usuários...' : 'Nenhum usuário cadastrado')}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Entidade</TableHead>
+                  <TableHead>Perfil</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Senha</TableHead>
+                  <TableHead>Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsuarios.map((usuario) => (
+                  <TableRow key={usuario.id_usuario}>
+                    <TableCell className="font-medium">
+                      {usuario.des_email || `Usuário ${usuario.id_usuario}`}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {usuario.entidade?.nom_entidade || 'N/A'}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {usuario.perfil?.nom_perfil || 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        usuario.des_status === 'A' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {usuario.des_status === 'A' ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        usuario.des_senha_validada === 'A' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {usuario.des_senha_validada === 'A' ? 'Validada' : 'Pendente'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onEdit(usuario)}
+                          className="h-8 w-8 p-0"
+                          title="Editar usuário"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-8 w-8 p-0" title="Resetar senha">
+                              <RotateCcw className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Resetar Senha</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja resetar a senha deste usuário? 
+                                A nova senha será "123456789" e o usuário precisará validá-la no próximo login.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleResetPassword(usuario.id_usuario)}>
+                                Resetar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
 
-                      <Button
-                        variant={usuario.des_status === 'A' ? 'destructive' : 'default'}
-                        size="sm"
-                        onClick={() => handleToggleStatus(usuario)}
-                      >
-                        {usuario.des_status === 'A' ? (
-                          <PowerOff className="h-4 w-4" />
-                        ) : (
-                          <Power className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              {perfilFilter 
-                ? `Nenhum usuário encontrado com o perfil "${perfilFilter.nom_perfil}"` 
-                : "Nenhum usuário encontrado"
-              }
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                        <Button
+                          variant={usuario.des_status === 'A' ? 'destructive' : 'default'}
+                          size="sm"
+                          onClick={() => handleToggleStatus(usuario)}
+                          className="h-8 w-8 p-0"
+                          title={usuario.des_status === 'A' ? 'Desativar usuário' : 'Ativar usuário'}
+                        >
+                          {usuario.des_status === 'A' ? (
+                            <PowerOff className="h-4 w-4" />
+                          ) : (
+                            <Power className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

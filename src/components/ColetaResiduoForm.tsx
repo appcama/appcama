@@ -406,13 +406,13 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
                   </div>
                 )}
 
-                <div className="flex gap-4 pt-4">
+                <div className="flex gap-4 pt-4 justify-end">
                   <Button type="button" variant="outline" onClick={onBack}>
                     Cancelar
                   </Button>
                   <Button 
                     type="submit"
-                    className="bg-recycle-green hover:bg-recycle-green-dark"
+                    className="bg-black hover:bg-gray-800 text-white"
                   >
                     {editingResiduo ? 'Atualizar' : 'Adicionar'} Resíduo
                   </Button>

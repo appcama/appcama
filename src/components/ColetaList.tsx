@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Eye, Trash2 } from 'lucide-react';
+import { Plus, Edit, Eye, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -96,7 +96,8 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
   const filteredColetas = coletas.filter(coleta =>
     coleta.cod_coleta?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     coleta.ponto_coleta?.nom_ponto_coleta?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    coleta.entidade?.nom_entidade?.toLowerCase().includes(searchTerm.toLowerCase())
+    coleta.entidade?.nom_entidade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    coleta.evento?.nom_evento?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const formatCurrency = (value: number) => {
@@ -122,7 +123,7 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-900">Coletas</h1>
-        <Button onClick={onAddNew} className="bg-recycle-green hover:bg-recycle-green-dark">
+        <Button onClick={onAddNew}>
           <Plus className="w-4 h-4 mr-2" />
           Nova Coleta
         </Button>
@@ -133,7 +134,7 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
           <CardTitle>Lista de Coletas</CardTitle>
           <div className="flex gap-4 mt-4">
             <Input
-              placeholder="Buscar por código, ponto de coleta ou entidade..."
+              placeholder="Buscar por código, ponto de coleta, entidade ou evento..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-md"
@@ -178,7 +179,7 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
                             onClick={() => onEdit(coleta)}
                             title="Editar coleta"
                           >
-                            <Edit2 className="w-4 h-4" />
+                            <Edit className="w-4 h-4" />
                           </Button>
                         </div>
                       </td>

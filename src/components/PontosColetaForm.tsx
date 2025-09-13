@@ -9,6 +9,7 @@ import { ArrowLeft, MapPin, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useViaCep } from "@/hooks/useViaCep";
+import { applyCepMask } from "@/lib/cpf-cnpj-utils";
 
 interface PontoColeta {
   id_ponto_coleta: number;
@@ -84,7 +85,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
     if (editingPontoColeta) {
       setFormData({
         nom_ponto_coleta: editingPontoColeta.nom_ponto_coleta,
-        num_cep: editingPontoColeta.num_cep,
+        num_cep: applyCepMask(editingPontoColeta.num_cep),
         des_logradouro: editingPontoColeta.des_logradouro,
         des_bairro: editingPontoColeta.des_bairro,
         num_endereco: '',
@@ -151,10 +152,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
   };
 
   const handleCepChange = async (cep: string) => {
-    const formattedCep = cep
-      .replace(/\D/g, '')
-      .replace(/(\d{5})(\d{3})/, '$1-$2')
-      .substring(0, 9);
+    const formattedCep = applyCepMask(cep);
     
     setFormData(prev => ({
       ...prev,
@@ -391,6 +389,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
                 value={formData.des_logradouro}
                 onChange={(e) => handleInputChange('des_logradouro', e.target.value)}
                 placeholder="Rua, Avenida, etc."
+                maxLength={60}
                 required
               />
             </div>
@@ -402,6 +401,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
                 value={formData.des_bairro}
                 onChange={(e) => handleInputChange('des_bairro', e.target.value)}
                 placeholder="Nome do bairro"
+                maxLength={50}
               />
             </div>
           </div>
@@ -443,12 +443,12 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
             </div>
           </div>
 
-          <div className="flex gap-2 pt-4">
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Salvando...' : 'Salvar'}
-            </Button>
+          <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onBack}>
               Cancelar
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Salvando...' : 'Salvar'}
             </Button>
           </div>
         </form>
