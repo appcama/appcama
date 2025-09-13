@@ -12,6 +12,7 @@ import { ArrowLeft, Save, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useOfflineForm } from "@/hooks/useOfflineForm";
 import { applyCpfCnpjMask, validateCpfOrCnpj, applyPhoneMask, formatCep } from "@/lib/cpf-cnpj-utils";
 
 const formSchema = z.object({
@@ -74,6 +75,76 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
   const [loadingCep, setLoadingCep] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Original submit function for online operations
+  const originalSubmit = async (data: FormData) => {
+    if (!user) {
+      throw new Error("Usuário não autenticado");
+    }
+
+    // Remover formatação do CPF/CNPJ
+    const cpfCnpjLimpo = data.num_cpf_cnpj.replace(/[^\d]/g, '');
+    
+    // Verificar se CPF/CNPJ já existe (excluindo a própria entidade em caso de edição)
+    const { data: existingEntity } = await supabase
+      .from('entidade')
+      .select('id_entidade')
+      .eq('num_cpf_cnpj', cpfCnpjLimpo)
+      .neq('id_entidade', editingEntidade?.id_entidade || 0);
+
+    if (existingEntity && existingEntity.length > 0) {
+      throw new Error("CPF/CNPJ já cadastrado no sistema");
+    }
+    
+    const telefoneLimpo = data.num_telefone?.replace(/\D/g, '') || null;
+    
+    const insertData: any = {
+      nom_entidade: data.nom_entidade,
+      num_cpf_cnpj: cpfCnpjLimpo,
+      id_tipo_entidade: parseInt(data.id_tipo_entidade),
+      id_tipo_pessoa: parseInt(data.id_tipo_pessoa),
+      nom_razao_social: data.nom_razao_social || null,
+      id_tipo_situacao: parseInt(data.id_tipo_situacao),
+      des_logradouro: data.des_logradouro,
+      des_bairro: data.des_bairro,
+      num_cep: data.num_cep.replace(/[^\d]/g, ''),
+      id_municipio: parseInt(data.id_municipio),
+      id_unidade_federativa: 29, // Bahia
+      num_telefone: telefoneLimpo,
+      id_usuario_criador: user.id,
+      dat_criacao: new Date().toISOString(),
+    };
+
+    let result;
+    if (editingEntidade) {
+      // Atualizar entidade existente
+      result = await supabase
+        .from('entidade')
+        .update({
+          ...insertData,
+          id_usuario_atualizador: user.id,
+          dat_atualizacao: new Date().toISOString(),
+        })
+        .eq('id_entidade', editingEntidade.id_entidade);
+    } else {
+      // Inserir nova entidade
+      result = await supabase
+        .from('entidade')
+        .insert(insertData);
+    }
+    
+    const { error } = result;
+    if (error) throw error;
+    
+    return result;
+  };
+
+  // Use offline form hook
+  const { submitForm, isSubmitting, isOnline } = useOfflineForm({
+    table: 'entidade',
+    onlineSubmit: originalSubmit,
+    onSuccess
+  });
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -182,93 +253,7 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
   };
 
   const onSubmit = async (data: FormData) => {
-    if (!user) {
-      toast({
-        title: "Erro",
-        description: "Usuário não autenticado",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // Remover formatação do CPF/CNPJ
-      const cpfCnpjLimpo = data.num_cpf_cnpj.replace(/[^\d]/g, '');
-      
-      // Verificar se CPF/CNPJ já existe (excluindo a própria entidade em caso de edição)
-      const { data: existingEntity } = await supabase
-        .from('entidade')
-        .select('id_entidade')
-        .eq('num_cpf_cnpj', cpfCnpjLimpo)
-        .neq('id_entidade', editingEntidade?.id_entidade || 0);
-
-      if (existingEntity && existingEntity.length > 0) {
-        toast({
-          title: "Erro",
-          description: "CPF/CNPJ já cadastrado no sistema",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      const telefoneLimpo = data.num_telefone?.replace(/\D/g, '') || null;
-      
-      const insertData: any = {
-        nom_entidade: data.nom_entidade,
-        num_cpf_cnpj: cpfCnpjLimpo,
-        id_tipo_entidade: parseInt(data.id_tipo_entidade),
-        id_tipo_pessoa: parseInt(data.id_tipo_pessoa),
-        nom_razao_social: data.nom_razao_social || null,
-        id_tipo_situacao: parseInt(data.id_tipo_situacao),
-        des_logradouro: data.des_logradouro,
-        des_bairro: data.des_bairro,
-        num_cep: data.num_cep.replace(/[^\d]/g, ''),
-        id_municipio: parseInt(data.id_municipio),
-        id_unidade_federativa: 29, // Bahia
-        num_telefone: telefoneLimpo,
-        id_usuario_criador: user.id,
-        dat_criacao: new Date().toISOString(),
-      };
-
-      let result;
-      if (editingEntidade) {
-        // Atualizar entidade existente
-        result = await supabase
-          .from('entidade')
-          .update({
-            ...insertData,
-            id_usuario_atualizador: user.id,
-            dat_atualizacao: new Date().toISOString(),
-          })
-          .eq('id_entidade', editingEntidade.id_entidade);
-      } else {
-        // Inserir nova entidade
-        result = await supabase
-          .from('entidade')
-          .insert(insertData);
-      }
-      
-      const { error } = result;
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: editingEntidade ? "Entidade atualizada com sucesso" : "Entidade cadastrada com sucesso",
-      });
-
-      onSuccess();
-    } catch (error: any) {
-      console.error('Erro ao salvar entidade:', error);
-      toast({
-        title: "Erro",
-        description: error.message || "Erro ao cadastrar entidade",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    await submitForm(data, !!editingEntidade, editingEntidade?.id_entidade);
   };
 
   return (
@@ -502,9 +487,10 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                 <Button type="button" variant="outline" onClick={onBack}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={loading}>
+                <Button type="submit" disabled={isSubmitting}>
                   <Save className="h-4 w-4 mr-2" />
-                  {loading ? "Salvando..." : "Salvar"}
+                  {isSubmitting ? "Salvando..." : "Salvar"}
+                  {!isOnline && " (Offline)"}
                 </Button>
               </div>
             </form>

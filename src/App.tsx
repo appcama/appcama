@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { PermissionsProvider } from "@/hooks/usePermissions";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import ValidatePassword from "./pages/ValidatePassword";
@@ -22,17 +23,20 @@ const App = () => (
       <AuthProvider>
         <PermissionsProvider>
           <BrowserRouter>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/validate-password" element={<ValidatePassword />} />
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <Index />
-                </ProtectedRoute>
-              } />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <div className="relative">
+              <OfflineIndicator className="fixed top-4 right-4 z-50" />
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/validate-password" element={<ValidatePassword />} />
+                <Route path="/" element={
+                  <ProtectedRoute>
+                    <Index />
+                  </ProtectedRoute>
+                } />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </div>
           </BrowserRouter>
         </PermissionsProvider>
       </AuthProvider>
