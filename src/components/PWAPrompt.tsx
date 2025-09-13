@@ -115,7 +115,11 @@ export function PWAPrompt() {
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                <Smartphone className="w-6 h-6 text-primary" />
+                <img 
+                  src="/icon-192x192.png" 
+                  alt="ReciclaÊ" 
+                  className="w-8 h-8 rounded-lg"
+                />
               </div>
               
               <div className="flex-1 min-w-0">
@@ -156,7 +160,11 @@ export function PWAPrompt() {
             <CardContent className="p-6">
               <div className="text-center mb-4">
                 <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Share className="w-8 h-8 text-primary" />
+                  <img 
+                    src="/icon-192x192.png" 
+                    alt="ReciclaÊ" 
+                    className="w-12 h-12 rounded-lg"
+                  />
                 </div>
                 <h2 className="text-lg font-semibold mb-2">Instalar ReciclaÊ no iOS</h2>
               </div>
