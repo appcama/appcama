@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useOfflineForm } from "@/hooks/useOfflineForm";
 
 interface Perfil {
   id_perfil: number;
@@ -29,8 +30,32 @@ export function PerfilForm({ onBack, onSuccess, editingPerfil }: PerfilFormProps
   const [formData, setFormData] = useState({
     nom_perfil: "",
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  
+  const { submitForm, isSubmitting } = useOfflineForm({
+    table: 'perfil',
+    onlineSubmit: async (data) => {
+      if (editingPerfil) {
+        const { data: result, error } = await supabase
+          .from('perfil')
+          .update(data)
+          .eq('id_perfil', editingPerfil.id_perfil)
+          .select()
+          .single();
+        if (error) throw error;
+        return result;
+      } else {
+        const { data: result, error } = await supabase
+          .from('perfil')
+          .insert(data)
+          .select()
+          .single();
+        if (error) throw error;
+        return result;
+      }
+    },
+    onSuccess
+  });
 
   useEffect(() => {
     if (editingPerfil) {
@@ -71,63 +96,19 @@ export function PerfilForm({ onBack, onSuccess, editingPerfil }: PerfilFormProps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
-    setIsSubmitting(true);
-
     try {
-      const now = new Date().toISOString();
-
-      if (editingPerfil) {
-        // Atualizar perfil existente
-        const { error } = await supabase
-          .from('perfil')
-          .update({
-            nom_perfil: formData.nom_perfil.trim(),
-            dat_atualizacao: now,
-            id_usuario_atualizador: 1 // Substituir pelo ID do usuário logado
-          })
-          .eq('id_perfil', editingPerfil.id_perfil);
-
-        if (error) throw error;
-
-        toast({
-          title: "Sucesso",
-          description: "Perfil atualizado com sucesso",
-        });
-      } else {
-        // Criar novo perfil
-        const { error } = await supabase
-          .from('perfil')
-          .insert({
-            nom_perfil: formData.nom_perfil.trim(),
-            des_status: 'A',
-            des_locked: 'D',
-            dat_criacao: now,
-            id_usuario_criador: 1 // Substituir pelo ID do usuário logado
-          });
-
-        if (error) throw error;
-
-        toast({
-          title: "Sucesso",
-          description: "Perfil cadastrado com sucesso",
-        });
-      }
-
-      onSuccess();
+      const data = {
+        nom_perfil: formData.nom_perfil,
+      };
+      
+      await submitForm(data, !!editingPerfil, editingPerfil?.id_perfil);
     } catch (error) {
       console.error('Erro ao salvar perfil:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao salvar perfil",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

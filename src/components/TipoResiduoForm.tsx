@@ -12,6 +12,7 @@ import { ArrowLeft, Trash2, Plus, Edit2 } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { TipoResiduoIndicadorForm } from "./TipoResiduoIndicadorForm";
+import { useOfflineForm } from "@/hooks/useOfflineForm";
 
 const formSchema = z.object({
   des_tipo_residuo: z.string().min(2, "Nome do tipo deve ter pelo menos 2 caracteres"),
@@ -55,6 +56,31 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
       des_tipo_residuo: "",
       des_recurso_natural: "",
     },
+  });
+  
+  const { submitForm, isSubmitting } = useOfflineForm({
+    table: 'tipo_residuo',
+    onlineSubmit: async (data) => {
+      if (isEditing) {
+        const { data: result, error } = await supabase
+          .from('tipo_residuo')
+          .update(data)
+          .eq('id_tipo_residuo', editingTipoResiduo.id_tipo_residuo)
+          .select()
+          .single();
+        if (error) throw error;
+        return result;
+      } else {
+        const { data: result, error } = await supabase
+          .from('tipo_residuo')
+          .insert(data)
+          .select()
+          .single();
+        if (error) throw error;
+        return result;
+      }
+    },
+    onSuccess
   });
 
   // Carregar indicadores vinculados quando editando

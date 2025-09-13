@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useOfflineForm } from "@/hooks/useOfflineForm";
 
 const residuoSchema = z.object({
   nom_residuo: z.string().min(1, "Nome do resíduo é obrigatório"),
@@ -48,6 +49,31 @@ export function ResiduoForm({ onBack, onSuccess, editingResiduo }: ResiduoFormPr
       nom_residuo: "",
       id_tipo_residuo: undefined,
     },
+  });
+  
+  const { submitForm, isSubmitting } = useOfflineForm({
+    table: 'residuo',
+    onlineSubmit: async (data) => {
+      if (editingResiduo) {
+        const { data: result, error } = await supabase
+          .from('residuo')
+          .update(data)
+          .eq('id_residuo', editingResiduo.id_residuo)
+          .select()
+          .single();
+        if (error) throw error;
+        return result;
+      } else {
+        const { data: result, error } = await supabase
+          .from('residuo')
+          .insert(data)
+          .select()
+          .single();
+        if (error) throw error;
+        return result;
+      }
+    },
+    onSuccess
   });
 
   // Load tipos de resíduo

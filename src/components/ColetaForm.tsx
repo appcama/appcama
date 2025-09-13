@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useOfflineForm } from '@/hooks/useOfflineForm';
 import { ColetaResiduoForm } from './ColetaResiduoForm';
 
 interface PontoColeta {
@@ -48,6 +49,31 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
   const [loading, setLoading] = useState(false);
   const [showResiduoForm, setShowResiduoForm] = useState(false);
   const [editingResiduo, setEditingResiduo] = useState<ColetaResiduo | null>(null);
+  
+  const { submitForm, isSubmitting } = useOfflineForm({
+    table: 'coleta',
+    onlineSubmit: async (data) => {
+      if (editingColeta) {
+        const { data: result, error } = await supabase
+          .from('coleta')
+          .update(data)
+          .eq('id_coleta', editingColeta.id_coleta)
+          .select()
+          .single();
+        if (error) throw error;
+        return result;
+      } else {
+        const { data: result, error } = await supabase
+          .from('coleta')
+          .insert(data)
+          .select()
+          .single();
+        if (error) throw error;
+        return result;
+      }
+    },
+    onSuccess
+  });
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({

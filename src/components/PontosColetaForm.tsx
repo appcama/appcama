@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useViaCep } from "@/hooks/useViaCep";
 import { applyCepMask } from "@/lib/cpf-cnpj-utils";
+import { useOfflineForm } from "@/hooks/useOfflineForm";
 
 interface PontoColeta {
   id_ponto_coleta: number;
@@ -70,11 +71,35 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
   
   const [entidadesGestoras, setEntidadesGestoras] = useState<Entidade[]>([]);
   const [tiposPontoColeta, setTiposPontoColeta] = useState<TipoPontoColeta[]>([]);
-  const [loading, setLoading] = useState(false);
   const [loadingEntidades, setLoadingEntidades] = useState(true);
   const [loadingTipos, setLoadingTipos] = useState(true);
   const { toast } = useToast();
   const { searchCep, loading: cepLoading } = useViaCep();
+  
+  const { submitForm, isSubmitting } = useOfflineForm({
+    table: 'ponto_coleta',
+    onlineSubmit: async (data) => {
+      if (editingPontoColeta) {
+        const { data: result, error } = await supabase
+          .from('ponto_coleta')
+          .update(data)
+          .eq('id_ponto_coleta', editingPontoColeta.id_ponto_coleta)
+          .select()
+          .single();
+        if (error) throw error;
+        return result;
+      } else {
+        const { data: result, error } = await supabase
+          .from('ponto_coleta')
+          .insert(data)
+          .select()
+          .single();
+        if (error) throw error;
+        return result;
+      }
+    },
+    onSuccess
+  });
 
   useEffect(() => {
     fetchEntidadesGestoras();
@@ -210,65 +235,24 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
       return;
     }
 
-    setLoading(true);
-
     try {
-      const dataToSave = {
-        nom_ponto_coleta: formData.nom_ponto_coleta.trim(),
-        num_cep: formData.num_cep.replace(/\D/g, ''), // Remove hífen e caracteres não numéricos
-        des_logradouro: formData.des_logradouro.trim(),
-        des_bairro: formData.des_bairro.trim(),
-        des_status: 'A', // Default to active status
+      const pontoData = {
+        nom_ponto_coleta: formData.nom_ponto_coleta,
+        des_logradouro: formData.des_logradouro || '',
+        des_bairro: formData.des_bairro || '',
+        num_cep: formData.num_cep.replace(/\D/g, ''),
         id_entidade_gestora: formData.id_entidade_gestora,
         id_municipio: formData.id_municipio,
         id_unidade_federativa: formData.id_unidade_federativa,
         id_tipo_ponto_coleta: formData.id_tipo_ponto_coleta,
         id_tipo_situacao: formData.id_tipo_situacao,
         num_latitude: formData.num_latitude,
-        num_longitude: formData.num_longitude,
-        dat_criacao: new Date().toISOString(),
-        id_usuario_criador: 1
+        num_longitude: formData.num_longitude
       };
 
-      if (editingPontoColeta) {
-        const { error } = await supabase
-          .from('ponto_coleta')
-          .update({
-            ...dataToSave,
-            dat_atualizacao: new Date().toISOString(),
-            id_usuario_atualizador: 1
-          })
-          .eq('id_ponto_coleta', editingPontoColeta.id_ponto_coleta);
-
-        if (error) throw error;
-
-        toast({
-          title: "Sucesso",
-          description: "Ponto de coleta atualizado com sucesso",
-        });
-      } else {
-        const { error } = await supabase
-          .from('ponto_coleta')
-          .insert([dataToSave]);
-
-        if (error) throw error;
-
-        toast({
-          title: "Sucesso",
-          description: "Ponto de coleta cadastrado com sucesso",
-        });
-      }
-
-      onSuccess();
-    } catch (error: any) {
+      await submitForm(pontoData, !!editingPontoColeta, editingPontoColeta?.id_ponto_coleta);
+    } catch (error) {
       console.error('Erro ao salvar ponto de coleta:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao salvar ponto de coleta",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -447,8 +431,8 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
             <Button type="button" variant="outline" onClick={onBack}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Salvando...' : 'Salvar'}
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Salvando...' : 'Salvar'}
             </Button>
           </div>
         </form>

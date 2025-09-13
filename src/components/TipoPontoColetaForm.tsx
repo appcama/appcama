@@ -18,6 +18,7 @@ import {
 import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
+import { useOfflineForm } from "@/hooks/useOfflineForm";
 
 interface TipoPontoColeta {
   id_tipo_ponto_coleta: number;
@@ -53,6 +54,31 @@ export function TipoPontoColetaForm({ editingTipoPontoColeta, onBack, onSuccess 
       des_tipo_ponto_coleta: "",
     },
   });
+  
+  const { submitForm, isSubmitting } = useOfflineForm({
+    table: 'tipo_ponto_coleta',
+    onlineSubmit: async (data) => {
+      if (isEditing) {
+        const { data: result, error } = await supabase
+          .from('tipo_ponto_coleta')
+          .update(data)
+          .eq('id_tipo_ponto_coleta', editingTipoPontoColeta.id_tipo_ponto_coleta)
+          .select()
+          .single();
+        if (error) throw error;
+        return result;
+      } else {
+        const { data: result, error } = await supabase
+          .from('tipo_ponto_coleta')
+          .insert(data)
+          .select()
+          .single();
+        if (error) throw error;
+        return result;
+      }
+    },
+    onSuccess
+  });
 
   useEffect(() => {
     if (editingTipoPontoColeta) {
@@ -62,53 +88,14 @@ export function TipoPontoColetaForm({ editingTipoPontoColeta, onBack, onSuccess 
     }
   }, [editingTipoPontoColeta, form]);
 
-  const saveMutation = useMutation({
-    mutationFn: async (data: FormData) => {
-      if (isEditing) {
-        const { error } = await supabase
-          .from('tipo_ponto_coleta')
-          .update({
-            des_tipo_ponto_coleta: data.des_tipo_ponto_coleta.trim(),
-            dat_atualizacao: new Date().toISOString(),
-            id_usuario_atualizador: 1,
-          })
-          .eq('id_tipo_ponto_coleta', editingTipoPontoColeta.id_tipo_ponto_coleta);
-
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('tipo_ponto_coleta')
-          .insert({
-            des_tipo_ponto_coleta: data.des_tipo_ponto_coleta.trim(),
-            des_status: 'A',
-            des_locked: 'D',
-            id_usuario_criador: 1,
-            dat_criacao: new Date().toISOString(),
-          });
-
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tipos-ponto-coleta'] });
-      toast({
-        title: isEditing ? "Tipo atualizado" : "Tipo criado",
-        description: `Tipo de ponto de coleta ${isEditing ? "atualizado" : "criado"} com sucesso.`,
-      });
-      onSuccess();
-    },
-    onError: (error) => {
-      console.error('Erro ao salvar tipo de ponto de coleta:', error);
-      toast({
-        title: "Erro",
-        description: `Erro ao ${isEditing ? "atualizar" : "criar"} tipo de ponto de coleta.`,
-        variant: "destructive",
-      });
-    },
-  });
-
   const onSubmit = (data: FormData) => {
-    saveMutation.mutate(data);
+    const tipoData = {
+      des_tipo_ponto_coleta: data.des_tipo_ponto_coleta.trim(),
+      des_status: 'A',
+      des_locked: 'D',
+    };
+    
+    submitForm(tipoData, isEditing, editingTipoPontoColeta?.id_tipo_ponto_coleta);
   };
 
   return (
@@ -152,8 +139,8 @@ export function TipoPontoColetaForm({ editingTipoPontoColeta, onBack, onSuccess 
                 <Button type="button" variant="outline" onClick={onBack}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={saveMutation.isPending}>
-                  {saveMutation.isPending ? "Salvando..." : isEditing ? "Atualizar" : "Salvar"}
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Salvando..." : isEditing ? "Atualizar" : "Salvar"}
                 </Button>
               </div>
             </form>
