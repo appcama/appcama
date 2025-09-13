@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useDecimalMask, useCurrencyMask } from '@/hooks/useInputMask';
 import { cn } from '@/lib/utils';
+import { useOfflineForm } from '@/hooks/useOfflineForm';
 
 interface TipoResiduo {
   id_tipo_residuo: number;
@@ -55,6 +56,39 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
   // Usando as máscaras personalizadas
   const quantidade = useDecimalMask();
   const valorUnitario = useCurrencyMask();
+  
+  // Hook offline para manter consistência, mas neste caso é apenas local
+  const { submitForm, isSubmitting } = useOfflineForm({
+    table: 'coleta_residuo',
+    onlineSubmit: async (data) => {
+      // Esta é uma adição local, não salva no banco ainda
+      return data;
+    },
+    onSuccess: () => {
+      // Callback executado após processar o resíduo
+      if (selectedResiduo && quantidade.value && valorUnitario.value) {
+        const qtd = parseFloat(quantidade.value);
+        const valor = valorUnitario.getNumericValue();
+        
+        const coletaResiduo: ColetaResiduo = {
+          id: editingResiduo?.id,
+          id_residuo: selectedResiduo.id_residuo,
+          nom_residuo: selectedResiduo.nom_residuo,
+          tipo_residuo: selectedResiduo.tipo_residuo?.des_tipo_residuo || '',
+          qtd_total: qtd,
+          vlr_total: valor,
+          subtotal: qtd * valor,
+        };
+
+        onAdd(coletaResiduo);
+        
+        toast({
+          title: "Sucesso",
+          description: `Resíduo ${editingResiduo ? 'atualizado' : 'adicionado'} com sucesso.`,
+        });
+      }
+    }
+  });
 
   useEffect(() => {
     loadData();
@@ -191,7 +225,7 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
     return qtd * valor;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!selectedResiduo || !quantidade.value || !valorUnitario.value) {
@@ -215,17 +249,16 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
       return;
     }
 
-    const coletaResiduo: ColetaResiduo = {
-      id: editingResiduo?.id,
-      id_residuo: selectedResiduo.id_residuo,
-      nom_residuo: selectedResiduo.nom_residuo,
-      tipo_residuo: selectedResiduo.tipo_residuo?.des_tipo_residuo || '',
-      qtd_total: qtd,
-      vlr_total: valor,
-      subtotal: qtd * valor,
-    };
-
-    onAdd(coletaResiduo);
+    try {
+      // Usar o hook offline form que vai processar e chamar onSuccess
+      await submitForm({
+        id_residuo: selectedResiduo.id_residuo,
+        qtd_total: qtd,
+        vlr_total: valor
+      });
+    } catch (error) {
+      console.error('Erro ao processar resíduo:', error);
+    }
   };
 
   const clearTipoResiduoFilter = () => {
@@ -413,8 +446,9 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
                   <Button 
                     type="submit"
                     className="bg-black hover:bg-gray-800 text-white"
+                    disabled={isSubmitting}
                   >
-                    {editingResiduo ? 'Atualizar' : 'Adicionar'} Resíduo
+                    {isSubmitting ? 'Processando...' : `${editingResiduo ? 'Atualizar' : 'Adicionar'} Resíduo`}
                   </Button>
                 </div>
               </form>
