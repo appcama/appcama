@@ -25,6 +25,7 @@ import { UsuarioForm } from '@/components/UsuarioForm';
 import { ColetaForm } from '@/components/ColetaForm';
 import { Sidebar } from '@/components/Sidebar';
 import { MobileHeader } from '@/components/MobileHeader';
+import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { useBreakpoints } from '@/hooks/use-breakpoints';
 import { cn } from '@/lib/utils';
 
@@ -203,7 +204,8 @@ export function ReciclaELayout() {
           />
           <main className="flex-1 overflow-hidden">
             <div className="h-full overflow-y-auto">
-              <div className="p-4">
+              <div className="p-4 space-y-4">
+                <OfflineIndicator />
                 {renderContent()}
               </div>
             </div>
@@ -218,7 +220,8 @@ export function ReciclaELayout() {
           />
           <main className="flex-1 overflow-hidden">
             <div className="h-full overflow-y-auto bg-gray-50">
-              <div className="p-6">
+              <div className="p-6 space-y-6">
+                <OfflineIndicator />
                 {renderContent()}
               </div>
             </div>

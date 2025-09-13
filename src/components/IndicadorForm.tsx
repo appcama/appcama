@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useOfflineForm } from "@/hooks/useOfflineForm";
 
 interface Indicador {
   id_indicador: number;
@@ -34,9 +35,30 @@ export function IndicadorForm({ editingIndicador, onBack, onSave }: IndicadorFor
   });
   
   const [unidadesMedida, setUnidadesMedida] = useState<UnidadeMedida[]>([]);
-  const [loading, setLoading] = useState(false);
   const [loadingUnidades, setLoadingUnidades] = useState(true);
   const { toast } = useToast();
+
+  // Hook offline para formulário
+  const { submitForm, isSubmitting } = useOfflineForm({
+    table: 'indicador',
+    onlineSubmit: async (data) => {
+      if (editingIndicador) {
+        return await supabase
+          .from('indicador')
+          .update({
+            ...data,
+            id_usuario_atualizador: 1,
+            dat_atualizacao: new Date().toISOString(),
+          })
+          .eq('id_indicador', editingIndicador.id_indicador);
+      } else {
+        return await supabase
+          .from('indicador')
+          .insert([data]);
+      }
+    },
+    onSuccess: onSave
+  });
 
   useEffect(() => {
     fetchUnidadesMedida();
@@ -122,53 +144,19 @@ export function IndicadorForm({ editingIndicador, onBack, onSave }: IndicadorFor
       return;
     }
 
-    setLoading(true);
-    
+    const dataToSubmit = {
+      nom_indicador: formData.nom_indicador.trim(),
+      id_unidade_medida: formData.id_unidade_medida,
+      id_usuario_criador: 1,
+      dat_criacao: new Date().toISOString(),
+      des_status: 'A',
+      des_locked: 'D'
+    };
+
     try {
-      const dataToSubmit = {
-        nom_indicador: formData.nom_indicador.trim(),
-        id_unidade_medida: formData.id_unidade_medida,
-        id_usuario_criador: 1,
-        dat_criacao: new Date().toISOString(),
-        des_status: 'A',
-        des_locked: 'D'
-      };
-
-      let result;
-      if (editingIndicador) {
-        result = await supabase
-          .from('indicador')
-          .update({
-            ...dataToSubmit,
-            id_usuario_atualizador: 1,
-            dat_atualizacao: new Date().toISOString(),
-          })
-          .eq('id_indicador', editingIndicador.id_indicador);
-      } else {
-        result = await supabase
-          .from('indicador')
-          .insert([dataToSubmit]);
-      }
-
-      if (result.error) throw result.error;
-
-      toast({
-        title: "Sucesso",
-        description: editingIndicador 
-          ? "Indicador atualizado com sucesso!" 
-          : "Indicador cadastrado com sucesso!",
-      });
-
-      onSave();
+      await submitForm(dataToSubmit, !!editingIndicador, editingIndicador?.id_indicador);
     } catch (error) {
       console.error('Erro ao salvar indicador:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao salvar indicador",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -236,8 +224,8 @@ export function IndicadorForm({ editingIndicador, onBack, onSave }: IndicadorFor
               <Button type="button" variant="outline" onClick={onBack}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? (
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Salvando...
