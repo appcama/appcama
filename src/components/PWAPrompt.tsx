@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { X, Download, Smartphone, Share } from 'lucide-react';
+import { X, Download, Smartphone, Share, Monitor, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -13,28 +13,41 @@ export function PWAPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [isEdge, setIsEdge] = useState(false);
   const [isInStandaloneMode, setIsInStandaloneMode] = useState(false);
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
+  const [showEdgeInstructions, setShowEdgeInstructions] = useState(false);
+  const [userInteractions, setUserInteractions] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if running on iOS
+    // Check device and browser types
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isEdgeBrowser = /Edg/.test(navigator.userAgent);
     setIsIOS(iOS);
+    setIsEdge(isEdgeBrowser);
 
     // Check if already in standalone mode
     const inStandalone = window.matchMedia('(display-mode: standalone)').matches ||
                         (window.navigator as any).standalone === true;
     setIsInStandaloneMode(inStandalone);
 
-    // Listen for beforeinstallprompt event (Android/Chrome)
+    // Don't show prompt if already installed or dismissed
+    if (inStandalone || localStorage.getItem('pwa-prompt-dismissed')) {
+      return;
+    }
+
+    // Track user interactions
+    const trackInteraction = () => {
+      setUserInteractions(prev => prev + 1);
+    };
+
+    // Listen for beforeinstallprompt event (Chrome/Edge on Android)
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-      
-      // Check if user has dismissed the prompt before
-      const dismissed = localStorage.getItem('pwa-prompt-dismissed');
-      if (!dismissed && !inStandalone) {
+      // Show prompt after user has interacted a bit
+      if (userInteractions >= 1) {
         setShowPrompt(true);
       }
     };
@@ -50,22 +63,60 @@ export function PWAPrompt() {
       });
     };
 
+    // Add interaction listeners
+    document.addEventListener('click', trackInteraction);
+    document.addEventListener('scroll', trackInteraction);
+    document.addEventListener('touchstart', trackInteraction);
+
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    // Show prompt for iOS users after a delay if not in standalone
+    // For iOS devices, show prompt after interactions and delay
     if (iOS && !inStandalone) {
       const dismissed = localStorage.getItem('pwa-ios-prompt-dismissed');
       if (!dismissed) {
-        setTimeout(() => setShowPrompt(true), 3000);
+        const timer = setTimeout(() => {
+          if (userInteractions >= 1) {
+            setShowPrompt(true);
+          }
+        }, 2000);
+        
+        return () => {
+          clearTimeout(timer);
+          document.removeEventListener('click', trackInteraction);
+          document.removeEventListener('scroll', trackInteraction);
+          document.removeEventListener('touchstart', trackInteraction);
+        };
+      }
+    }
+
+    // For Edge Mobile, show prompt after brief interaction
+    if (isEdgeBrowser && !inStandalone) {
+      const dismissed = localStorage.getItem('pwa-edge-prompt-dismissed');
+      if (!dismissed) {
+        const timer = setTimeout(() => {
+          if (userInteractions >= 1) {
+            setShowPrompt(true);
+          }
+        }, 1500);
+        
+        return () => {
+          clearTimeout(timer);
+          document.removeEventListener('click', trackInteraction);
+          document.removeEventListener('scroll', trackInteraction);
+          document.removeEventListener('touchstart', trackInteraction);
+        };
       }
     }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
+      document.removeEventListener('click', trackInteraction);
+      document.removeEventListener('scroll', trackInteraction);
+      document.removeEventListener('touchstart', trackInteraction);
     };
-  }, [toast]);
+  }, [toast, userInteractions]);
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {
@@ -95,12 +146,16 @@ export function PWAPrompt() {
       }
     } else if (isIOS) {
       setShowIOSInstructions(true);
+    } else if (isEdge) {
+      setShowEdgeInstructions(true);
     }
   };
 
   const handleDismiss = () => {
     setShowPrompt(false);
-    const key = isIOS ? 'pwa-ios-prompt-dismissed' : 'pwa-prompt-dismissed';
+    let key = 'pwa-prompt-dismissed';
+    if (isIOS) key = 'pwa-ios-prompt-dismissed';
+    if (isEdge) key = 'pwa-edge-prompt-dismissed';
     localStorage.setItem(key, 'true');
   };
 
@@ -134,8 +189,8 @@ export function PWAPrompt() {
                     onClick={handleInstallClick}
                     className="flex-1"
                   >
-                    <Download className="w-4 h-4 mr-1" />
-                    {isIOS ? 'Como Instalar' : 'Instalar'}
+                    {isEdge ? <Monitor className="w-4 h-4 mr-1" /> : <Download className="w-4 h-4 mr-1" />}
+                    {isIOS ? 'Como Instalar' : isEdge ? 'Adicionar ao Menu' : 'Instalar'}
                   </Button>
                   
                   <Button 
@@ -198,6 +253,62 @@ export function PWAPrompt() {
                   className="flex-1" 
                   onClick={() => {
                     setShowIOSInstructions(false);
+                    handleDismiss();
+                  }}
+                >
+                  Não mostrar novamente
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Edge Mobile Installation Instructions Modal */}
+      {showEdgeInstructions && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <Card className="max-w-sm w-full">
+            <CardContent className="p-6">
+              <div className="text-center mb-4">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <img 
+                    src="/icon-192x192.png" 
+                    alt="ReciclaÊ" 
+                    className="w-12 h-12 rounded-lg"
+                  />
+                </div>
+                <h2 className="text-lg font-semibold mb-2">Instalar ReciclaÊ no Edge</h2>
+              </div>
+              
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <div className="flex gap-3">
+                  <span className="flex-shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-semibold">1</span>
+                  <p>Toque no menu <strong>(⋯)</strong> no canto inferior direito</p>
+                </div>
+                
+                <div className="flex gap-3">
+                  <span className="flex-shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-semibold">2</span>
+                  <p>Selecione <strong>"Aplicativos"</strong> → <strong>"Instalar este site como aplicativo"</strong></p>
+                </div>
+                
+                <div className="flex gap-3">
+                  <span className="flex-shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-semibold">3</span>
+                  <p>Toque em <strong>"Instalar"</strong> para adicionar à tela inicial</p>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 mt-6">
+                <Button 
+                  variant="outline" 
+                  className="flex-1" 
+                  onClick={() => setShowEdgeInstructions(false)}
+                >
+                  Entendi
+                </Button>
+                <Button 
+                  className="flex-1" 
+                  onClick={() => {
+                    setShowEdgeInstructions(false);
                     handleDismiss();
                   }}
                 >
