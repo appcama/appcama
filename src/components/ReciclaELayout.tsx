@@ -26,6 +26,8 @@ import { ColetaForm } from '@/components/ColetaForm';
 import { Sidebar } from '@/components/Sidebar';
 import { MobileHeader } from '@/components/MobileHeader';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
+import { PWAPrompt } from '@/components/PWAPrompt';
+import { PWAOfflineBanner } from '@/components/PWAOfflineBanner';
 import { useBreakpoints } from '@/hooks/use-breakpoints';
 import { cn } from '@/lib/utils';
 
@@ -194,6 +196,9 @@ export function ReciclaELayout() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* PWA Offline Status Banner */}
+      <PWAOfflineBanner />
+      
       {isMobile ? (
         <>
           <MobileHeader
@@ -228,6 +233,9 @@ export function ReciclaELayout() {
           </main>
         </div>
       )}
+      
+      {/* PWA Install Prompt */}
+      <PWAPrompt />
     </div>
   );
 }

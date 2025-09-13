@@ -1,12 +1,11 @@
 // Service Worker for ReciclaE Offline Functionality
 
-const CACHE_NAME = 'recicla-e-v1';
+const CACHE_NAME = 'recicla-e-pwa-v1.1';
 const urlsToCache = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
-  '/favicon.ico',
-  '/logo.png'
+  '/manifest.json',
+  '/lovable-uploads/94506f0e-fb21-40be-a145-11c21b9f09fa.png',
+  // Dynamic assets will be cached as they're requested
 ];
 
 // Install event - cache resources

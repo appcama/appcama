@@ -1,0 +1,105 @@
+{
+  "name": "ReciclaÊ - Sistema de Gestão de Reciclagem",
+  "short_name": "ReciclaÊ",
+  "description": "Sistema completo para gestão de reciclagem com funcionalidade offline",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#7CB342",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "pt-BR",
+  "categories": ["productivity", "business", "utilities"],
+  "icons": [
+    {
+      "src": "/lovable-uploads/94506f0e-fb21-40be-a145-11c21b9f09fa.png",
+      "sizes": "48x48",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/lovable-uploads/94506f0e-fb21-40be-a145-11c21b9f09fa.png",
+      "sizes": "72x72", 
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/lovable-uploads/94506f0e-fb21-40be-a145-11c21b9f09fa.png",
+      "sizes": "96x96",
+      "type": "image/png", 
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/lovable-uploads/94506f0e-fb21-40be-a145-11c21b9f09fa.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/lovable-uploads/94506f0e-fb21-40be-a145-11c21b9f09fa.png",
+      "sizes": "168x168",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Acesso rápido ao dashboard principal",
+      "url": "/?shortcut=dashboard",
+      "icons": [
+        {
+          "src": "/icon-512x512.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Nova Coleta",
+      "short_name": "Coleta",
+      "description": "Registrar nova coleta",
+      "url": "/?shortcut=coleta",
+      "icons": [
+        {
+          "src": "/icon-512x512.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "platform": "narrow"
+    },
+    {
+      "src": "/icon-512x512.png", 
+      "sizes": "720x540",
+      "type": "image/png",
+      "platform": "wide"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": ["navigate-new", "navigate-existing"]
+  }
+}

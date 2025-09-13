@@ -14,7 +14,15 @@ export default {
 			center: true,
 			padding: '2rem',
 			screens: {
-				'2xl': '1400px'
+				'xs': '375px',
+				'sm': '640px',
+				'md': '768px',
+				'lg': '1024px',
+				'xl': '1280px',
+				'2xl': '1400px',
+				// PWA specific breakpoints
+				'pwa-narrow': '540px',
+				'pwa-wide': '720px'
 			}
 		},
 		extend: {
@@ -96,11 +104,54 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				// PWA animations
+				'slide-up': {
+					from: {
+						transform: 'translateY(100%)',
+						opacity: '0'
+					},
+					to: {
+						transform: 'translateY(0)',
+						opacity: '1'
+					}
+				},
+				'fade-in': {
+					from: {
+						opacity: '0'
+					},
+					to: {
+						opacity: '1'
+					}
+				},
+				'bounce-subtle': {
+					'0%, 100%': {
+						transform: 'translateY(0)'
+					},
+					'50%': {
+						transform: 'translateY(-2px)'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				// PWA animations
+				'slide-up': 'slide-up 0.3s ease-out',
+				'fade-in': 'fade-in 0.2s ease-out',
+				'bounce-subtle': 'bounce-subtle 0.5s ease-out'
+			},
+			// PWA specific spacing for touch targets
+			spacing: {
+				'touch': '44px',
+				'safe-top': 'env(safe-area-inset-top)',
+				'safe-bottom': 'env(safe-area-inset-bottom)',
+				'safe-left': 'env(safe-area-inset-left)',
+				'safe-right': 'env(safe-area-inset-right)'
+			},
+			// PWA specific fonts
+			fontFamily: {
+				sans: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif']
 			}
 		}
 	},
