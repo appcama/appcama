@@ -139,7 +139,7 @@ export function TipoPontoColetaForm({ editingTipoPontoColeta, onBack, onSuccess 
                 <Button type="button" variant="outline" onClick={onBack}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
+                <Button type="submit" disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">
                   {isSubmitting ? "Salvando..." : isEditing ? "Atualizar" : "Salvar"}
                 </Button>
               </div>

@@ -81,7 +81,7 @@ export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
 
       toast({
         title: "Sucesso",
-        description: `Ponto de coleta ${newStatus === 'A' ? 'ativado' : 'desativado'} com sucesso`,
+        description: `Ponto de coleta ${newStatus === 'A' ? 'Ativado' : 'Desativado'} com sucesso`,
       });
 
       fetchPontosColeta();
@@ -119,14 +119,14 @@ export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
             <MapPin className="h-5 w-5" />
             <CardTitle>Pontos de Coleta</CardTitle>
           </div>
-          <Button onClick={onAddNew} className="flex items-center gap-2">
+          <Button onClick={onAddNew} className="flex items-center gap-2 bg-green-600 hover:bg-green-700">
             <Plus className="h-4 w-4" />
-            Novo Ponto de Coleta
+            Novo
           </Button>
         </div>
         <div className="flex gap-4 mt-4">
           <Input
-            placeholder="Buscar por nome, logradouro ou bairro..."
+            placeholder="Buscar por nome, logradouro ou bairro"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-md"
@@ -184,7 +184,7 @@ export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Editar ponto de coleta</p>
+                              <p>Editar</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -205,7 +205,7 @@ export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>{pontoColeta.des_status === 'A' ? 'Desativar ponto de coleta' : 'Ativar ponto de coleta'}</p>
+                              <p>{pontoColeta.des_status === 'A' ? 'Desativar' : 'Ativar'}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>

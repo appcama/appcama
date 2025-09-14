@@ -123,9 +123,9 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-900">Coletas</h1>
-        <Button onClick={onAddNew}>
+        <Button onClick={onAddNew} className="bg-green-600 hover:bg-green-700">
           <Plus className="w-4 h-4 mr-2" />
-          Nova Coleta
+          Novo
         </Button>
       </div>
 
@@ -134,7 +134,7 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
           <CardTitle>Lista de Coletas</CardTitle>
           <div className="flex gap-4 mt-4">
             <Input
-              placeholder="Buscar por código, ponto de coleta, entidade ou evento..."
+              placeholder="Buscar por código, ponto de coleta, entidade ou evento"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-md"
@@ -177,7 +177,7 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
                             variant="outline"
                             size="sm"
                             onClick={() => onEdit(coleta)}
-                            title="Editar coleta"
+                            title="Editar"
                           >
                             <Edit className="w-4 h-4" />
                           </Button>

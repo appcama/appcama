@@ -185,7 +185,7 @@ export function PerfilFuncionalidades() {
             <Button variant="outline" onClick={() => setSelectedPerfil(null)}>
               Cancelar
             </Button>
-            <Button onClick={handleSalvar} disabled={saving || selectedPerfil == null}>
+            <Button onClick={handleSalvar} disabled={saving || selectedPerfil == null} className="bg-green-600 hover:bg-green-700">
               {saving ? "Salvando..." : "Salvar"}
             </Button>
           </div>

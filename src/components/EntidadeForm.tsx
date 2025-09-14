@@ -487,7 +487,7 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                 <Button type="button" variant="outline" onClick={onBack}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
+                <Button type="submit" disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">
                   <Save className="h-4 w-4 mr-2" />
                   {isSubmitting ? "Salvando..." : "Salvar"}
                   {!isOnline && " (Offline)"}

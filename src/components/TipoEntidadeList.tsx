@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Building2, Edit, Power } from "lucide-react";
 import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface TipoEntidade {
   id_tipo_entidade: number;
@@ -112,14 +113,14 @@ export function TipoEntidadeList({ onAddNew, onEdit }: TipoEntidadeListProps) {
             <Building2 className="h-5 w-5" />
             <CardTitle>Tipos de Entidades</CardTitle>
           </div>
-          <Button onClick={onAddNew} className="flex items-center gap-2">
+          <Button onClick={onAddNew} className="flex items-center gap-2 bg-green-600 hover:bg-green-700">
             <Plus className="h-4 w-4" />
-            Novo Tipo de Entidade
+            Novo
           </Button>
         </div>
         <div className="flex gap-4 mt-4">
           <Input
-            placeholder="Buscar por nome do tipo..."
+            placeholder="Buscar por nome do tipo"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-md"
@@ -166,27 +167,45 @@ export function TipoEntidadeList({ onAddNew, onEdit }: TipoEntidadeListProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onEdit(tipo)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleToggleStatus(tipo)}
-                          disabled={toggleStatusMutation.isPending}
-                          className={`h-8 w-8 p-0 ${
-                            tipo.des_status === 'A' 
-                              ? 'hover:bg-red-50 hover:text-red-600' 
-                              : 'hover:bg-green-50 hover:text-green-600'
-                          }`}
-                        >
-                          <Power className="h-4 w-4" />
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => onEdit(tipo)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Editar</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleToggleStatus(tipo)}
+                                disabled={toggleStatusMutation.isPending}
+                                className={`h-8 w-8 p-0 ${
+                                  tipo.des_status === 'A' 
+                                    ? 'hover:bg-red-50 hover:text-red-600' 
+                                    : 'hover:bg-green-50 hover:text-green-600'
+                                }`}
+                              >
+                                <Power className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{tipo.des_status === 'A' ? 'Desativar' : 'Ativar'}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     </TableCell>
                   </TableRow>

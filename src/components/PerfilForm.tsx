@@ -148,7 +148,7 @@ export function PerfilForm({ onBack, onSuccess, editingPerfil }: PerfilFormProps
             <Button 
               type="submit" 
               disabled={isSubmitting}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
             >
               <Save className="h-4 w-4" />
               {isSubmitting ? "Salvando..." : "Salvar"}

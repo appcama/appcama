@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { TipoResiduoIndicadorForm } from "./TipoResiduoIndicadorForm";
 import { useOfflineForm } from "@/hooks/useOfflineForm";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const formSchema = z.object({
   des_tipo_residuo: z.string().min(2, "Nome do tipo deve ter pelo menos 2 caracteres"),
@@ -387,7 +388,7 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
                     className="bg-recycle-green hover:bg-recycle-green-dark"
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Adicionar Indicador
+                    Adicionar
                   </Button>
                 </div>
 
@@ -416,22 +417,40 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEditIndicador(indicador)}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleRemoveIndicador(indicador.id_indicador)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleEditIndicador(indicador)}
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Editar</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleRemoveIndicador(indicador.id_indicador)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Excluir</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         </div>
                       </Card>
@@ -455,6 +474,7 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
                 <Button
                   type="submit"
                   disabled={saveMutation.isPending || indicadores.length === 0}
+                  className="bg-green-600 hover:bg-green-700"
                 >
                   {saveMutation.isPending
                     ? 'Salvando...'

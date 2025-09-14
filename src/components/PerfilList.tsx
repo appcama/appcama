@@ -120,14 +120,14 @@ export function PerfilList({ onAddNew, onEdit, onViewUsers }: PerfilListProps) {
             <Shield className="h-5 w-5" />
             <CardTitle>Perfis</CardTitle>
           </div>
-          <Button onClick={onAddNew} className="flex items-center gap-2">
+          <Button onClick={onAddNew} className="flex items-center gap-2 bg-green-600 hover:bg-green-700">
             <Plus className="h-4 w-4" />
-            Novo Perfil
+            Novo
           </Button>
         </div>
         <div className="flex gap-4 mt-4">
           <Input
-            placeholder="Buscar por nome do perfil..."
+            placeholder="Buscar por nome do perfil"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-md"

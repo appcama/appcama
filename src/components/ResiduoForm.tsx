@@ -243,7 +243,7 @@ export function ResiduoForm({ onBack, onSuccess, editingResiduo }: ResiduoFormPr
                 <Button
                   type="submit"
                   disabled={saveMutation.isPending}
-                  className="gap-2"
+                  className="gap-2 bg-green-600 hover:bg-green-700"
                 >
                   <Save className="h-4 w-4" />
                   {saveMutation.isPending

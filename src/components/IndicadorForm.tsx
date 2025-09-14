@@ -224,7 +224,7 @@ export function IndicadorForm({ editingIndicador, onBack, onSave }: IndicadorFor
               <Button type="button" variant="outline" onClick={onBack}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />

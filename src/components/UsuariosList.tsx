@@ -184,15 +184,15 @@ export function UsuariosList({ onAddNew, onEdit, perfilFilter, onClearFilter }: 
                 Limpar Filtro
               </Button>
             )}
-            <Button onClick={onAddNew} className="flex items-center gap-2">
+            <Button onClick={onAddNew} className="flex items-center gap-2 bg-green-600 hover:bg-green-700">
               <Plus className="h-4 w-4" />
-              Novo Usuário
+              Novo
             </Button>
           </div>
         </div>
         <div className="flex gap-4 mt-4">
           <Input
-            placeholder="Buscar por email, entidade ou perfil..."
+            placeholder="Buscar por email, entidade ou perfil"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-md"

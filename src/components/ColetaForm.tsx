@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Trash2, Edit2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useOfflineForm } from '@/hooks/useOfflineForm';
@@ -488,7 +489,8 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
                 <Input
                   id="cod_coleta"
                   value={formData.cod_coleta}
-                  onChange={(e) => setFormData(prev => ({ ...prev, cod_coleta: e.target.value }))}
+                  readOnly
+                  className="bg-gray-100 cursor-not-allowed"
                   required
                 />
               </div>
@@ -573,10 +575,10 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
               <Button
                 type="button"
                 onClick={() => setShowResiduoForm(true)}
-                className="bg-black hover:bg-gray-800 text-white"
+                className="bg-green-600 hover:bg-green-700 text-white"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Adicionar Resíduo
+                Adicionar
               </Button>
             </div>
           </CardHeader>
@@ -613,22 +615,40 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
                           </td>
                           <td className="p-2">
                             <div className="flex justify-center gap-1">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEditResiduo(residuo)}
-                              >
-                                <Edit2 className="w-3 h-3" />
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleRemoveResiduo(residuo.id_residuo)}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleEditResiduo(residuo)}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Editar</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleRemoveResiduo(residuo.id_residuo)}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Remover</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             </div>
                           </td>
                         </tr>
@@ -665,9 +685,9 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
           <Button 
             type="submit" 
             disabled={loading || coletaResiduos.length === 0}
-            className="bg-black hover:bg-gray-800 text-white"
+            className="bg-green-600 hover:bg-green-700 text-white"
           >
-            {loading ? 'Salvando...' : (editingColeta ? 'Atualizar' : 'Salvar')} Coleta
+            {loading ? 'Salvando...' : (editingColeta ? 'Atualizar' : 'Salvar')}
           </Button>
         </div>
       </form>

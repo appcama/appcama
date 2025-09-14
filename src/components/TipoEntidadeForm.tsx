@@ -237,6 +237,7 @@ export function TipoEntidadeForm({ onBack, onSuccess, editingTipoEntidade }: Tip
               <Button
                 type="submit"
                 disabled={saveMutation.isPending}
+                className="bg-green-600 hover:bg-green-700"
               >
                 {saveMutation.isPending
                   ? 'Salvando...'

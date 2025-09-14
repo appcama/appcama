@@ -130,14 +130,14 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
             <Users className="h-5 w-5" />
             <CardTitle>Entidades</CardTitle>
           </div>
-          <Button onClick={onAddNew} className="flex items-center gap-2">
+          <Button onClick={onAddNew} className="flex items-center gap-2 bg-green-600 hover:bg-green-700">
             <Plus className="h-4 w-4" />
-            Nova Entidade
+            Novo
           </Button>
         </div>
         <div className="flex gap-4 mt-4">
           <Input
-            placeholder="Buscar por nome, CPF/CNPJ ou tipo..."
+            placeholder="Buscar por nome, CPF/CNPJ ou tipo"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-md"
@@ -211,7 +211,7 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Editar entidade</p>
+                              <p>Editar</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -233,7 +233,7 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>{entidade.des_status === 'A' ? 'Desativar entidade' : 'Ativar entidade'}</p>
+                              <p>{entidade.des_status === 'A' ? 'Desativar' : 'Ativar'}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>

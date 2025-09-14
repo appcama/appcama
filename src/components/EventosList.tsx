@@ -118,14 +118,14 @@ export function EventosList({ onAddNew, onEdit }: EventosListProps) {
             <Calendar className="h-5 w-5" />
             <CardTitle>Eventos de Coleta</CardTitle>
           </div>
-          <Button onClick={onAddNew} className="flex items-center gap-2">
+          <Button onClick={onAddNew} className="flex items-center gap-2 bg-green-600 hover:bg-green-700">
             <Plus className="h-4 w-4" />
-            Novo Evento
+            Novo
           </Button>
         </div>
         <div className="flex gap-4 mt-4">
           <Input
-            placeholder="Buscar por nome ou descrição..."
+            placeholder="Buscar por nome ou descrição"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-md"
@@ -183,7 +183,7 @@ export function EventosList({ onAddNew, onEdit }: EventosListProps) {
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Editar evento</p>
+                              <p>Editar</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -204,7 +204,7 @@ export function EventosList({ onAddNew, onEdit }: EventosListProps) {
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>{evento.des_status === 'A' ? 'Desativar evento' : 'Ativar evento'}</p>
+                              <p>{evento.des_status === 'A' ? 'Desativar' : 'Ativar'}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>

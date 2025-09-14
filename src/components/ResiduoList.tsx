@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Edit, Power, Trash2, Plus } from "lucide-react";
+import { Edit2, Power, Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Residuo {
   id_residuo: number;
@@ -159,14 +160,14 @@ export function ResiduoList({ onAddNew, onEdit }: ResiduoListProps) {
               <Plus className="h-5 w-5" />
               Resíduos
             </CardTitle>
-            <Button onClick={onAddNew} className="flex items-center gap-2">
+            <Button onClick={onAddNew} className="flex items-center gap-2 bg-green-600 hover:bg-green-700">
               <Plus className="h-4 w-4" />
-              Novo Resíduo
+              Novo
             </Button>
           </div>
           <div className="flex gap-4">
             <Input
-              placeholder="Buscar por nome do resíduo ou tipo..."
+              placeholder="Buscar por nome do resíduo ou tipo"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-md"
@@ -211,36 +212,63 @@ export function ResiduoList({ onAddNew, onEdit }: ResiduoListProps) {
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex justify-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onEdit(residuo)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleToggleStatus(residuo)}
-                            disabled={toggleStatusMutation.isPending}
-                            className={`h-8 w-8 p-0 ${
-                              residuo.des_status === 'A'
-                                ? 'hover:bg-red-50 hover:text-red-600 hover:border-red-300'
-                                : 'hover:bg-green-50 hover:text-green-600 hover:border-green-300'
-                            }`}
-                          >
-                            <Power className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteClick(residuo)}
-                            disabled={deleteMutation.isPending}
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => onEdit(residuo)}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Editar</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleToggleStatus(residuo)}
+                                  disabled={toggleStatusMutation.isPending}
+                                  className={`h-8 w-8 p-0 ${
+                                    residuo.des_status === 'A'
+                                      ? 'hover:bg-red-50 hover:text-red-600 hover:border-red-300'
+                                      : 'hover:bg-green-50 hover:text-green-600 hover:border-green-300'
+                                  }`}
+                                >
+                                  <Power className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{residuo.des_status === 'A' ? 'Desativar' : 'Ativar'}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDeleteClick(residuo)}
+                                  disabled={deleteMutation.isPending}
+                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Excluir</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
                       </TableCell>
                     </TableRow>

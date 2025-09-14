@@ -73,6 +73,8 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
   const [tiposPontoColeta, setTiposPontoColeta] = useState<TipoPontoColeta[]>([]);
   const [loadingEntidades, setLoadingEntidades] = useState(true);
   const [loadingTipos, setLoadingTipos] = useState(true);
+  const [cepValid, setCepValid] = useState(true);
+  const [cepError, setCepError] = useState('');
   const { toast } = useToast();
   const { searchCep, loading: cepLoading } = useViaCep();
   
@@ -184,6 +186,10 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
       num_cep: formattedCep
     }));
 
+    // Reset validation state
+    setCepValid(true);
+    setCepError('');
+
     if (formattedCep.replace(/\D/g, '').length === 8) {
       const cepData = await searchCep(formattedCep);
       if (cepData) {
@@ -192,7 +198,22 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
           des_logradouro: cepData.logradouro,
           des_bairro: cepData.bairro
         }));
+        setCepValid(true);
+        setCepError('');
+      } else {
+        // CEP não encontrado
+        setCepValid(false);
+        setCepError('CEP não encontrado ou inválido');
+        setFormData(prev => ({
+          ...prev,
+          des_logradouro: '',
+          des_bairro: ''
+        }));
       }
+    } else if (formattedCep.replace(/\D/g, '').length > 0) {
+      // CEP incompleto
+      setCepValid(false);
+      setCepError('CEP deve ter 8 dígitos');
     }
   };
 
@@ -203,6 +224,24 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
       toast({
         title: "Erro",
         description: "Nome do ponto de coleta é obrigatório",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.num_cep.trim() || formData.num_cep.replace(/\D/g, '').length !== 8) {
+      toast({
+        title: "Erro",
+        description: "CEP é obrigatório e deve ter 8 dígitos",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!cepValid) {
+      toast({
+        title: "Erro",
+        description: "CEP inválido. Verifique o CEP informado",
         variant: "destructive",
       });
       return;
@@ -356,6 +395,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
                 placeholder="00000-000"
                 maxLength={9}
                 required
+                className={!cepValid && formData.num_cep ? 'border-red-500 focus:border-red-500' : ''}
               />
               {cepLoading && (
                 <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -363,6 +403,9 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
                 </div>
               )}
             </div>
+            {!cepValid && cepError && (
+              <p className="text-sm text-red-600">{cepError}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -431,7 +474,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
             <Button type="button" variant="outline" onClick={onBack}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">
               {isSubmitting ? 'Salvando...' : 'Salvar'}
             </Button>
           </div>

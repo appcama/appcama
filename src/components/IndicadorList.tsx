@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Plus, TrendingUp, Edit, Power, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -129,14 +130,14 @@ export function IndicadorList({ onEdit, onNew }: IndicadorListProps) {
             <TrendingUp className="h-5 w-5" />
             <CardTitle>Indicadores</CardTitle>
           </div>
-          <Button onClick={onNew} className="flex items-center gap-2">
+          <Button onClick={onNew} className="flex items-center gap-2 bg-green-600 hover:bg-green-700">
             <Plus className="h-4 w-4" />
-            Novo Indicador
+            Novo
           </Button>
         </div>
         <div className="flex gap-4 mt-4">
           <Input
-            placeholder="Buscar por nome ou unidade de medida..."
+            placeholder="Buscar por nome ou unidade de medida"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-md"
@@ -183,31 +184,49 @@ export function IndicadorList({ onEdit, onNew }: IndicadorListProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onEdit(indicador)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleToggleStatus(indicador)}
-                          disabled={updatingStatus === indicador.id_indicador}
-                          className={`h-8 w-8 p-0 ${
-                            indicador.des_status === 'A' 
-                              ? 'hover:bg-red-50 hover:text-red-600' 
-                              : 'hover:bg-green-50 hover:text-green-600'
-                          }`}
-                        >
-                          {updatingStatus === indicador.id_indicador ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Power className="h-4 w-4" />
-                          )}
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => onEdit(indicador)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Editar</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleToggleStatus(indicador)}
+                                disabled={updatingStatus === indicador.id_indicador}
+                                className={`h-8 w-8 p-0 ${
+                                  indicador.des_status === 'A' 
+                                    ? 'hover:bg-red-50 hover:text-red-600' 
+                                    : 'hover:bg-green-50 hover:text-green-600'
+                                }`}
+                              >
+                                {updatingStatus === indicador.id_indicador ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Power className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{indicador.des_status === 'A' ? 'Desativar' : 'Ativar'}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     </TableCell>
                   </TableRow>
