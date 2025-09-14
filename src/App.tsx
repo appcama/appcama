@@ -1,19 +1,49 @@
 
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/hooks/useAuth";
+import { PermissionsProvider } from "@/hooks/usePermissions";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { PWAPrompt } from "@/components/PWAPrompt";
+import Index from "./pages/Index";
+import Login from "./pages/Login";
+import ValidatePassword from "./pages/ValidatePassword";
+import NotFound from "./pages/NotFound";
+
+const queryClient = new QueryClient();
+
 const App = () => (
-  <div className="min-h-screen flex items-center justify-center bg-gray-100">
-    <div className="text-center">
-      <h1 className="text-4xl font-bold mb-4">ReciclaE App</h1>
-      <p className="text-xl text-gray-600 mb-4">Sistema funcionando</p>
-      <div className="space-y-2">
-        <a href="/login" className="block text-blue-500 hover:text-blue-700 underline">
-          Login
-        </a>
-        <a href="/validate-password" className="block text-blue-500 hover:text-blue-700 underline">
-          Validar Senha
-        </a>
-      </div>
-    </div>
-  </div>
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <AuthProvider>
+        <PermissionsProvider>
+          <BrowserRouter>
+            <div className="relative">
+              <OfflineIndicator className="fixed top-4 right-4 z-50" />
+              <PWAPrompt />
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/validate-password" element={<ValidatePassword />} />
+                <Route path="/" element={
+                  <ProtectedRoute>
+                    <Index />
+                  </ProtectedRoute>
+                } />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </div>
+          </BrowserRouter>
+        </PermissionsProvider>
+      </AuthProvider>
+    </TooltipProvider>
+  </QueryClientProvider>
 );
 
 export default App;
