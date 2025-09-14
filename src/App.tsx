@@ -1,26 +1,19 @@
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import Login from "./pages/Login";
-import ValidatePassword from "./pages/ValidatePassword";
-import NotFound from "./pages/NotFound";
-
-const queryClient = new QueryClient();
-
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <BrowserRouter>
-      <div className="relative">
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/validate-password" element={<ValidatePassword />} />
-          <Route path="/" element={<Index />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+  <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="text-center">
+      <h1 className="text-4xl font-bold mb-4">ReciclaE App</h1>
+      <p className="text-xl text-gray-600 mb-4">Sistema funcionando</p>
+      <div className="space-y-2">
+        <a href="/login" className="block text-blue-500 hover:text-blue-700 underline">
+          Login
+        </a>
+        <a href="/validate-password" className="block text-blue-500 hover:text-blue-700 underline">
+          Validar Senha
+        </a>
       </div>
-    </BrowserRouter>
-  </QueryClientProvider>
+    </div>
+  </div>
 );
 
 export default App;
