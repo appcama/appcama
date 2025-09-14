@@ -2,7 +2,7 @@
   "name": "ReciclaÊ - Sistema de Gestão de Reciclagem",
   "short_name": "ReciclaÊ",
   "description": "Sistema completo para gestão de reciclagem com funcionalidade offline",
-  "start_url": "/?pwa=true",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#7CB342",
@@ -12,31 +12,31 @@
   "categories": ["productivity", "business", "utilities"],
   "icons": [
     {
-      "src": "/icon-48x48.png",
+      "src": "/icon-192x192.png",
       "sizes": "48x48",
       "type": "image/png",
       "purpose": "maskable any"
     },
     {
-      "src": "/icon-72x72.png",
+      "src": "/icon-192x192.png",
       "sizes": "72x72", 
       "type": "image/png",
       "purpose": "maskable any"
     },
     {
-      "src": "/icon-96x96.png",
+      "src": "/icon-192x192.png",
       "sizes": "96x96",
       "type": "image/png", 
       "purpose": "maskable any"
     },
     {
-      "src": "/icon-144x144.png",
+      "src": "/icon-192x192.png",
       "sizes": "144x144",
       "type": "image/png",
       "purpose": "maskable any"
     },
     {
-      "src": "/icon-168x168.png",
+      "src": "/icon-192x192.png",
       "sizes": "168x168",
       "type": "image/png",
       "purpose": "maskable any"
