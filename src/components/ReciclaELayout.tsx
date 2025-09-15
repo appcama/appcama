@@ -138,15 +138,7 @@ export function ReciclaELayout() {
               onSuccess={handleFormSuccess}
               editingPerfil={editingItem}
             />
-          );
-          case 'funcionalidades':
-          return (
-            <PerfilForm
-              onBack={handleBackToList}
-              onSuccess={handleFormSuccess}
-              editingFuncionalidade={editingItem}
-            />
-          );
+          );        
         case 'usuarios':
           return (
             <UsuarioForm
