@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useDashboardData, type DashboardFilters } from "@/hooks/useDashboardData";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 import { DashboardFiltersComponent } from "@/components/DashboardFilters";
 import { DashboardCharts } from "@/components/DashboardCharts";
 import { DashboardInfographic } from "@/components/DashboardInfographic";
@@ -59,8 +60,17 @@ export function Dashboard() {
     dataFinal: new Date().getFullYear() + "-12-31",
   });
 
-  const { data, isLoading, error } = useDashboardData(filters);
-  const { data: statsData, isLoading: statsLoading } = useDashboardStats(filters);
+  const entityFilter = useEntityFilter();
+  
+  const { data, isLoading, error } = useDashboardData(filters, {
+    userEntityId: entityFilter.userEntityId,
+    isAdmin: entityFilter.isAdmin
+  });
+  
+  const { data: statsData, isLoading: statsLoading } = useDashboardStats(filters, {
+    userEntityId: entityFilter.userEntityId,
+    isAdmin: entityFilter.isAdmin
+  });
 
   const formatNumber = (value: number, decimals = 1) => {
     return value.toLocaleString('pt-BR', { 

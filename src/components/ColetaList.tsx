@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useEntityFilter } from '@/hooks/useEntityFilter';
 
 interface Coleta {
   id_coleta: number;
@@ -36,13 +37,14 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
+  const entityFilter = useEntityFilter();
 
   const loadColetas = async () => {
     try {
       setLoading(true);
       console.log('[ColetaList] Loading coletas...');
 
-      const { data, error } = await supabase
+      let coletaQuery = supabase
         .from('coleta')
         .select(`
           id_coleta,
@@ -64,6 +66,13 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
         `)
         .eq('des_status', 'A')
         .order('dat_coleta', { ascending: false });
+
+      // Aplicar filtro por entidade se não for administrador
+      if (entityFilter.shouldFilterByEntity) {
+        coletaQuery = coletaQuery.eq('id_entidade_geradora', entityFilter.userEntityId);
+      }
+
+      const { data, error } = await coletaQuery;
 
       if (error) {
         console.error('[ColetaList] Error loading coletas:', error);

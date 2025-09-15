@@ -9,6 +9,7 @@ import { Plus, MapPin, Edit, Power } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { formatCep } from "@/lib/cpf-cnpj-utils";
+import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 interface PontoColeta {
   id_ponto_coleta: number;
@@ -41,6 +42,7 @@ export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
+  const entityFilter = useEntityFilter();
 
   useEffect(() => {
     fetchPontosColeta();
@@ -48,11 +50,18 @@ export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
 
   const fetchPontosColeta = async () => {
     try {
-      const { data, error } = await supabase
+      let pontosQuery = supabase
         .from('ponto_coleta')
         .select('*')
         .in('des_status', ['A', 'D'])
         .order('nom_ponto_coleta');
+
+      // Aplicar filtro por entidade se não for administrador
+      if (entityFilter.shouldFilterByEntity) {
+        pontosQuery = pontosQuery.eq('id_entidade_gestora', entityFilter.userEntityId);
+      }
+
+      const { data, error } = await pontosQuery;
 
       if (error) throw error;
       setPontosColeta(data || []);
