@@ -144,7 +144,7 @@ export function ReciclaELayout() {
             <PerfilForm
               onBack={handleBackToList}
               onSuccess={handleFormSuccess}
-              editingPerfil={editingItem}
+              editingFuncionalidade={editingItem}
             />
           );
         case 'usuarios':
