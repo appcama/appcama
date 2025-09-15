@@ -12,6 +12,7 @@ import { TipoResiduoList } from '@/components/TipoResiduoList';
 import { Residuos } from '@/components/Residuos';
 import { Indicadores } from '@/components/Indicadores';
 import { PerfilList } from '@/components/PerfilList';
+import { PerfilFuncionalidades } from '@/components/PerfilFuncionalidades';
 import { UsuariosList } from '@/components/UsuariosList';
 import { ColetaList } from '@/components/ColetaList';
 import { EntidadeForm } from '@/components/EntidadeForm';
@@ -175,6 +176,8 @@ export function ReciclaELayout() {
         return <Indicadores />;
       case 'perfis':
         return <PerfilList onAddNew={handleAddNew} onEdit={handleEdit} />;
+      case 'funcionalidades':
+        return <PerfilFuncionalidades />;
       case 'usuarios':
         return <UsuariosList onAddNew={handleAddNew} onEdit={handleEdit} />;
       default:
