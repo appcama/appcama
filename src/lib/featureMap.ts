@@ -15,7 +15,7 @@ export const idToFeatureMap: Record<string, string> = {
   indicadores: "Indicadores",
   perfis: "Perfis",
   usuarios: "Usuários",
-  funcionalidades: "Funcionalidades",
+  funcionalidades: "Perfis", // Funcionalidades usa a mesma permissão de Perfis
   configuracoes: "Configurações",
   ajuda: "Ajuda",
   coletas: "Coletas", // Nova funcionalidade

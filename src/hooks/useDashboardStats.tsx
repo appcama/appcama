@@ -14,23 +14,17 @@ interface DashboardStats {
 }
 
 // Função auxiliar para buscar estatísticas de um período
-async function getStatsForPeriod(dataInicial: string, dataFinal: string, userEntityId?: number | null, isAdmin?: boolean) {
-  // Total de entidades ativas - filtrar por entidade se não for admin
-  let entidadeQuery = supabase
+async function getStatsForPeriod(dataInicial: string, dataFinal: string) {
+  // Total de entidades ativas
+  const { count: totalEntidades } = await supabase
     .from("entidade")
     .select("*", { count: "exact", head: true })
     .eq("des_status", "A")
     .gte("dat_criacao", dataInicial)
     .lte("dat_criacao", dataFinal);
-    
-  if (!isAdmin && userEntityId) {
-    entidadeQuery = entidadeQuery.eq("id_entidade", userEntityId);
-  }
-  
-  const { count: totalEntidades } = await entidadeQuery;
 
-  // Entidades coletoras (cooperativas/catadores) - filtrar por entidade se não for admin
-  let entidadesColetorasQuery = supabase
+  // Entidades coletoras (cooperativas/catadores)
+  const { count: entidadesColetoras } = await supabase
     .from("entidade")
     .select(
       `
@@ -43,14 +37,8 @@ async function getStatsForPeriod(dataInicial: string, dataFinal: string, userEnt
     .eq("tipo_entidade.des_coletora_residuo", "A")
     .gte("dat_criacao", dataInicial)
     .lte("dat_criacao", dataFinal);
-    
-  if (!isAdmin && userEntityId) {
-    entidadesColetorasQuery = entidadesColetorasQuery.eq("id_entidade", userEntityId);
-  }
-  
-  const { count: entidadesColetoras } = await entidadesColetorasQuery;
 
-  // Eventos de coleta ativos - não filtrar por entidade pois eventos são globais
+  // Eventos de coleta ativos
   const { count: eventosColeta } = await supabase
     .from("evento")
     .select("*", { count: "exact", head: true })
@@ -58,8 +46,8 @@ async function getStatsForPeriod(dataInicial: string, dataFinal: string, userEnt
     .gte("dat_criacao", dataInicial)
     .lte("dat_criacao", dataFinal);
 
-  // Entidades geradoras - filtrar por entidade se não for admin
-  let geradoresResiduosQuery = supabase
+  // Entidades geradoras
+  const { count: geradoresResiduos } = await supabase
     .from("entidade")
     .select(
       `
@@ -72,12 +60,6 @@ async function getStatsForPeriod(dataInicial: string, dataFinal: string, userEnt
     .eq("tipo_entidade.des_geradora_residuo", "A")
     .gte("dat_criacao", dataInicial)
     .lte("dat_criacao", dataFinal);
-    
-  if (!isAdmin && userEntityId) {
-    geradoresResiduosQuery = geradoresResiduosQuery.eq("id_entidade", userEntityId);
-  }
-  
-  const { count: geradoresResiduos } = await geradoresResiduosQuery;
 
   return {
     totalEntidades: totalEntidades || 0,
@@ -93,14 +75,9 @@ function calculatePercentage(current: number, previous: number): number {
   return ((current - previous) / previous) * 100;
 }
 
-export interface DashboardStatsOptions {
-  userEntityId?: number | null;
-  isAdmin?: boolean;
-}
-
-export function useDashboardStats(filters: DashboardFilters, options?: DashboardStatsOptions) {
+export function useDashboardStats(filters: DashboardFilters) {
   return useQuery({
-    queryKey: ["dashboard-stats", filters, options],
+    queryKey: ["dashboard-stats", filters],
     queryFn: async (): Promise<DashboardStats> => {
       // Calcular período anterior
       const startDate = new Date(filters.dataInicial);
@@ -117,17 +94,13 @@ export function useDashboardStats(filters: DashboardFilters, options?: Dashboard
       // Buscar dados do período atual
       const currentStats = await getStatsForPeriod(
         filters.dataInicial,
-        filters.dataFinal,
-        options?.userEntityId,
-        options?.isAdmin
+        filters.dataFinal
       );
 
       // Buscar dados do período anterior
       const previousStats = await getStatsForPeriod(
         previousStartDate.toISOString().split("T")[0],
-        previousEndDate.toISOString().split("T")[0],
-        options?.userEntityId,
-        options?.isAdmin
+        previousEndDate.toISOString().split("T")[0]
       );
 
       return {

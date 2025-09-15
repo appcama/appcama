@@ -9,7 +9,6 @@ import { Plus, MapPin, Edit, Power } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { formatCep } from "@/lib/cpf-cnpj-utils";
-import { useEntityFilter } from "@/hooks/useEntityFilter";
 
 interface PontoColeta {
   id_ponto_coleta: number;
@@ -42,53 +41,20 @@ export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
-  const entityFilter = useEntityFilter();
 
   useEffect(() => {
-    // Só carregar se o usuário estiver definido ou se for admin
-    if (entityFilter.userEntityId !== null || entityFilter.isAdmin) {
-      console.log('[PontosColetaList] useEffect triggered - loading pontos');
-      fetchPontosColeta();
-    } else {
-      console.log('[PontosColetaList] useEffect - aguardando autenticação do usuário');
-      setLoading(false);
-      setPontosColeta([]);
-    }
-  }, [entityFilter.isAdmin, entityFilter.userEntityId, entityFilter.shouldFilterByEntity]);
+    fetchPontosColeta();
+  }, []);
 
   const fetchPontosColeta = async () => {
     try {
-      // Debug logs para diagnóstico
-      console.log('[PontosColetaList] Loading pontos with filter:', {
-        isAdmin: entityFilter.isAdmin,
-        userEntityId: entityFilter.userEntityId,
-        shouldFilterByEntity: entityFilter.shouldFilterByEntity
-      });
-
-      let pontosQuery = supabase
+      const { data, error } = await supabase
         .from('ponto_coleta')
         .select('*')
         .in('des_status', ['A', 'D'])
         .order('nom_ponto_coleta');
 
-      // Aplicar filtro por entidade se não for administrador
-      if (entityFilter.shouldFilterByEntity) {
-        console.log('[PontosColetaList] Aplicando filtro por entidade gestora:', entityFilter.userEntityId);
-        pontosQuery = pontosQuery.eq('id_entidade_gestora', entityFilter.userEntityId);
-      } else {
-        console.log('[PontosColetaList] Sem filtro por entidade (admin ou sem entidade)');
-      }
-
-      const { data, error } = await pontosQuery;
-
       if (error) throw error;
-      
-      console.log('[PontosColetaList] Pontos loaded:', {
-        totalRecords: data?.length || 0,
-        filteredByEntity: entityFilter.shouldFilterByEntity,
-        entityId: entityFilter.userEntityId
-      });
-      
       setPontosColeta(data || []);
     } catch (error) {
       console.error('Erro ao buscar pontos de coleta:', error);

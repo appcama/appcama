@@ -30,14 +30,9 @@ export interface DashboardData {
   residuosPorTipo: ResiduoTipoData[];
 }
 
-export interface DashboardDataOptions {
-  userEntityId?: number | null;
-  isAdmin?: boolean;
-}
-
-export function useDashboardData(filters: DashboardFilters, options?: DashboardDataOptions) {
+export function useDashboardData(filters: DashboardFilters) {
   return useQuery({
-    queryKey: ["dashboard-data", filters, options],
+    queryKey: ["dashboard-data", filters],
     queryFn: async (): Promise<DashboardData> => {
       // Build base query with filters
       let coletaQuery = supabase
@@ -47,12 +42,7 @@ export function useDashboardData(filters: DashboardFilters, options?: DashboardD
         .lte("dat_coleta", filters.dataFinal)
         .eq("des_status", "A");
 
-      // Apply entity restriction for non-admin users
-      if (options && !options.isAdmin && options.userEntityId) {
-        coletaQuery = coletaQuery.eq("id_entidade_geradora", options.userEntityId);
-      }
-
-      // Apply entity filters if provided (this is for manual filtering by admins)
+      // Apply entity filters if provided
       if (filters.entidadeId) {
         coletaQuery = coletaQuery.eq("id_entidade_geradora", filters.entidadeId);
       }

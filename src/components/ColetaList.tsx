@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useEntityFilter } from '@/hooks/useEntityFilter';
 
 interface Coleta {
   id_coleta: number;
@@ -37,20 +36,13 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
-  const entityFilter = useEntityFilter();
 
   const loadColetas = async () => {
     try {
       setLoading(true);
-      
-      // Debug logs para diagnóstico
-      console.log('[ColetaList] Loading coletas with filter:', {
-        isAdmin: entityFilter.isAdmin,
-        userEntityId: entityFilter.userEntityId,
-        shouldFilterByEntity: entityFilter.shouldFilterByEntity
-      });
+      console.log('[ColetaList] Loading coletas...');
 
-      let coletaQuery = supabase
+      const { data, error } = await supabase
         .from('coleta')
         .select(`
           id_coleta,
@@ -73,16 +65,6 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
         .eq('des_status', 'A')
         .order('dat_coleta', { ascending: false });
 
-      // Aplicar filtro por entidade se não for administrador
-      if (entityFilter.shouldFilterByEntity) {
-        console.log('[ColetaList] Aplicando filtro por entidade:', entityFilter.userEntityId);
-        coletaQuery = coletaQuery.eq('id_entidade_geradora', entityFilter.userEntityId);
-      } else {
-        console.log('[ColetaList] Sem filtro por entidade (admin ou sem entidade)');
-      }
-
-      const { data, error } = await coletaQuery;
-
       if (error) {
         console.error('[ColetaList] Error loading coletas:', error);
         toast({
@@ -93,11 +75,7 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
         return;
       }
 
-      console.log('[ColetaList] Coletas loaded:', {
-        totalRecords: data?.length || 0,
-        filteredByEntity: entityFilter.shouldFilterByEntity,
-        entityId: entityFilter.userEntityId
-      });
+      console.log('[ColetaList] Coletas loaded:', data);
       setColetas(data || []);
     } catch (error) {
       console.error('[ColetaList] Unexpected error:', error);
@@ -112,16 +90,8 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
   };
 
   useEffect(() => {
-    // Só carregar se o usuário estiver definido ou se for admin
-    if (entityFilter.userEntityId !== null || entityFilter.isAdmin) {
-      console.log('[ColetaList] useEffect triggered - loading coletas');
-      loadColetas();
-    } else {
-      console.log('[ColetaList] useEffect - aguardando autenticação do usuário');
-      setLoading(false);
-      setColetas([]);
-    }
-  }, [entityFilter.isAdmin, entityFilter.userEntityId, entityFilter.shouldFilterByEntity]);
+    loadColetas();
+  }, []);
 
   const filteredColetas = coletas.filter(coleta =>
     coleta.cod_coleta?.toLowerCase().includes(searchTerm.toLowerCase()) ||
