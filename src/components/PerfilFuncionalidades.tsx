@@ -31,7 +31,7 @@ export function PerfilFuncionalidades() {
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
 
-  const canManage = isAllowed("Perfis");
+  const canManage = isAllowed("Funcionalidades");
 
   const loadPerfis = async () => {
     const { data, error } = await supabase
