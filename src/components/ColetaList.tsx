@@ -42,7 +42,13 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
   const loadColetas = async () => {
     try {
       setLoading(true);
-      console.log('[ColetaList] Loading coletas...');
+      
+      // Debug logs para diagnóstico
+      console.log('[ColetaList] Loading coletas with filter:', {
+        isAdmin: entityFilter.isAdmin,
+        userEntityId: entityFilter.userEntityId,
+        shouldFilterByEntity: entityFilter.shouldFilterByEntity
+      });
 
       let coletaQuery = supabase
         .from('coleta')
@@ -69,7 +75,10 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
 
       // Aplicar filtro por entidade se não for administrador
       if (entityFilter.shouldFilterByEntity) {
+        console.log('[ColetaList] Aplicando filtro por entidade:', entityFilter.userEntityId);
         coletaQuery = coletaQuery.eq('id_entidade_geradora', entityFilter.userEntityId);
+      } else {
+        console.log('[ColetaList] Sem filtro por entidade (admin ou sem entidade)');
       }
 
       const { data, error } = await coletaQuery;
@@ -84,7 +93,11 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
         return;
       }
 
-      console.log('[ColetaList] Coletas loaded:', data);
+      console.log('[ColetaList] Coletas loaded:', {
+        totalRecords: data?.length || 0,
+        filteredByEntity: entityFilter.shouldFilterByEntity,
+        entityId: entityFilter.userEntityId
+      });
       setColetas(data || []);
     } catch (error) {
       console.error('[ColetaList] Unexpected error:', error);
@@ -99,8 +112,16 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
   };
 
   useEffect(() => {
-    loadColetas();
-  }, []);
+    // Só carregar se o usuário estiver definido ou se for admin
+    if (entityFilter.userEntityId !== null || entityFilter.isAdmin) {
+      console.log('[ColetaList] useEffect triggered - loading coletas');
+      loadColetas();
+    } else {
+      console.log('[ColetaList] useEffect - aguardando autenticação do usuário');
+      setLoading(false);
+      setColetas([]);
+    }
+  }, [entityFilter.isAdmin, entityFilter.userEntityId, entityFilter.shouldFilterByEntity]);
 
   const filteredColetas = coletas.filter(coleta =>
     coleta.cod_coleta?.toLowerCase().includes(searchTerm.toLowerCase()) ||

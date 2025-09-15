@@ -9,14 +9,27 @@ export interface EntityFilterConfig {
 }
 
 export function useEntityFilter(): EntityFilterConfig {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const isAdmin = useIsAdmin();
 
-  const config = useMemo(() => ({
-    isAdmin,
-    userEntityId: user?.entityId || null,
-    shouldFilterByEntity: !isAdmin && Boolean(user?.entityId),
-  }), [isAdmin, user?.entityId]);
+  const config = useMemo(() => {
+    const entityConfig = {
+      isAdmin,
+      userEntityId: user?.entityId || null,
+      shouldFilterByEntity: !isAdmin && Boolean(user?.entityId),
+    };
+    
+    // Debug logs para diagnóstico
+    console.log('[useEntityFilter] Config:', {
+      isAdmin,
+      userEntityId: user?.entityId,
+      shouldFilterByEntity: entityConfig.shouldFilterByEntity,
+      userLoading: loading,
+      userExists: !!user
+    });
+    
+    return entityConfig;
+  }, [isAdmin, user?.entityId, loading]);
 
   return config;
 }
