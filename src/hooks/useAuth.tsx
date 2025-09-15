@@ -2,13 +2,14 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 
-interface AuthUser {
+export interface AuthUser {
   id: number;
   entityId: number;
   profileId: number;
   passwordValidated: string;
   status: string;
   email: string;
+  isAdmin?: boolean; // Adicionar campo para identificar admin
 }
 
 interface AuthContextType {
@@ -48,6 +49,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  const checkIsAdmin = async (profileId: number): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from('perfil')
+        .select('nom_perfil')
+        .eq('id_perfil', profileId)
+        .single();
+      
+      if (error || !data) return false;
+      
+      return data.nom_perfil?.toLowerCase().includes('admin') || 
+             data.nom_perfil?.toLowerCase().includes('administrador') ||
+             profileId === 1 || profileId === 2; // IDs conhecidos de admin
+    } catch {
+      return false;
+    }
+  };
+
   const login = async (cpfCnpj: string, password: string) => {
     try {
       setLoading(true);
@@ -71,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const userData = data[0];
+      const isAdmin = await checkIsAdmin(userData.profile_id);
 
       const authUser: AuthUser = {
         id: userData.user_id,
@@ -78,7 +98,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profileId: userData.profile_id,
         passwordValidated: userData.password_validated,
         status: userData.user_status,
-        email: userData.email
+        email: userData.email,
+        isAdmin
       };
 
       setUser(authUser);

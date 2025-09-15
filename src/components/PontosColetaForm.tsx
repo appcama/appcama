@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useViaCep } from "@/hooks/useViaCep";
 import { applyCepMask } from "@/lib/cpf-cnpj-utils";
 import { useOfflineForm } from "@/hooks/useOfflineForm";
+import { useAuth } from "@/hooks/useAuth";
 
 interface PontoColeta {
   id_ponto_coleta: number;
@@ -54,6 +55,7 @@ interface PontosColetaFormProps {
 }
 
 export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: PontosColetaFormProps) {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     nom_ponto_coleta: '',
     num_cep: '',
@@ -103,9 +105,11 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
   });
 
   useEffect(() => {
-    fetchEntidadesGestoras();
+    if (user) {
+      fetchEntidadesGestoras();
+    }
     fetchTiposPontoColeta();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (editingPontoColeta) {
@@ -127,7 +131,18 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
 
   const fetchEntidadesGestoras = async () => {
     try {
-      const { data, error } = await supabase
+      console.log('User data in form:', user);
+      console.log('User entityId in form:', user?.entityId);
+      console.log('User isAdmin in form:', user?.isAdmin);
+      
+      if (!user) {
+        console.log('No user found, not loading entities');
+        setEntidadesGestoras([]);
+        setLoadingEntidades(false);
+        return;
+      }
+  
+      let query = supabase
         .from('entidade')
         .select(`
           id_entidade,
@@ -137,11 +152,35 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
             des_tipo_entidade
           )
         `)
-        .eq('des_status', 'A')
-        .order('nom_entidade');
-
+        .eq('des_status', 'A');
+  
+      // Se não é administrador, filtrar pela entidade do usuário
+      if (!user.isAdmin && user.entityId) {
+        console.log('Non-admin user, filtering entities by entityId:', user.entityId);
+        query = query.eq('id_entidade', user.entityId);
+      } else if (user.isAdmin) {
+        console.log('Admin user, showing all entities');
+      } else {
+        console.log('No entityId found and not admin, not loading entities');
+        setEntidadesGestoras([]);
+        setLoadingEntidades(false);
+        return;
+      }
+  
+      const { data, error } = await query.order('nom_entidade');
+  
+      console.log('Entities query result:', { data, error });
+      
       if (error) throw error;
       setEntidadesGestoras(data || []);
+      
+      // Se estamos criando um novo ponto de coleta e não é admin, definir automaticamente a entidade
+      if (!editingPontoColeta && data && data.length > 0 && !user.isAdmin) {
+        setFormData(prev => ({
+          ...prev,
+          id_entidade_gestora: data[0].id_entidade
+        }));
+      }
     } catch (error) {
       console.error('Erro ao buscar entidades gestoras:', error);
       toast({

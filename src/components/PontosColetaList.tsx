@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Plus, MapPin, Edit, Power } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { formatCep } from "@/lib/cpf-cnpj-utils";
 
 interface PontoColeta {
@@ -41,32 +42,71 @@ export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
-
-  useEffect(() => {
-    fetchPontosColeta();
-  }, []);
+  const { user } = useAuth();
 
   const fetchPontosColeta = async () => {
     try {
-      const { data, error } = await supabase
-        .from('ponto_coleta')
-        .select('*')
-        .in('des_status', ['A', 'D'])
-        .order('nom_ponto_coleta');
+      console.log('User data:', user);
+      console.log('User entityId:', user?.entityId);
+      console.log('User isAdmin:', user?.isAdmin);
+      
+      // Se não há usuário, não buscar dados
+      if (!user) {
+        console.log('No user found, not loading points');
+        setPontosColeta([]);
+        setLoading(false);
+        return;
+      }
 
+      let query = supabase
+        .from('ponto_coleta')
+        .select(`
+          *,
+          entidade_gestora:id_entidade_gestora(
+            nom_entidade,
+            nom_razao_social
+          ),
+          tipo_ponto_coleta:id_tipo_ponto_coleta(
+            des_tipo_ponto_coleta
+          )
+        `);
+
+      // Se não é administrador, filtrar pela entidade do usuário
+      if (!user.isAdmin && user.entityId) {
+        console.log('Non-admin user, filtering by entityId:', user.entityId);
+        query = query.eq('id_entidade_gestora', user.entityId);
+      } else if (user.isAdmin) {
+        console.log('Admin user, showing all points');
+      } else {
+        console.log('No entityId found and not admin, not loading points');
+        setPontosColeta([]);
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await query.order('nom_ponto_coleta');
+      
+      console.log('Points query result:', { data, error });
+      
       if (error) throw error;
       setPontosColeta(data || []);
     } catch (error) {
       console.error('Erro ao buscar pontos de coleta:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar lista de pontos de coleta",
+        description: "Erro ao carregar pontos de coleta",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user) {
+      fetchPontosColeta();
+    }
+  }, [user]);
 
   const handleToggleStatus = async (pontoColeta: PontoColeta) => {
     try {
