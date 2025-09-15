@@ -59,11 +59,10 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
     num_cep: '',
     des_logradouro: '',
     des_bairro: '',
-    num_endereco: '',
-    id_entidade_gestora: 0,
+    id_entidade_gestora: null as number | null,
     id_municipio: 1,
     id_unidade_federativa: 1,
-    id_tipo_ponto_coleta: 0,
+    id_tipo_ponto_coleta: null as number | null,
     id_tipo_situacao: 1,
     num_latitude: null as number | null,
     num_longitude: null as number | null
@@ -115,7 +114,6 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
         num_cep: applyCepMask(editingPontoColeta.num_cep),
         des_logradouro: editingPontoColeta.des_logradouro,
         des_bairro: editingPontoColeta.des_bairro,
-        num_endereco: '',
         id_entidade_gestora: editingPontoColeta.id_entidade_gestora,
         id_municipio: editingPontoColeta.id_municipio,
         id_unidade_federativa: editingPontoColeta.id_unidade_federativa,
@@ -256,7 +254,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
       return;
     }
 
-    if (!formData.id_entidade_gestora || formData.id_entidade_gestora === 0) {
+    if (!formData.id_entidade_gestora) {
       toast({
         title: "Erro",
         description: "Entidade gestora é obrigatória",
@@ -265,7 +263,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
       return;
     }
 
-    if (!formData.id_tipo_ponto_coleta || formData.id_tipo_ponto_coleta === 0) {
+    if (!formData.id_tipo_ponto_coleta) {
       toast({
         title: "Erro",
         description: "Tipo de ponto de coleta é obrigatório",
@@ -286,8 +284,18 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
         id_tipo_ponto_coleta: formData.id_tipo_ponto_coleta,
         id_tipo_situacao: formData.id_tipo_situacao,
         num_latitude: formData.num_latitude,
-        num_longitude: formData.num_longitude
+        num_longitude: formData.num_longitude,
+        des_status: 'A',
+        des_locked: 'D',
+        dat_atualizacao: new Date().toISOString(),
+        id_usuario_atualizador: 1
       };
+
+      // Adicionar campos específicos para criação
+      if (!editingPontoColeta) {
+        pontoData.dat_criacao = new Date().toISOString();
+        pontoData.id_usuario_criador = 1;
+      }
 
       await submitForm(pontoData, !!editingPontoColeta, editingPontoColeta?.id_ponto_coleta);
     } catch (error) {
@@ -338,7 +346,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
               </div>
             ) : (
               <Select 
-                value={formData.id_entidade_gestora.toString()} 
+                value={formData.id_entidade_gestora?.toString() || ""} 
                 onValueChange={(value) => handleInputChange('id_entidade_gestora', parseInt(value))}
               >
                 <SelectTrigger>
@@ -368,7 +376,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
               </div>
             ) : (
               <Select 
-                value={formData.id_tipo_ponto_coleta.toString()} 
+                value={formData.id_tipo_ponto_coleta?.toString() || ""} 
                 onValueChange={(value) => handleInputChange('id_tipo_ponto_coleta', parseInt(value))}
               >
                 <SelectTrigger>
@@ -433,16 +441,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="num_endereco">Número</Label>
-            <Input
-              id="num_endereco"
-              value={formData.num_endereco}
-              onChange={(e) => handleInputChange('num_endereco', e.target.value)}
-              placeholder="Número do endereço"
-              maxLength={10}
-            />
-          </div>
+
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">

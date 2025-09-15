@@ -14,6 +14,7 @@ import { Indicadores } from '@/components/Indicadores';
 import { PerfilList } from '@/components/PerfilList';
 import { UsuariosList } from '@/components/UsuariosList';
 import { ColetaList } from '@/components/ColetaList';
+import { PerfilFuncionalidades } from '@/components/PerfilFuncionalidades';
 import { EntidadeForm } from '@/components/EntidadeForm';
 import { EventoForm } from '@/components/EventoForm';
 import { PontosColetaForm } from '@/components/PontosColetaForm';
@@ -177,6 +178,8 @@ export function ReciclaELayout() {
         return <PerfilList onAddNew={handleAddNew} onEdit={handleEdit} />;
       case 'usuarios':
         return <UsuariosList onAddNew={handleAddNew} onEdit={handleEdit} />;
+      case 'funcionalidades':
+        return <PerfilFuncionalidades />;
       default:
         return <Dashboard />;
     }

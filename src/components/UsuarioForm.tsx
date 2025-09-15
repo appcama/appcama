@@ -484,7 +484,7 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
               <Button type="button" variant="outline" onClick={onBack}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={saveMutation.isPending}>
+              <Button type="submit" disabled={saveMutation.isPending} className="bg-green-600 hover:bg-green-700">
                 {saveMutation.isPending 
                   ? 'Salvando...' 
                   : (editingUsuario ? 'Atualizar' : 'Criar e Enviar Email')
