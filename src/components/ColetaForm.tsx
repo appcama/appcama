@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useOfflineForm } from '@/hooks/useOfflineForm';
 import { ColetaResiduoForm } from './ColetaResiduoForm';
+import { useAuth } from '@/hooks/useAuth';
 
 interface PontoColeta {
   id_ponto_coleta: number;
@@ -43,6 +44,7 @@ interface ColetaFormProps {
 }
 
 export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps) {
+  const { user } = useAuth();
   const [pontosColeta, setPontosColeta] = useState<PontoColeta[]>([]);
   const [entidades, setEntidades] = useState<Entidade[]>([]);
   const [eventos, setEventos] = useState<Evento[]>([]);
@@ -117,14 +119,45 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
     console.log('[ColetaForm] Loading all form data in parallel...');
     
     try {
+      // Verificar se o usuário está logado
+      if (!user) {
+        console.error('[ColetaForm] Usuário não está logado');
+        toast({
+          title: "Erro",
+          description: "Usuário não está logado",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('[ColetaForm] User data:', { id: user.id, email: user.email });
+
+      // Usar os dados do usuário já disponíveis no hook useAuth
+      const isAdmin = user.isAdmin || false;
+      const userEntityId = user.entityId;
+
+      console.log('[ColetaForm] User entity data:', { isAdmin, userEntityId });
+
+      // Preparar query para pontos de coleta com filtro de entidade
+      let pontosQuery = supabase
+        .from('ponto_coleta')
+        .select('id_ponto_coleta, nom_ponto_coleta')
+        .eq('des_status', 'A');
+
+      // Se não for admin, filtrar pela entidade do usuário
+      if (!isAdmin && userEntityId) {
+        console.log('[ColetaForm] Filtering pontos de coleta by entity:', userEntityId);
+        pontosQuery = pontosQuery.eq('id_entidade_gestora', userEntityId);
+      } else if (isAdmin) {
+        console.log('[ColetaForm] Admin user - loading all pontos de coleta');
+      }
+
+      pontosQuery = pontosQuery.order('nom_ponto_coleta');
+
       // Usar Promise.all para carregar todos os dados simultaneamente
       const [pontosResult, entidadesResult, tiposEntidadeResult, eventosResult] = await Promise.all([
-        // Carregar pontos de coleta
-        supabase
-          .from('ponto_coleta')
-          .select('id_ponto_coleta, nom_ponto_coleta')
-          .eq('des_status', 'A')
-          .order('nom_ponto_coleta'),
+        // Carregar pontos de coleta (com filtro de entidade se necessário)
+        pontosQuery,
         
         // Carregar entidades
         supabase
@@ -157,7 +190,10 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         });
         setPontosColeta([]);
       } else {
-        console.log('[ColetaForm] Pontos de coleta loaded:', pontosResult.data?.length || 0);
+        console.log('[ColetaForm] Pontos de coleta loaded:', pontosResult.data?.length || 0, 'items');
+        if (!isAdmin && userEntityId) {
+          console.log('[ColetaForm] Pontos filtered by entity:', userEntityId);
+        }
         setPontosColeta(pontosResult.data || []);
       }
 

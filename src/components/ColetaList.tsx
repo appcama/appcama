@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Coleta {
   id_coleta: number;
@@ -36,13 +37,25 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const loadColetas = async () => {
     try {
       setLoading(true);
       console.log('[ColetaList] Loading coletas...');
+      console.log('User data:', user);
+      console.log('User entityId:', user?.entityId);
+      console.log('User isAdmin:', user?.isAdmin);
+      
+      // Se não há usuário, não buscar dados
+      if (!user) {
+        console.log('No user found, not loading coletas');
+        setColetas([]);
+        setLoading(false);
+        return;
+      }
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('coleta')
         .select(`
           id_coleta,
@@ -62,8 +75,24 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
             nom_evento
           )
         `)
-        .eq('des_status', 'A')
-        .order('dat_coleta', { ascending: false });
+        .eq('des_status', 'A');
+
+      // Se não é administrador, filtrar pela entidade do usuário
+      if (!user.isAdmin && user.entityId) {
+        console.log('Non-admin user, filtering by entityId:', user.entityId);
+        query = query.eq('id_entidade_geradora', user.entityId);
+      } else if (user.isAdmin) {
+        console.log('Admin user, showing all coletas');
+      } else {
+        console.log('No entityId found and not admin, not loading coletas');
+        setColetas([]);
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await query.order('dat_coleta', { ascending: false });
+      
+      console.log('Coletas query result:', { data, error });
 
       if (error) {
         console.error('[ColetaList] Error loading coletas:', error);
@@ -91,7 +120,7 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
 
   useEffect(() => {
     loadColetas();
-  }, []);
+  }, [user]);
 
   const filteredColetas = coletas.filter(coleta =>
     coleta.cod_coleta?.toLowerCase().includes(searchTerm.toLowerCase()) ||

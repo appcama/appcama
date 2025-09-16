@@ -1,0 +1,59 @@
+<svg width="200" height="120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fundo branco -->
+  <rect width="200" height="120" fill="white"/>
+  
+  <!-- Logo RecyclaE -->
+  <g transform="translate(20, 20)">
+    <!-- Texto RecyclaE -->
+    <text x="0" y="40" font-family="Arial, sans-serif" font-size="32" font-weight="bold">
+      <tspan fill="#2563eb">R</tspan>
+      <tspan fill="#dc2626">c</tspan>
+      <tspan fill="#dc2626">y</tspan>
+      <tspan fill="#f59e0b">c</tspan>
+      <tspan fill="#f59e0b">l</tspan>
+      <tspan fill="#f59e0b">a</tspan>
+      <tspan fill="#16a34a">E</tspan>
+    </text>
+    
+    <!-- Ícones de reciclagem -->
+    <g transform="translate(0, -15)">
+      <!-- Garrafa de água -->
+      <path d="M15 5 L17 5 L17 3 L19 3 L19 5 L21 5 L21 25 L15 25 Z" fill="none" stroke="#2563eb" stroke-width="1.5"/>
+      <path d="M16 7 L20 7" stroke="#2563eb" stroke-width="1"/>
+      <path d="M16 9 L20 9" stroke="#2563eb" stroke-width="1"/>
+      
+      <!-- Garrafa de vidro -->
+      <path d="M25 8 L27 8 L27 6 L29 6 L29 8 L31 8 L31 25 L25 25 Z" fill="none" stroke="#2563eb" stroke-width="1.5"/>
+      <circle cx="28" cy="4" r="1" fill="#2563eb"/>
+      
+      <!-- Lata -->
+      <rect x="35" y="8" width="6" height="17" rx="1" fill="none" stroke="#2563eb" stroke-width="1.5"/>
+      <path d="M36 8 L40 8" stroke="#2563eb" stroke-width="1"/>
+      
+      <!-- Símbolo de reciclagem -->
+      <g transform="translate(45, 10)">
+        <path d="M0 6 A6 6 0 0 1 10.4 9 L8.4 11 A3 3 0 0 0 3 6 Z" fill="none" stroke="#2563eb" stroke-width="1.5"/>
+        <path d="M10.4 9 A6 6 0 0 1 5.2 18 L3.2 16 A3 3 0 0 0 8.4 11 Z" fill="none" stroke="#2563eb" stroke-width="1.5"/>
+        <path d="M5.2 18 A6 6 0 0 1 0 6 L2 4 A3 3 0 0 0 3.2 16 Z" fill="none" stroke="#2563eb" stroke-width="1.5"/>
+      </g>
+    </g>
+    
+    <!-- Seta de reciclagem -->
+    <g transform="translate(120, 35)">
+      <path d="M0 0 Q15 -15 30 0 Q15 15 0 0" fill="#16a34a" opacity="0.8"/>
+      <path d="M25 -3 L30 0 L25 3" fill="#16a34a"/>
+    </g>
+    
+    <!-- Elementos decorativos -->
+    <g transform="translate(100, 55)">
+      <!-- Folhas -->
+      <path d="M0 0 Q5 -5 10 0 Q5 5 0 0" fill="#16a34a" opacity="0.6"/>
+      <path d="M15 0 Q20 -5 25 0 Q20 5 15 0" fill="#16a34a" opacity="0.6"/>
+    </g>
+  </g>
+  
+  <!-- Texto Sistema de Gestão de Reciclagem -->
+  <text x="100" y="100" font-family="Arial, sans-serif" font-size="12" fill="#6b7280" text-anchor="middle">
+    Sistema de Gestão de Reciclagem
+  </text>
+</svg>

@@ -23,7 +23,12 @@ const App = () => (
       <Sonner />
       <AuthProvider>
         <PermissionsProvider>
-          <BrowserRouter>
+          <BrowserRouter
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true,
+            }}
+          >
             <div className="relative">
               <OfflineIndicator className="fixed top-4 right-4 z-50" />
               <PWAPrompt />
