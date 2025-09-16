@@ -22,7 +22,7 @@ interface Perfil {
 interface PerfilListProps {
   onAddNew: () => void;
   onEdit: (perfil: Perfil) => void;
-  onViewUsers?: (perfil: Perfil) => void;
+  onViewUsers?: (perfilId: number) => void;
 }
 
 export function PerfilList({ onAddNew, onEdit, onViewUsers }: PerfilListProps) {
@@ -177,7 +177,7 @@ export function PerfilList({ onAddNew, onEdit, onViewUsers }: PerfilListProps) {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => onViewUsers?.(perfil)}
+                          onClick={() => onViewUsers?.(perfil.id_perfil)}
                           className="h-8 w-8 p-0"
                           title="Ver usuários deste perfil"
                         >

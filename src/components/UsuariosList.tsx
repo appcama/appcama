@@ -40,17 +40,20 @@ interface Usuario {
 interface UsuariosListProps {
   onAddNew: () => void;
   onEdit: (usuario: Usuario) => void;
-  perfilFilter?: {
-    id_perfil: number;
-    nom_perfil: string;
-  } | null;
-  onClearFilter?: () => void;
+  perfilFilter?: number | null;
 }
 
-export function UsuariosList({ onAddNew, onEdit, perfilFilter, onClearFilter }: UsuariosListProps) {
+export function UsuariosList({ onAddNew, onEdit, perfilFilter }: UsuariosListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const handleClearFilter = () => {
+    // Recarregar a query sem o filtro
+    queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+    // Disparar evento customizado para notificar o componente pai
+    window.dispatchEvent(new CustomEvent('clearPerfilFilter'));
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -64,7 +67,7 @@ export function UsuariosList({ onAddNew, onEdit, perfilFilter, onClearFilter }: 
   };
 
   const { data: usuarios, isLoading } = useQuery({
-    queryKey: ['usuarios', perfilFilter?.id_perfil],
+    queryKey: ['usuarios', perfilFilter],
     queryFn: async () => {
       let query = supabase
         .from('usuario')
@@ -77,13 +80,29 @@ export function UsuariosList({ onAddNew, onEdit, perfilFilter, onClearFilter }: 
 
       // Aplicar filtro por perfil se fornecido
       if (perfilFilter) {
-        query = query.eq('id_perfil', perfilFilter.id_perfil);
+        query = query.eq('id_perfil', perfilFilter);
       }
 
       const { data, error } = await query;
       if (error) throw error;
       return data as Usuario[];
     },
+  });
+
+  // Buscar nome do perfil se houver filtro
+  const { data: perfilData } = useQuery({
+    queryKey: ['perfil', perfilFilter],
+    queryFn: async () => {
+      if (!perfilFilter) return null;
+      const { data, error } = await supabase
+        .from('perfil')
+        .select('nom_perfil')
+        .eq('id_perfil', perfilFilter)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!perfilFilter,
   });
 
   const toggleStatusMutation = useMutation({
@@ -167,17 +186,17 @@ export function UsuariosList({ onAddNew, onEdit, perfilFilter, onClearFilter }: 
           <div className="flex items-center gap-2">
             <Users className="h-5 w-5" />
             <CardTitle>Usuários</CardTitle>
-            {perfilFilter && (
+            {perfilFilter && perfilData && (
               <span className="text-base font-normal text-muted-foreground ml-2">
-                - Perfil: {perfilFilter.nom_perfil}
+                - Perfil: {perfilData.nom_perfil}
               </span>
             )}
           </div>
           <div className="flex gap-2">
-            {perfilFilter && onClearFilter && (
+            {perfilFilter && (
               <Button 
                 variant="outline" 
-                onClick={onClearFilter}
+                onClick={handleClearFilter}
                 className="flex items-center gap-2"
               >
                 <X className="h-4 w-4" />

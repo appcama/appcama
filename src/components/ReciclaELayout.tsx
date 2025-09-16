@@ -35,6 +35,7 @@ export function ReciclaELayout() {
   const [activeItem, setActiveItem] = useState('dashboard');
   const [currentView, setCurrentView] = useState<'list' | 'form'>('list');
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [selectedPerfilId, setSelectedPerfilId] = useState<number | null>(null);
   const { user } = useAuth();
   const { allowedFeatures, loading: permissionsLoading } = usePermissions();
   const { isMobile } = useBreakpoints();
@@ -43,11 +44,27 @@ export function ReciclaELayout() {
   console.log('[ReciclaELayout] Allowed features:', allowedFeatures);
   console.log('[ReciclaELayout] Active item:', activeItem);
 
+  // Listener para limpar filtro de perfil
+  useEffect(() => {
+    const handleClearPerfilFilter = () => {
+      setSelectedPerfilId(null);
+    };
+
+    window.addEventListener('clearPerfilFilter', handleClearPerfilFilter);
+    return () => {
+      window.removeEventListener('clearPerfilFilter', handleClearPerfilFilter);
+    };
+  }, []);
+
   const handleItemClick = (item: string) => {
     console.log('[ReciclaELayout] Item clicked:', item);
     setActiveItem(item);
     setCurrentView('list');
     setEditingItem(null);
+    // Limpar filtro de perfil quando navegar para outra seção
+    if (item !== 'usuarios') {
+      setSelectedPerfilId(null);
+    }
   };
 
   const handleAddNew = () => {
@@ -71,6 +88,19 @@ export function ReciclaELayout() {
   const handleFormSuccess = () => {
     setCurrentView('list');
     setEditingItem(null);
+  };
+
+  const handleViewUsers = (perfilId: number) => {
+    console.log('[ReciclaELayout] View users for perfil:', perfilId);
+    setSelectedPerfilId(perfilId);
+    setActiveItem('usuarios');
+    setCurrentView('list');
+    setEditingItem(null);
+  };
+
+  const handleClearPerfilFilter = () => {
+    console.log('[ReciclaELayout] Clearing perfil filter');
+    setSelectedPerfilId(null);
   };
 
   const renderContent = () => {
@@ -175,9 +205,9 @@ export function ReciclaELayout() {
       case 'indicadores':
         return <Indicadores />;
       case 'perfis':
-        return <PerfilList onAddNew={handleAddNew} onEdit={handleEdit} />;
+        return <PerfilList onAddNew={handleAddNew} onEdit={handleEdit} onViewUsers={handleViewUsers} />;
       case 'usuarios':
-        return <UsuariosList onAddNew={handleAddNew} onEdit={handleEdit} />;
+        return <UsuariosList onAddNew={handleAddNew} onEdit={handleEdit} perfilFilter={selectedPerfilId} />;
       case 'funcionalidades':
         return <PerfilFuncionalidades />;
       default:
