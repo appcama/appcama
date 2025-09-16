@@ -123,7 +123,7 @@ export default function Login() {
                 alt="ReciclaÊ Logo" 
                 className={cn(
                   "object-contain",
-                  isMobile ? "h-12 w-auto" : "h-16 w-auto"
+                  isMobile ? "h-16 w-auto" : "h-24 w-auto"
                 )}
               />
             </div>

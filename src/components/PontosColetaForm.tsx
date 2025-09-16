@@ -331,12 +331,13 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
       };
 
       // Adicionar campos específicos para criação
-      if (!editingPontoColeta) {
-        pontoData.dat_criacao = new Date().toISOString();
-        pontoData.id_usuario_criador = 1;
-      }
+      const dataToSubmit = !editingPontoColeta ? {
+        ...pontoData,
+        dat_criacao: new Date().toISOString(),
+        id_usuario_criador: 1
+      } : pontoData;
 
-      await submitForm(pontoData, !!editingPontoColeta, editingPontoColeta?.id_ponto_coleta);
+      await submitForm(dataToSubmit, !!editingPontoColeta, editingPontoColeta?.id_ponto_coleta);
     } catch (error) {
       console.error('Erro ao salvar ponto de coleta:', error);
     }
