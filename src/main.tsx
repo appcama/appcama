@@ -1,59 +1,109 @@
+// Completely fresh React app - no dependencies on existing broken code
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 
-// Completely fresh start - no imports from existing files
-function SimpleApp() {
-  return React.createElement('div', {
-    style: {
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: 'system-ui',
-      backgroundColor: '#f0f9ff'
-    }
-  }, React.createElement('div', {
-    style: { textAlign: 'center' }
-  }, [
-    React.createElement('h1', {
-      key: 'title',
-      style: { fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem', color: '#1e40af' }
-    }, 'ReciclaÊ System'),
-    React.createElement('p', {
-      key: 'subtitle',
-      style: { fontSize: '1.1rem', color: '#64748b', marginBottom: '2rem' }
-    }, 'Sistema de Gestão de Reciclagem'),
-    React.createElement('div', {
-      key: 'status',
-      style: { 
-        padding: '1rem 2rem',
-        backgroundColor: '#22c55e',
-        color: 'white',
-        borderRadius: '0.5rem',
-        fontWeight: '600'
-      }
-    }, '✓ React is working correctly!')
-  ]));
+console.log('🚀 Starting fresh React app...');
+console.log('React version:', React.version);
+
+// Inline styles to avoid any CSS dependencies
+const styles = {
+  container: {
+    minHeight: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    color: 'white',
+    padding: '20px'
+  },
+  card: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backdropFilter: 'blur(10px)',
+    borderRadius: '20px',
+    padding: '40px',
+    textAlign: 'center' as const,
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    boxShadow: '0 25px 45px rgba(0, 0, 0, 0.1)'
+  },
+  title: {
+    fontSize: '3rem',
+    fontWeight: 'bold',
+    marginBottom: '1rem',
+    textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)'
+  },
+  subtitle: {
+    fontSize: '1.2rem',
+    marginBottom: '2rem',
+    opacity: 0.9
+  },
+  status: {
+    padding: '15px 30px',
+    backgroundColor: '#22c55e',
+    borderRadius: '50px',
+    fontWeight: '600',
+    fontSize: '1.1rem',
+    border: 'none',
+    boxShadow: '0 10px 20px rgba(34, 197, 94, 0.3)'
+  }
+};
+
+// Simple functional component using only React basics
+function FreshApp() {
+  console.log('✅ FreshApp component rendering...');
+  
+  return React.createElement('div', { style: styles.container },
+    React.createElement('div', { style: styles.card }, [
+      React.createElement('h1', { 
+        key: 'title', 
+        style: styles.title 
+      }, 'ReciclaÊ'),
+      React.createElement('p', { 
+        key: 'subtitle', 
+        style: styles.subtitle 
+      }, 'Sistema de Gestão de Reciclagem'),
+      React.createElement('div', { 
+        key: 'status', 
+        style: styles.status 
+      }, '✅ Sistema Online e Funcionando!')
+    ])
+  );
 }
 
-// Direct DOM manipulation without JSX
-const rootElement = document.getElementById('root');
-if (rootElement) {
+// Initialize the app
+function initializeApp() {
+  console.log('🔧 Initializing React application...');
+  
+  const rootElement = document.getElementById('root');
+  
+  if (!rootElement) {
+    console.error('❌ Root element not found!');
+    return;
+  }
+
   try {
+    console.log('📦 Creating React root...');
     const root = createRoot(rootElement);
-    root.render(React.createElement(SimpleApp));
-    console.log('✓ React app mounted successfully');
+    
+    console.log('🎨 Rendering app...');
+    root.render(React.createElement(FreshApp));
+    
+    console.log('🎉 App successfully mounted!');
   } catch (error) {
-    console.error('❌ Failed to mount React app:', error);
+    console.error('💥 Failed to mount React app:', error);
+    
+    // Fallback HTML if React fails completely
     rootElement.innerHTML = `
-      <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: system-ui;">
-        <div style="text-align: center; color: red;">
-          <h1>React Error</h1>
-          <p>Failed to initialize React: ${error.message}</p>
+      <div style="${Object.entries(styles.container).map(([k, v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}:${v}`).join(';')}">
+        <div style="text-align: center;">
+          <h1 style="color: red; font-size: 2rem;">React Failed to Load</h1>
+          <p>Error: ${error.message}</p>
+          <pre style="background: rgba(0,0,0,0.1); padding: 10px; border-radius: 5px; text-align: left; overflow: auto;">${error.stack}</pre>
         </div>
       </div>
     `;
   }
-} else {
-  console.error('❌ Root element not found');
 }
+
+// Run initialization
+initializeApp();
