@@ -55,24 +55,7 @@
   </head>
 
   <body>
-    <div id="root">
-      <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; font-family: system-ui;">
-        <div style="text-align: center;">
-          <h1 style="font-size: 2rem; font-weight: bold; margin-bottom: 1rem;">ReciclaÊ Loading...</h1>
-          <p>If this message persists, there may be a build issue.</p>
-        </div>
-      </div>
-    </div>
-    <script>
-      // Clear any potential cache issues
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for(let registration of registrations) {
-            registration.unregister();
-          }
-        });
-      }
-    </script>
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
