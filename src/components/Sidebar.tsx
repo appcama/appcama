@@ -16,11 +16,13 @@ import {
   Shield,
   FileText,
   TrendingUp,
-  Package
+  Package,
+  LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { featureByItemId } from "@/lib/featureMap";
 import { useBreakpoints } from "@/hooks/use-breakpoints";
+import { useAuth } from "@/hooks/useAuth";
 
 interface SidebarProps {
   activeItem: string;
@@ -39,6 +41,7 @@ interface MenuItem {
 export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose }: SidebarProps) {
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const { isMobile } = useBreakpoints();
+  const { logout } = useAuth();
 
   const toggleExpanded = (itemId: string) => {
     setExpandedItems(prev => 
@@ -234,6 +237,21 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose 
       <nav className={cn("flex-1 overflow-y-auto", isMobile ? "p-2" : "p-4")}>
         {menuGroups.map(renderGroup)}
       </nav>
+      
+      {/* Botão de Sair */}
+      <div className={cn("border-t border-gray-200", isMobile ? "p-2" : "p-4")}>
+        <button
+          onClick={logout}
+          className={cn(
+            "w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors text-sm font-medium",
+            isMobile ? "min-h-[44px]" : "min-h-[36px]",
+            "text-red-600 hover:bg-red-50 active:bg-red-100"
+          )}
+        >
+          <LogOut className={cn("flex-shrink-0", isMobile ? "w-5 h-5" : "w-4 h-4")} />
+          <span className="flex-1 truncate">Sair</span>
+        </button>
+      </div>
     </div>
   );
 }
