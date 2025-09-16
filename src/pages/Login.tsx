@@ -119,11 +119,11 @@ export default function Login() {
               isMobile ? "mb-2" : "mb-4"
             )}>
               <img 
-                src="/nova-logo.png" 
+                src="/horizontal-logo.png" 
                 alt="ReciclaÊ Logo" 
                 className={cn(
                   "object-contain",
-                  isMobile ? "h-16 w-auto" : "h-20 w-auto"
+                  isMobile ? "h-12 w-auto" : "h-16 w-auto"
                 )}
               />
             </div>
