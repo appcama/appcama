@@ -18,36 +18,34 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <AuthProvider>
-        <PermissionsProvider>
-          <BrowserRouter
-            future={{
-              v7_startTransition: true,
-              v7_relativeSplatPath: true,
-            }}
-          >
-            <div className="relative">
-              <OfflineIndicator className="fixed top-4 right-4 z-50" />
-              <PWAPrompt />
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/validate-password" element={<ValidatePassword />} />
-                <Route path="/" element={
-                  <ProtectedRoute>
-                    <Index />
-                  </ProtectedRoute>
-                } />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </div>
-          </BrowserRouter>
-        </PermissionsProvider>
-      </AuthProvider>
-    </TooltipProvider>
+    <Toaster />
+    <Sonner />
+    <AuthProvider>
+      <PermissionsProvider>
+        <BrowserRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
+          <div className="relative">
+            <OfflineIndicator className="fixed top-4 right-4 z-50" />
+            <PWAPrompt />
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/validate-password" element={<ValidatePassword />} />
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <Index />
+                </ProtectedRoute>
+              } />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </div>
+        </BrowserRouter>
+      </PermissionsProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
