@@ -1,0 +1,322 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FileDown, Printer, Share2, RefreshCw, BarChart3, Table, PieChart } from "lucide-react";
+import { useRelatorioData } from "@/hooks/useRelatorioData";
+import { useRelatorioExport } from "@/hooks/useRelatorioExport";
+import { RelatorioFiltersType } from "./RelatorioFilters";
+import { DashboardCharts } from "./DashboardCharts";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+interface RelatorioViewerProps {
+  reportType: string;
+  category: string;
+  filters: RelatorioFiltersType;
+}
+
+export function RelatorioViewer({ reportType, category, filters }: RelatorioViewerProps) {
+  const { data, isLoading, error, refetch } = useRelatorioData(reportType, category, filters);
+  const { exportToPDF, exportToExcel, exportToCSV, isExporting } = useRelatorioExport();
+
+  const reportTitles: Record<string, string> = {
+    "coletas-periodo": "Coletas por Período",
+    "residuos-coletados": "Resíduos Coletados",
+    "pontos-performance": "Performance dos Pontos de Coleta",
+    "entidades-ranking": "Ranking de Entidades Geradoras",
+    "eventos-coleta": "Relatório de Eventos de Coleta",
+    "dashboard-executivo": "Dashboard Executivo",
+    "faturamento": "Análise de Faturamento",
+    "produtividade": "Relatório de Produtividade",
+    "crescimento": "Análise de Crescimento",
+    "custos-beneficios": "Análise de Custos vs Benefícios",
+    "indicadores-ambientais": "Indicadores Ambientais",
+    "impacto-ecologico": "Impacto Ecológico Detalhado",
+    "reciclometro": "Reciclômetro - Impacto Acumulado",
+    "certificacao": "Dados para Certificação Ambiental",
+    "sustentabilidade": "Métricas de Sustentabilidade",
+    "comparativo-temporal": "Comparativo Temporal",
+    "benchmark-entidades": "Benchmark entre Entidades",
+    "performance-regional": "Performance Regional",
+    "tipos-residuo": "Comparativo por Tipo de Resíduo",
+    "sazonalidade": "Análise de Sazonalidade"
+  };
+
+  const handleExport = async (format: 'pdf' | 'excel' | 'csv') => {
+    const reportTitle = reportTitles[reportType] || "Relatório";
+    
+    try {
+      switch (format) {
+        case 'pdf':
+          await exportToPDF(data, reportTitle, filters);
+          break;
+        case 'excel':
+          await exportToExcel(data, reportTitle, filters);
+          break;
+        case 'csv':
+          await exportToCSV(data, reportTitle, filters);
+          break;
+      }
+    } catch (error) {
+      console.error('Erro ao exportar relatório:', error);
+    }
+  };
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-destructive">Erro ao Carregar Relatório</CardTitle>
+          <CardDescription>
+            Ocorreu um erro ao carregar os dados do relatório. Tente novamente.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={() => refetch()} variant="outline" className="gap-2">
+            <RefreshCw className="w-4 h-4" />
+            Tentar Novamente
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header do Relatório */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl">{reportTitles[reportType]}</CardTitle>
+              <CardDescription className="flex items-center gap-4 mt-2">
+                {filters.dataInicial && filters.dataFinal && (
+                  <span>
+                    Período: {format(filters.dataInicial, "dd/MM/yyyy", { locale: ptBR })} - {format(filters.dataFinal, "dd/MM/yyyy", { locale: ptBR })}
+                  </span>
+                )}
+                <Badge variant="outline">
+                  Gerado em {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                </Badge>
+              </CardDescription>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetch()}
+                disabled={isLoading}
+                className="gap-2"
+              >
+                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                Atualizar
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.print()}
+                className="gap-2"
+              >
+                <Printer className="w-4 h-4" />
+                Imprimir
+              </Button>
+              
+              <div className="flex">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExport('pdf')}
+                  disabled={isExporting}
+                  className="gap-2 rounded-r-none"
+                >
+                  <FileDown className="w-4 h-4" />
+                  PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExport('excel')}
+                  disabled={isExporting}
+                  className="gap-2 rounded-none border-l-0"
+                >
+                  Excel
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExport('csv')}
+                  disabled={isExporting}
+                  className="gap-2 rounded-l-none border-l-0"
+                >
+                  CSV
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Conteúdo do Relatório */}
+      {isLoading ? (
+        <Card>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <Skeleton className="h-8 w-1/3" />
+              <Skeleton className="h-4 w-2/3" />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Skeleton className="h-24" />
+                <Skeleton className="h-24" />
+                <Skeleton className="h-24" />
+              </div>
+              <Skeleton className="h-64" />
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Tabs defaultValue="visualizacao" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="visualizacao" className="gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Visualização
+            </TabsTrigger>
+            <TabsTrigger value="tabela" className="gap-2">
+              <Table className="w-4 h-4" />
+              Tabela
+            </TabsTrigger>
+            <TabsTrigger value="graficos" className="gap-2">
+              <PieChart className="w-4 h-4" />
+              Gráficos
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="visualizacao" className="space-y-4">
+            <RelatorioVisualizacao data={data} reportType={reportType} />
+          </TabsContent>
+
+          <TabsContent value="tabela" className="space-y-4">
+            <RelatorioTabela data={data} reportType={reportType} />
+          </TabsContent>
+
+          <TabsContent value="graficos" className="space-y-4">
+            <RelatorioGraficos data={data} reportType={reportType} />
+          </TabsContent>
+        </Tabs>
+      )}
+    </div>
+  );
+}
+
+// Componente para visualização resumida
+function RelatorioVisualizacao({ data, reportType }: { data: any; reportType: string }) {
+  if (!data) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <p className="text-muted-foreground">Nenhum dado encontrado para os filtros selecionados.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Renderização específica baseada no tipo de relatório
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPIs principais */}
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-2xl font-bold text-recycle-green">{data.totalColetas || 0}</div>
+          <p className="text-xs text-muted-foreground">Total de Coletas</p>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-2xl font-bold text-eco-blue">{data.totalResiduos || 0} kg</div>
+          <p className="text-xs text-muted-foreground">Resíduos Coletados</p>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-2xl font-bold text-eco-orange">R$ {data.valorTotal || 0}</div>
+          <p className="text-xs text-muted-foreground">Valor Total</p>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-2xl font-bold text-earth-brown">{data.entidadesAtivas || 0}</div>
+          <p className="text-xs text-muted-foreground">Entidades Ativas</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Componente para visualização em tabela
+function RelatorioTabela({ data, reportType }: { data: any; reportType: string }) {
+  if (!data?.items || data.items.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <p className="text-muted-foreground">Nenhum dado encontrado para exibir na tabela.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="border-b border-border bg-muted/50">
+              <tr>
+                <th className="text-left p-4 font-medium">Item</th>
+                <th className="text-left p-4 font-medium">Quantidade</th>
+                <th className="text-left p-4 font-medium">Valor</th>
+                <th className="text-left p-4 font-medium">Data</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.items.slice(0, 10).map((item: any, index: number) => (
+                <tr key={index} className="border-b border-border hover:bg-muted/20">
+                  <td className="p-4">{item.nome || item.id || `Item ${index + 1}`}</td>
+                  <td className="p-4">{item.quantidade || '-'}</td>
+                  <td className="p-4">{item.valor ? `R$ ${item.valor}` : '-'}</td>
+                  <td className="p-4">{item.data ? format(new Date(item.data), "dd/MM/yyyy") : '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {data.items.length > 10 && (
+          <div className="p-4 text-center border-t border-border">
+            <p className="text-sm text-muted-foreground">
+              Mostrando 10 de {data.items.length} registros. Exporte para ver todos os dados.
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Componente para gráficos
+function RelatorioGraficos({ data, reportType }: { data: any; reportType: string }) {
+  if (!data?.residuosPorTipo) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <p className="text-muted-foreground">Dados insuficientes para gerar gráficos.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return <DashboardCharts residuosPorTipo={data.residuosPorTipo} />;
+}

@@ -138,7 +138,28 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose 
     },
     {
       label: "RELATÓRIOS",
-      items: []
+      items: [
+        {
+          id: "relatorios-operacionais",
+          label: "Relatórios Operacionais",
+          icon: FileText,
+        },
+        {
+          id: "relatorios-gerenciais", 
+          label: "Relatórios Gerenciais",
+          icon: TrendingUp,
+        },
+        {
+          id: "relatorios-ambientais",
+          label: "Relatórios Ambientais", 
+          icon: Recycle,
+        },
+        {
+          id: "relatorios-comparativos",
+          label: "Relatórios Comparativos",
+          icon: BarChart3,
+        },
+      ]
     }
   ];
 

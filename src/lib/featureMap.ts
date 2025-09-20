@@ -19,6 +19,11 @@ export const idToFeatureMap: Record<string, string> = {
   configuracoes: "Configurações",
   ajuda: "Ajuda",
   coletas: "Coletas", // Nova funcionalidade
+  // Relatórios
+  "relatorios-operacionais": "Relatórios Operacionais",
+  "relatorios-gerenciais": "Relatórios Gerenciais", 
+  "relatorios-ambientais": "Relatórios Ambientais",
+  "relatorios-comparativos": "Relatórios Comparativos",
 };
 
 export function featureByItemId(itemId: string): string | undefined {

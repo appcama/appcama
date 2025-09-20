@@ -28,6 +28,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { MobileHeader } from '@/components/MobileHeader';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { PWAOfflineBanner } from '@/components/PWAOfflineBanner';
+import { RelatoriosLayout } from '@/components/RelatoriosLayout';
 import { useBreakpoints } from '@/hooks/use-breakpoints';
 import { cn } from '@/lib/utils';
 
@@ -210,6 +211,11 @@ export function ReciclaELayout() {
         return <UsuariosList onAddNew={handleAddNew} onEdit={handleEdit} perfilFilter={selectedPerfilId} />;
       case 'funcionalidades':
         return <PerfilFuncionalidades />;
+      case 'relatorios-operacionais':
+      case 'relatorios-gerenciais':
+      case 'relatorios-ambientais':
+      case 'relatorios-comparativos':
+        return <RelatoriosLayout activeItem={activeItem} />;
       default:
         return <Dashboard />;
     }
