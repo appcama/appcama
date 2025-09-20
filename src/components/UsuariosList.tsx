@@ -224,7 +224,7 @@ export function UsuariosList({ onAddNew, onEdit, perfilFilter }: UsuariosListPro
         {perfilFilter && (
           <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
             <p className="text-sm text-blue-800">
-              <strong>Filtro ativo:</strong> Exibindo apenas usuários do perfil "{perfilFilter.nom_perfil}"
+              <strong>Filtro ativo:</strong> Exibindo apenas usuários do perfil ID {perfilFilter}
             </p>
           </div>
         )}

@@ -312,7 +312,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
     }
 
     try {
-      const pontoData = {
+      const pontoData: any = {
         nom_ponto_coleta: formData.nom_ponto_coleta,
         des_logradouro: formData.des_logradouro || '',
         des_bairro: formData.des_bairro || '',
