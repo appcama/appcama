@@ -100,13 +100,13 @@ export function DashboardCharts({ residuosPorTipo }: DashboardChartsProps) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Pie Chart - Distribution by Waste Type */}
+      {/* Pie Chart - Distribution by Weight */}
       <Card>
         <CardHeader>
-          <CardTitle>Distribuição por Tipo de Resíduo</CardTitle>
+          <CardTitle>Distribuição por Tipo de Resíduo * Peso</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={350}>
             <PieChart>
               <Pie
                 data={pieData}
@@ -125,8 +125,15 @@ export function DashboardCharts({ residuosPorTipo }: DashboardChartsProps) {
               <Tooltip content={<CustomTooltip />} />
               <Legend 
                 verticalAlign="bottom" 
-                height={36}
-                formatter={(value) => <span className="text-sm">{value}</span>}
+                height={60}
+                formatter={(value, entry) => (
+                  <span className="text-sm" style={{ color: entry.color }}>
+                    {value}
+                  </span>
+                )}
+                wrapperStyle={{
+                  paddingTop: '20px'
+                }}
               />
             </PieChart>
           </ResponsiveContainer>

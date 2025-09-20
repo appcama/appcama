@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Power, PowerOff, RotateCcw, X, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatCpfCnpj } from "@/lib/cpf-cnpj-utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +32,7 @@ interface Usuario {
   id_perfil: number;
   entidade?: {
     nom_entidade: string;
+    num_cpf_cnpj: string;
   };
   perfil?: {
     nom_perfil: string;
@@ -73,7 +75,7 @@ export function UsuariosList({ onAddNew, onEdit, perfilFilter }: UsuariosListPro
         .from('usuario')
         .select(`
           *,
-          entidade:id_entidade(nom_entidade),
+          entidade:id_entidade(nom_entidade, num_cpf_cnpj),
           perfil:id_perfil(nom_perfil)
         `)
         .order('id_usuario', { ascending: true });
@@ -237,6 +239,7 @@ export function UsuariosList({ onAddNew, onEdit, perfilFilter }: UsuariosListPro
                 <TableRow>
                   <TableHead>Email</TableHead>
                   <TableHead>Entidade</TableHead>
+                  <TableHead>CNPJ</TableHead>
                   <TableHead>Perfil</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Senha</TableHead>
@@ -251,6 +254,9 @@ export function UsuariosList({ onAddNew, onEdit, perfilFilter }: UsuariosListPro
                     </TableCell>
                     <TableCell className="text-sm">
                       {usuario.entidade?.nom_entidade || 'N/A'}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {usuario.entidade?.num_cpf_cnpj ? formatCpfCnpj(usuario.entidade.num_cpf_cnpj) : 'N/A'}
                     </TableCell>
                     <TableCell className="text-sm">
                       {usuario.perfil?.nom_perfil || 'N/A'}

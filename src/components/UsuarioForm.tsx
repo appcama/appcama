@@ -84,6 +84,15 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
       setStatus(editingUsuario.des_status);
       setSenha(""); // Não preencher senha para edição
       setEmailSent(false);
+    } else {
+      // Limpar todos os campos quando for novo usuário
+      setEmail("");
+      setSenha("");
+      setIdEntidade(null);
+      setIdPerfil(null);
+      setStatus("A");
+      setEmailSent(false);
+      setEmailResponse(null);
     }
   }, [editingUsuario]);
 
@@ -145,6 +154,23 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
       };
 
       if (editingUsuario) {
+        // Para edição, verificar se a entidade mudou e se já existe outro usuário para a nova entidade
+        if (editingUsuario.id_entidade !== idEntidade) {
+          console.log('Entidade mudou, verificando se já existe usuário para nova entidade:', idEntidade);
+          const { data: existingUsers, error: checkError } = await supabase
+            .from('usuario')
+            .select('id_usuario')
+            .eq('id_entidade', idEntidade)
+            .neq('id_usuario', editingUsuario.id_usuario);
+
+          console.log('Resultado da verificação para edição:', { existingUsers, checkError });
+
+          if (existingUsers && existingUsers.length > 0) {
+            console.log('Já existe outro usuário para esta entidade, bloqueando alteração');
+            throw new Error('Já existe um usuário cadastrado para esta entidade. Não é possível ter mais de um usuário por entidade.');
+          }
+        }
+
         const { error } = await supabase
           .from('usuario')
           .update(userData)
@@ -153,6 +179,20 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
         if (error) throw error;
         return { isNew: false, userId: editingUsuario.id_usuario };
       } else {
+        // Para novo usuário, verificar se já existe usuário para a entidade selecionada
+        console.log('Verificando se já existe usuário para entidade:', idEntidade);
+        const { data: existingUsers, error: checkError } = await supabase
+          .from('usuario')
+          .select('id_usuario')
+          .eq('id_entidade', idEntidade);
+
+        console.log('Resultado da verificação:', { existingUsers, checkError });
+
+        if (existingUsers && existingUsers.length > 0) {
+          console.log('Usuário já existe para esta entidade, bloqueando criação');
+          throw new Error('Já existe um usuário cadastrado para esta entidade. Não é possível ter mais de um usuário por entidade.');
+        }
+
         const { data, error } = await supabase
           .from('usuario')
           .insert({
@@ -209,12 +249,14 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
         onSuccess();
       }
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      const errorMessage = error.message || (editingUsuario 
+        ? "Erro ao atualizar usuário" 
+        : "Erro ao criar usuário");
+      
       toast({
         title: "Erro",
-        description: editingUsuario 
-          ? "Erro ao atualizar usuário" 
-          : "Erro ao criar usuário",
+        description: errorMessage,
         variant: "destructive",
       });
       console.error('Erro ao salvar usuário:', error);

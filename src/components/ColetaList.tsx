@@ -7,6 +7,17 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Coleta {
   id_coleta: number;
@@ -16,6 +27,7 @@ interface Coleta {
   id_ponto_coleta?: number;
   id_entidade_geradora?: number;
   id_evento?: number;
+  id_usuario_criador: number;
   ponto_coleta?: {
     nom_ponto_coleta: string;
   };
@@ -65,6 +77,7 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
           id_ponto_coleta,
           id_entidade_geradora,
           id_evento,
+          id_usuario_criador,
           ponto_coleta:id_ponto_coleta (
             nom_ponto_coleta
           ),
@@ -140,6 +153,57 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
+  // Função para verificar se o usuário pode excluir uma coleta
+  const canDeleteColeta = (coleta: Coleta) => {
+    if (!user) return false;
+    
+    // Administradores podem excluir qualquer coleta
+    if (user.isAdmin) return true;
+    
+    // Entidade criadora pode excluir suas próprias coletas
+    if (coleta.id_entidade_geradora === user.entityId) return true;
+    
+    // Usuário criador pode excluir suas próprias coletas
+    if (coleta.id_usuario_criador === user.id) return true;
+    
+    return false;
+  };
+
+  // Função para excluir coleta
+  const handleDeleteColeta = async (coleta: Coleta) => {
+    try {
+      const { error } = await supabase
+        .from('coleta')
+        .update({ des_status: 'D' })
+        .eq('id_coleta', coleta.id_coleta);
+
+      if (error) {
+        console.error('Erro ao excluir coleta:', error);
+        toast({
+          title: 'Erro',
+          description: 'Erro ao excluir coleta',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      toast({
+        title: 'Sucesso',
+        description: 'Coleta excluída com sucesso',
+      });
+
+      // Recarregar a lista
+      loadColetas();
+    } catch (error) {
+      console.error('Erro inesperado ao excluir coleta:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro inesperado ao excluir coleta',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
@@ -210,6 +274,38 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
+                          {canDeleteColeta(coleta) && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  title="Excluir"
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Tem certeza que deseja excluir a coleta <strong>{coleta.cod_coleta}</strong>?
+                                    Esta ação não pode ser desfeita.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteColeta(coleta)}
+                                    className="bg-red-600 hover:bg-red-700"
+                                  >
+                                    Excluir
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
                         </div>
                       </td>
                     </tr>
