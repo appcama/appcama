@@ -105,10 +105,26 @@ export function useOfflineSync() {
               result = await (supabase as any).from(table).insert(data).select().single();
               break;
             case 'UPDATE':
-              result = await (supabase as any).from(table).update(data).eq('id_' + table.slice(0, -1), originalId).select().single();
+              // Mapear nome da tabela para o nome correto da coluna ID
+              const getIdColumn = (tableName: string) => {
+                switch (tableName) {
+                  case 'tipo_ponto_coleta':
+                    return 'id_tipo_ponto_coleta';
+                  case 'tipo_residuo':
+                    return 'id_tipo_residuo';
+                  case 'tipo_entidade':
+                    return 'id_tipo_entidade';
+                  default:
+                    // Para tabelas que seguem o padrão singular
+                    return 'id_' + tableName.replace(/s$/, '');
+                }
+              };
+              const idColumn = getIdColumn(table);
+              result = await (supabase as any).from(table).update(data).eq(idColumn, originalId).select().single();
               break;
             case 'DELETE':
-              result = await (supabase as any).from(table).delete().eq('id_' + table.slice(0, -1), originalId);
+              const deleteIdColumn = getIdColumn(table);
+              result = await (supabase as any).from(table).delete().eq(deleteIdColumn, originalId);
               break;
           }
 
