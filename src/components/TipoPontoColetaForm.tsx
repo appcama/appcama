@@ -18,7 +18,7 @@ import {
 import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
-import { useOfflineForm } from "@/hooks/useOfflineForm";
+import { useAuth } from "@/hooks/useAuth";
 
 interface TipoPontoColeta {
   id_tipo_ponto_coleta: number;
@@ -45,6 +45,7 @@ type FormData = z.infer<typeof formSchema>;
 
 export function TipoPontoColetaForm({ editingTipoPontoColeta, onBack, onSuccess }: TipoPontoColetaFormProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const isEditing = !!editingTipoPontoColeta;
 
@@ -55,29 +56,59 @@ export function TipoPontoColetaForm({ editingTipoPontoColeta, onBack, onSuccess 
     },
   });
   
-  const { submitForm, isSubmitting } = useOfflineForm({
-    table: 'tipo_ponto_coleta',
-    onlineSubmit: async (data) => {
+  const mutation = useMutation({
+    mutationFn: async (data: FormData) => {
       if (isEditing) {
+        const updateData = {
+          des_tipo_ponto_coleta: data.des_tipo_ponto_coleta.trim(),
+          des_status: 'A' as const,
+          des_locked: 'D' as const,
+          id_usuario_atualizador: user?.id,
+          dat_atualizacao: new Date().toISOString()
+        };
+
         const { data: result, error } = await supabase
           .from('tipo_ponto_coleta')
-          .update(data)
+          .update(updateData)
           .eq('id_tipo_ponto_coleta', editingTipoPontoColeta.id_tipo_ponto_coleta)
           .select()
           .single();
         if (error) throw error;
         return result;
       } else {
+        const insertData = {
+          des_tipo_ponto_coleta: data.des_tipo_ponto_coleta.trim(),
+          des_status: 'A' as const,
+          des_locked: 'D' as const,
+          id_usuario_criador: user?.id || 1,
+          dat_criacao: new Date().toISOString()
+        };
+
         const { data: result, error } = await supabase
           .from('tipo_ponto_coleta')
-          .insert(data)
+          .insert(insertData)
           .select()
           .single();
         if (error) throw error;
         return result;
       }
     },
-    onSuccess
+    onSuccess: () => {
+      toast({
+        title: "Sucesso",
+        description: `Tipo de ponto de coleta ${isEditing ? "atualizado" : "criado"} com sucesso!`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['tipos-ponto-coleta'] });
+      onSuccess();
+    },
+    onError: (error: any) => {
+      console.error('Erro ao salvar tipo de ponto de coleta:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao salvar tipo de ponto de coleta.",
+        variant: "destructive",
+      });
+    },
   });
 
   useEffect(() => {
@@ -89,13 +120,7 @@ export function TipoPontoColetaForm({ editingTipoPontoColeta, onBack, onSuccess 
   }, [editingTipoPontoColeta, form]);
 
   const onSubmit = (data: FormData) => {
-    const tipoData = {
-      des_tipo_ponto_coleta: data.des_tipo_ponto_coleta.trim(),
-      des_status: 'A',
-      des_locked: 'D',
-    };
-    
-    submitForm(tipoData, isEditing, editingTipoPontoColeta?.id_tipo_ponto_coleta);
+    mutation.mutate(data);
   };
 
   return (
@@ -139,8 +164,8 @@ export function TipoPontoColetaForm({ editingTipoPontoColeta, onBack, onSuccess 
                 <Button type="button" variant="outline" onClick={onBack}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">
-                  {isSubmitting ? "Salvando..." : isEditing ? "Atualizar" : "Salvar"}
+                <Button type="submit" disabled={mutation.isPending} className="bg-green-600 hover:bg-green-700">
+                  {mutation.isPending ? "Salvando..." : isEditing ? "Atualizar" : "Salvar"}
                 </Button>
               </div>
             </form>
