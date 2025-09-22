@@ -372,10 +372,10 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.id_ponto_coleta || !formData.dat_coleta || coletaResiduos.length === 0) {
+    if (!formData.dat_coleta || coletaResiduos.length === 0) {
       toast({
         title: 'Erro',
-        description: 'Preencha todos os campos obrigatórios e adicione pelo menos um resíduo',
+        description: 'Preencha a data da coleta e adicione pelo menos um resíduo',
         variant: 'destructive',
       });
       return;
@@ -388,7 +388,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
 
       const coletaData = {
         cod_coleta: formData.cod_coleta,
-        id_ponto_coleta: parseInt(formData.id_ponto_coleta),
+        id_ponto_coleta: formData.id_ponto_coleta ? parseInt(formData.id_ponto_coleta) : null,
         id_entidade_geradora: formData.id_entidade_geradora ? parseInt(formData.id_entidade_geradora) : null,
         id_evento: formData.id_evento ? parseInt(formData.id_evento) : null,
         dat_coleta: formData.dat_coleta,
@@ -543,14 +543,14 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
             </div>
 
             <div>
-              <Label htmlFor="id_ponto_coleta">Ponto de Coleta *</Label>
+              <Label htmlFor="id_ponto_coleta">Ponto de Coleta (Opcional)</Label>
               <Select
                 value={formData.id_ponto_coleta}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, id_ponto_coleta: value }))}
                 disabled={!isDataLoaded}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={isDataLoaded ? "Selecione o ponto de coleta" : "Carregando..."} />
+                  <SelectValue placeholder={isDataLoaded ? "Selecione o ponto de coleta (opcional)" : "Carregando..."} />
                 </SelectTrigger>
                 <SelectContent>
                   {pontosColeta.map((ponto) => (

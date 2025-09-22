@@ -302,15 +302,6 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
       return;
     }
 
-    if (!formData.id_tipo_ponto_coleta) {
-      toast({
-        title: "Erro",
-        description: "Tipo de ponto de coleta é obrigatório",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
       const pontoData: any = {
         nom_ponto_coleta: formData.nom_ponto_coleta,
@@ -320,7 +311,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
         id_entidade_gestora: formData.id_entidade_gestora,
         id_municipio: formData.id_municipio,
         id_unidade_federativa: formData.id_unidade_federativa,
-        id_tipo_ponto_coleta: formData.id_tipo_ponto_coleta,
+        id_tipo_ponto_coleta: formData.id_tipo_ponto_coleta || null,
         id_tipo_situacao: formData.id_tipo_situacao,
         num_latitude: formData.num_latitude,
         num_longitude: formData.num_longitude,
@@ -407,7 +398,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="id_tipo_ponto_coleta">Tipo de Ponto de Coleta *</Label>
+            <Label htmlFor="id_tipo_ponto_coleta">Tipo de Ponto de Coleta (Opcional)</Label>
             {loadingTipos ? (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -419,7 +410,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
                 onValueChange={(value) => handleInputChange('id_tipo_ponto_coleta', parseInt(value))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione um tipo de ponto de coleta" />
+                  <SelectValue placeholder="Selecione um tipo de ponto de coleta (opcional)" />
                 </SelectTrigger>
                 <SelectContent>
                   {tiposPontoColeta.map((tipo) => (
