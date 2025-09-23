@@ -10,6 +10,7 @@ import { RelatorioFiltersType } from "./RelatorioFilters";
 import { DashboardCharts } from "./DashboardCharts";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 
 interface RelatorioViewerProps {
   reportType: string;
@@ -51,16 +52,28 @@ export function RelatorioViewer({ reportType, category, filters }: RelatorioView
       switch (format) {
         case 'pdf':
           await exportToPDF(data, reportTitle, filters);
+          toast.success('PDF gerado com sucesso!', {
+            description: 'O arquivo foi baixado para seu dispositivo.'
+          });
           break;
         case 'excel':
           await exportToExcel(data, reportTitle, filters);
+          toast.success('Excel exportado com sucesso!', {
+            description: 'O arquivo foi baixado para seu dispositivo.'
+          });
           break;
         case 'csv':
           await exportToCSV(data, reportTitle, filters);
+          toast.success('CSV exportado com sucesso!', {
+            description: 'O arquivo foi baixado para seu dispositivo.'
+          });
           break;
       }
     } catch (error) {
       console.error('Erro ao exportar relatório:', error);
+      toast.error('Erro ao exportar relatório', {
+        description: 'Tente novamente ou entre em contato com o suporte.'
+      });
     }
   };
 
@@ -222,37 +235,67 @@ function RelatorioVisualizacao({ data, reportType }: { data: any; reportType: st
     );
   }
 
-  // Renderização específica baseada no tipo de relatório
+  // Definir KPIs específicos por tipo de relatório
+  const getKPIs = () => {
+    const defaultKPIs = [
+      { value: data.totalColetas || 0, label: 'Total de Coletas', color: 'text-recycle-green' },
+      { value: `${data.totalResiduos || 0} kg`, label: 'Resíduos Coletados', color: 'text-eco-blue' },
+      { value: `R$ ${(data.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, label: 'Valor Total', color: 'text-eco-orange' },
+      { value: data.entidadesAtivas || 0, label: 'Entidades Ativas', color: 'text-earth-brown' }
+    ];
+
+    switch (reportType) {
+      case 'performance-pontos':
+        return [
+          ...defaultKPIs,
+          { 
+            value: Math.round((data.valorTotal || 0) / (data.totalColetas || 1)), 
+            label: 'Valor Médio por Coleta', 
+            color: 'text-purple-600',
+            prefix: 'R$ '
+          }
+        ];
+      case 'ranking-entidades':
+        return [
+          ...defaultKPIs,
+          { 
+            value: Math.round((data.totalResiduos || 0) / (data.entidadesAtivas || 1)), 
+            label: 'Média por Entidade', 
+            color: 'text-indigo-600',
+            suffix: ' kg'
+          }
+        ];
+      case 'eventos-coleta':
+        const eventosUnicos = new Set(data.items?.map((item: any) => item.nome)).size;
+        return [
+          ...defaultKPIs.slice(0, 3),
+          { value: eventosUnicos, label: 'Eventos Únicos', color: 'text-pink-600' }
+        ];
+      case 'residuos-coletados':
+        const tiposResiduos = data.residuosPorTipo?.length || 0;
+        return [
+          ...defaultKPIs.slice(0, 3),
+          { value: tiposResiduos, label: 'Tipos de Resíduo', color: 'text-cyan-600' }
+        ];
+      default:
+        return defaultKPIs;
+    }
+  };
+
+  const kpis = getKPIs();
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      {/* KPIs principais */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-2xl font-bold text-recycle-green">{data.totalColetas || 0}</div>
-          <p className="text-xs text-muted-foreground">Total de Coletas</p>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-2xl font-bold text-eco-blue">{data.totalResiduos || 0} kg</div>
-          <p className="text-xs text-muted-foreground">Resíduos Coletados</p>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-2xl font-bold text-eco-orange">R$ {data.valorTotal || 0}</div>
-          <p className="text-xs text-muted-foreground">Valor Total</p>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-2xl font-bold text-earth-brown">{data.entidadesAtivas || 0}</div>
-          <p className="text-xs text-muted-foreground">Entidades Ativas</p>
-        </CardContent>
-      </Card>
+      {kpis.map((kpi, index) => (
+        <Card key={index}>
+          <CardContent className="p-6">
+            <div className={`text-2xl font-bold ${kpi.color}`}>
+              {kpi.prefix || ''}{kpi.value}{kpi.suffix || ''}
+            </div>
+            <p className="text-xs text-muted-foreground">{kpi.label}</p>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }
@@ -269,6 +312,55 @@ function RelatorioTabela({ data, reportType }: { data: any; reportType: string }
     );
   }
 
+  // Configurar colunas baseado no tipo de relatório
+  const getColumns = () => {
+    switch (reportType) {
+      case 'performance-pontos':
+        return [
+          { key: 'nome', label: 'Ponto de Coleta' },
+          { key: 'quantidade', label: 'Resíduos (kg)' },
+          { key: 'valor', label: 'Valor (R$)' },
+          { key: 'ponto', label: 'Coletas' },
+          { key: 'entidade', label: 'Entidade Gestora' }
+        ];
+      case 'ranking-entidades':
+        return [
+          { key: 'nome', label: 'Entidade' },
+          { key: 'quantidade', label: 'Resíduos (kg)' },
+          { key: 'valor', label: 'Valor (R$)' },
+          { key: 'entidade', label: 'Coletas' },
+          { key: 'ponto', label: 'Média por Coleta' }
+        ];
+      case 'eventos-coleta':
+        return [
+          { key: 'nome', label: 'Evento' },
+          { key: 'quantidade', label: 'Resíduos (kg)' },
+          { key: 'valor', label: 'Valor (R$)' },
+          { key: 'entidade', label: 'Participantes' },
+          { key: 'ponto', label: 'Coletas' }
+        ];
+      case 'residuos-coletados':
+        return [
+          { key: 'nome', label: 'Tipo de Resíduo' },
+          { key: 'quantidade', label: 'Quantidade (kg)' },
+          { key: 'valor', label: 'Valor (R$)' },
+          { key: 'entidade', label: 'Origem' },
+          { key: 'ponto', label: 'Status' }
+        ];
+      default:
+        return [
+          { key: 'nome', label: 'Código/Item' },
+          { key: 'quantidade', label: 'Quantidade (kg)' },
+          { key: 'valor', label: 'Valor (R$)' },
+          { key: 'entidade', label: 'Entidade' },
+          { key: 'ponto', label: 'Ponto de Coleta' },
+          { key: 'data', label: 'Data' }
+        ];
+    }
+  };
+
+  const columns = getColumns();
+
   return (
     <Card>
       <CardContent className="p-0">
@@ -276,19 +368,26 @@ function RelatorioTabela({ data, reportType }: { data: any; reportType: string }
           <table className="w-full">
             <thead className="border-b border-border bg-muted/50">
               <tr>
-                <th className="text-left p-4 font-medium">Item</th>
-                <th className="text-left p-4 font-medium">Quantidade</th>
-                <th className="text-left p-4 font-medium">Valor</th>
-                <th className="text-left p-4 font-medium">Data</th>
+                {columns.map(column => (
+                  <th key={column.key} className="text-left p-4 font-medium">{column.label}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {data.items.slice(0, 10).map((item: any, index: number) => (
                 <tr key={index} className="border-b border-border hover:bg-muted/20">
-                  <td className="p-4">{item.nome || item.id || `Item ${index + 1}`}</td>
-                  <td className="p-4">{item.quantidade || '-'}</td>
-                  <td className="p-4">{item.valor ? `R$ ${item.valor}` : '-'}</td>
-                  <td className="p-4">{item.data ? format(new Date(item.data), "dd/MM/yyyy") : '-'}</td>
+                  {columns.map(column => (
+                    <td key={column.key} className="p-4">
+                      {column.key === 'valor' && item[column.key] ? 
+                        `R$ ${Number(item[column.key]).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` :
+                       column.key === 'quantidade' && item[column.key] ?
+                        `${Number(item[column.key]).toLocaleString('pt-BR')} kg` :
+                       column.key === 'data' && item[column.key] ?
+                        format(new Date(item[column.key]), "dd/MM/yyyy") :
+                        item[column.key] || '-'
+                      }
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>

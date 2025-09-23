@@ -72,7 +72,7 @@ async function fetchRelatorioData(
           nom_evento
         )
       `)
-      .eq('des_status', 'A');
+      .in('des_status', ['A', 'D']); // Incluir tanto ativos quanto desativados
 
     // Aplicar filtros de data
     if (filters.dataInicial) {
@@ -105,11 +105,39 @@ function processRelatorioData(
   filters: RelatorioFiltersType
 ): RelatorioData {
   
-  // Calcular métricas básicas
+  // Filtrar apenas coletas ativas se especificado
+  const coletasAtivas = coletas.filter(c => c.des_status === 'A');
+  
+  // Se não há coletas ativas, usar todas para demonstração
+  const coletasParaProcessar = coletasAtivas.length > 0 ? coletasAtivas : coletas;
+  
+  console.log(`Processando ${coletasParaProcessar.length} coletas para relatório ${reportType}`, {
+    totalColetas: coletas.length,
+    coletasAtivas: coletasAtivas.length,
+    usado: coletasParaProcessar.length
+  });
+
+  // Implementar lógicas específicas por tipo de relatório
+  switch (reportType) {
+    case 'coletas-periodo':
+      return processColetasPorPeriodo(coletasParaProcessar, filters);
+    case 'residuos-coletados':
+      return processResiduosColetados(coletasParaProcessar, filters);
+    case 'performance-pontos':
+      return processPerformancePontos(coletasParaProcessar, filters);
+    case 'ranking-entidades':
+      return processRankingEntidades(coletasParaProcessar, filters);
+    case 'eventos-coleta':
+      return processEventosColeta(coletasParaProcessar, filters);
+    default:
+      return processRelatorioGenerico(coletasParaProcessar, filters);
+  }
+}
+
+function processColetasPorPeriodo(coletas: any[], filters: RelatorioFiltersType): RelatorioData {
   const totalColetas = coletas.length;
   const valorTotal = coletas.reduce((sum, coleta) => sum + (Number(coleta.vlr_total) || 0), 0);
   
-  // Calcular total de resíduos
   const totalResiduos = coletas.reduce((sum, coleta) => {
     if (coleta.coleta_residuo) {
       return sum + coleta.coleta_residuo.reduce((subSum: number, residuo: any) => {
@@ -119,7 +147,241 @@ function processRelatorioData(
     return sum;
   }, 0);
 
-  // Entidades únicas
+  // Agrupar por entidade geradora
+  const entidadesMap = new Map();
+  coletas.forEach(coleta => {
+    const entidade = coleta.entidade?.nom_entidade || 'Não informado';
+    if (!entidadesMap.has(entidade)) {
+      entidadesMap.set(entidade, { count: 0, valor: 0, residuos: 0 });
+    }
+    const data = entidadesMap.get(entidade);
+    data.count++;
+    data.valor += Number(coleta.vlr_total) || 0;
+    if (coleta.coleta_residuo) {
+      data.residuos += coleta.coleta_residuo.reduce((sum: number, r: any) => sum + (Number(r.qtd_total) || 0), 0);
+    }
+  });
+
+  const residuosPorTipo = processResiduosPorTipo(coletas);
+  const indicadores = processIndicadoresAmbientais(totalResiduos);
+
+  const items = coletas.map(coleta => ({
+    id: coleta.id_coleta,
+    nome: coleta.cod_coleta || `COL-${coleta.id_coleta}`,
+    quantidade: coleta.coleta_residuo?.reduce((sum: number, r: any) => sum + (Number(r.qtd_total) || 0), 0) || 0,
+    valor: Number(coleta.vlr_total) || 0,
+    data: coleta.dat_coleta,
+    entidade: coleta.entidade?.nom_entidade || 'N/A',
+    ponto: coleta.ponto_coleta?.nom_ponto_coleta || 'N/A',
+    evento: coleta.evento?.nom_evento || 'N/A'
+  }));
+
+  return {
+    totalColetas,
+    totalResiduos: Math.round(totalResiduos),
+    valorTotal: Math.round(valorTotal * 100) / 100,
+    entidadesAtivas: entidadesMap.size,
+    residuosPorTipo,
+    indicadores,
+    items
+  };
+}
+
+function processResiduosColetados(coletas: any[], filters: RelatorioFiltersType): RelatorioData {
+  const residuosPorTipo = processResiduosPorTipo(coletas);
+  const totalResiduos = residuosPorTipo.reduce((sum, tipo) => sum + tipo.quantidade, 0);
+  const valorTotal = residuosPorTipo.reduce((sum, tipo) => sum + tipo.valor, 0);
+
+  const indicadores = processIndicadoresAmbientais(totalResiduos);
+
+  const items = residuosPorTipo.map((tipo, index) => ({
+    id: index + 1,
+    nome: tipo.nome,
+    quantidade: tipo.quantidade,
+    valor: tipo.valor,
+    data: new Date().toISOString(),
+    entidade: 'Todas',
+    ponto: 'Todos'
+  }));
+
+  return {
+    totalColetas: coletas.length,
+    totalResiduos: Math.round(totalResiduos),
+    valorTotal: Math.round(valorTotal * 100) / 100,
+    entidadesAtivas: new Set(coletas.map(c => c.entidade?.nom_entidade).filter(Boolean)).size,
+    residuosPorTipo,
+    indicadores,
+    items
+  };
+}
+
+function processPerformancePontos(coletas: any[], filters: RelatorioFiltersType): RelatorioData {
+  const pontosMap = new Map();
+  
+  coletas.forEach(coleta => {
+    const ponto = coleta.ponto_coleta?.nom_ponto_coleta || 'Ponto não informado';
+    if (!pontosMap.has(ponto)) {
+      pontosMap.set(ponto, { 
+        nome: ponto,
+        coletas: 0, 
+        valor: 0, 
+        residuos: 0,
+        ultimaColeta: null,
+        entidade: coleta.ponto_coleta?.entidade?.nom_entidade || 'N/A'
+      });
+    }
+    const data = pontosMap.get(ponto);
+    data.coletas++;
+    data.valor += Number(coleta.vlr_total) || 0;
+    if (coleta.coleta_residuo) {
+      data.residuos += coleta.coleta_residuo.reduce((sum: number, r: any) => sum + (Number(r.qtd_total) || 0), 0);
+    }
+    if (!data.ultimaColeta || new Date(coleta.dat_coleta) > new Date(data.ultimaColeta)) {
+      data.ultimaColeta = coleta.dat_coleta;
+    }
+  });
+
+  const pontosRanking = Array.from(pontosMap.values())
+    .sort((a, b) => b.valor - a.valor)
+    .map((ponto, index) => ({
+      id: index + 1,
+      nome: ponto.nome,
+      quantidade: Math.round(ponto.residuos),
+      valor: Math.round(ponto.valor * 100) / 100,
+      data: ponto.ultimaColeta,
+      entidade: ponto.entidade,
+      ponto: `${ponto.coletas} coletas`
+    }));
+
+  const totalResiduos = Array.from(pontosMap.values()).reduce((sum, p) => sum + p.residuos, 0);
+  const valorTotal = Array.from(pontosMap.values()).reduce((sum, p) => sum + p.valor, 0);
+
+  return {
+    totalColetas: coletas.length,
+    totalResiduos: Math.round(totalResiduos),
+    valorTotal: Math.round(valorTotal * 100) / 100,
+    entidadesAtivas: pontosMap.size,
+    residuosPorTipo: processResiduosPorTipo(coletas),
+    indicadores: processIndicadoresAmbientais(totalResiduos),
+    items: pontosRanking
+  };
+}
+
+function processRankingEntidades(coletas: any[], filters: RelatorioFiltersType): RelatorioData {
+  const entidadesMap = new Map();
+  
+  coletas.forEach(coleta => {
+    const entidade = coleta.entidade?.nom_entidade || 'Entidade não informada';
+    if (!entidadesMap.has(entidade)) {
+      entidadesMap.set(entidade, { 
+        nome: entidade,
+        coletas: 0, 
+        valor: 0, 
+        residuos: 0,
+        ultimaColeta: null
+      });
+    }
+    const data = entidadesMap.get(entidade);
+    data.coletas++;
+    data.valor += Number(coleta.vlr_total) || 0;
+    if (coleta.coleta_residuo) {
+      data.residuos += coleta.coleta_residuo.reduce((sum: number, r: any) => sum + (Number(r.qtd_total) || 0), 0);
+    }
+    if (!data.ultimaColeta || new Date(coleta.dat_coleta) > new Date(data.ultimaColeta)) {
+      data.ultimaColeta = coleta.dat_coleta;
+    }
+  });
+
+  const entidadesRanking = Array.from(entidadesMap.values())
+    .sort((a, b) => b.residuos - a.residuos)
+    .map((entidade, index) => ({
+      id: index + 1,
+      nome: entidade.nome,
+      quantidade: Math.round(entidade.residuos),
+      valor: Math.round(entidade.valor * 100) / 100,
+      data: entidade.ultimaColeta,
+      entidade: `${entidade.coletas} coletas`,
+      ponto: `Média: ${Math.round((entidade.valor / entidade.coletas) * 100) / 100}`
+    }));
+
+  const totalResiduos = Array.from(entidadesMap.values()).reduce((sum, e) => sum + e.residuos, 0);
+  const valorTotal = Array.from(entidadesMap.values()).reduce((sum, e) => sum + e.valor, 0);
+
+  return {
+    totalColetas: coletas.length,
+    totalResiduos: Math.round(totalResiduos),
+    valorTotal: Math.round(valorTotal * 100) / 100,
+    entidadesAtivas: entidadesMap.size,
+    residuosPorTipo: processResiduosPorTipo(coletas),
+    indicadores: processIndicadoresAmbientais(totalResiduos),
+    items: entidadesRanking
+  };
+}
+
+function processEventosColeta(coletas: any[], filters: RelatorioFiltersType): RelatorioData {
+  const eventosMap = new Map();
+  
+  coletas.forEach(coleta => {
+    const evento = coleta.evento?.nom_evento || 'Coleta regular';
+    if (!eventosMap.has(evento)) {
+      eventosMap.set(evento, { 
+        nome: evento,
+        coletas: 0, 
+        valor: 0, 
+        residuos: 0,
+        participantes: new Set()
+      });
+    }
+    const data = eventosMap.get(evento);
+    data.coletas++;
+    data.valor += Number(coleta.vlr_total) || 0;
+    if (coleta.coleta_residuo) {
+      data.residuos += coleta.coleta_residuo.reduce((sum: number, r: any) => sum + (Number(r.qtd_total) || 0), 0);
+    }
+    if (coleta.entidade?.nom_entidade) {
+      data.participantes.add(coleta.entidade.nom_entidade);
+    }
+  });
+
+  const eventosRanking = Array.from(eventosMap.values())
+    .sort((a, b) => b.valor - a.valor)
+    .map((evento, index) => ({
+      id: index + 1,
+      nome: evento.nome,
+      quantidade: Math.round(evento.residuos),
+      valor: Math.round(evento.valor * 100) / 100,
+      data: new Date().toISOString(),
+      entidade: `${evento.participantes.size} participantes`,
+      ponto: `${evento.coletas} coletas`
+    }));
+
+  const totalResiduos = Array.from(eventosMap.values()).reduce((sum, e) => sum + e.residuos, 0);
+  const valorTotal = Array.from(eventosMap.values()).reduce((sum, e) => sum + e.valor, 0);
+
+  return {
+    totalColetas: coletas.length,
+    totalResiduos: Math.round(totalResiduos),
+    valorTotal: Math.round(valorTotal * 100) / 100,
+    entidadesAtivas: eventosMap.size,
+    residuosPorTipo: processResiduosPorTipo(coletas),
+    indicadores: processIndicadoresAmbientais(totalResiduos),
+    items: eventosRanking
+  };
+}
+
+function processRelatorioGenerico(coletas: any[], filters: RelatorioFiltersType): RelatorioData {
+  const totalColetas = coletas.length;
+  const valorTotal = coletas.reduce((sum, coleta) => sum + (Number(coleta.vlr_total) || 0), 0);
+  
+  const totalResiduos = coletas.reduce((sum, coleta) => {
+    if (coleta.coleta_residuo) {
+      return sum + coleta.coleta_residuo.reduce((subSum: number, residuo: any) => {
+        return subSum + (Number(residuo.qtd_total) || 0);
+      }, 0);
+    }
+    return sum;
+  }, 0);
+
   const entidadesUnicas = new Set();
   coletas.forEach(coleta => {
     if (coleta.entidade?.nom_entidade) {
@@ -130,13 +392,9 @@ function processRelatorioData(
     }
   });
 
-  // Processar resíduos por tipo
   const residuosPorTipo = processResiduosPorTipo(coletas);
-
-  // Processar indicadores ambientais (simulados)
   const indicadores = processIndicadoresAmbientais(totalResiduos);
 
-  // Items para tabela (primeiras coletas)
   const items = coletas.slice(0, 50).map(coleta => ({
     id: coleta.id_coleta,
     nome: coleta.cod_coleta || `Coleta ${coleta.id_coleta}`,

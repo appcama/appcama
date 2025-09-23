@@ -24,8 +24,8 @@ export function RelatoriosLayout({ activeItem }: RelatoriosLayoutProps) {
       reports: [
         { id: "coletas-periodo", title: "Coletas por Período", description: "Lista detalhada de todas as coletas realizadas" },
         { id: "residuos-coletados", title: "Resíduos Coletados", description: "Detalhamento por tipo de resíduo, quantidade e valor" },
-        { id: "pontos-performance", title: "Performance dos Pontos", description: "Estatísticas e eficiência de cada ponto de coleta" },
-        { id: "entidades-ranking", title: "Ranking de Entidades", description: "Ranking das entidades por volume coletado" },
+        { id: "performance-pontos", title: "Performance dos Pontos", description: "Estatísticas e eficiência de cada ponto de coleta" },
+        { id: "ranking-entidades", title: "Ranking de Entidades", description: "Ranking das entidades por volume coletado" },
         { id: "eventos-coleta", title: "Eventos de Coleta", description: "Relatório consolidado por evento de coleta" }
       ]
     },
