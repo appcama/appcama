@@ -11,96 +11,8 @@ export function useRelatorioExport() {
   const exportToPDF = async (data: any, title: string, filters: RelatorioFiltersType, reportType?: string) => {
     setIsExporting(true);
     try {
-      // Criar novo documento PDF
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.width;
-      let yPosition = 20;
-
-      // Configurar fonte
-      doc.setFont('helvetica');
+      const doc = await generatePDF(data, title, filters, reportType);
       
-      // Título principal
-      doc.setFontSize(16);
-      doc.setTextColor(40, 40, 40);
-      doc.text(title, pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 15;
-
-      // Data de geração
-      doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 10;
-
-      // Período dos filtros
-      if (filters.dataInicial && filters.dataFinal) {
-        doc.text(`Período: ${format(filters.dataInicial, "dd/MM/yyyy")} - ${format(filters.dataFinal, "dd/MM/yyyy")}`, pageWidth / 2, yPosition, { align: 'center' });
-        yPosition += 15;
-      } else {
-        yPosition += 10;
-      }
-
-      // Filtros aplicados
-      const filtrosAplicados = [];
-      if (filters.statusColetas) {
-        const statusMap: Record<string, string> = {
-          'A': 'Coletas Ativas',
-          'D': 'Coletas Desativadas', 
-          'A,D': 'Todas as Coletas'
-        };
-        filtrosAplicados.push(`Status Coletas: ${statusMap[filters.statusColetas] || filters.statusColetas}`);
-      }
-      if (filters.statusEntidades) {
-        const statusMap: Record<string, string> = {
-          'A': 'Entidades Ativas',
-          'D': 'Entidades Desativadas',
-          'A,D': 'Todas as Entidades'
-        };
-        filtrosAplicados.push(`Status Entidades: ${statusMap[filters.statusEntidades] || filters.statusEntidades}`);
-      }
-      
-      if (filtrosAplicados.length > 0) {
-        doc.setFontSize(9);
-        doc.setTextColor(120, 120, 120);
-        filtrosAplicados.forEach((filtro, index) => {
-          doc.text(filtro, pageWidth / 2, yPosition, { align: 'center' });
-          yPosition += 8;
-        });
-        yPosition += 5;
-      }
-
-      // Gerar conteúdo específico do tipo de relatório
-      switch (reportType) {
-        case 'coletas-periodo':
-          yPosition = await generateColetasPeriodoPDF(doc, data, yPosition);
-          break;
-        case 'residuos-coletados':
-          yPosition = await generateResiduosColetadosPDF(doc, data, yPosition);
-          break;
-        case 'pontos-performance':
-          yPosition = await generatePontosPerformancePDF(doc, data, yPosition);
-          break;
-        case 'entidades-ranking':
-          yPosition = await generateEntidadesRankingPDF(doc, data, yPosition);
-          break;
-        case 'eventos-coleta':
-          yPosition = await generateEventosColetaPDF(doc, data, yPosition);
-          break;
-        default:
-          // Fallback - gerar conteúdo genérico
-          yPosition = await generateGenericPDF(doc, data, yPosition);
-          break;
-      }
-
-      // Rodapé em todas as páginas
-      const pageCount = doc.getNumberOfPages();
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150);
-        doc.text(`Página ${i} de ${pageCount}`, pageWidth - 14, doc.internal.pageSize.height - 10, { align: 'right' });
-        doc.text('Gerado pelo Sistema ReciclaE', 14, doc.internal.pageSize.height - 10);
-      }
-
       // Fazer download
       const fileName = `${title.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd_HHmmss')}.pdf`;
       doc.save(fileName);
@@ -111,6 +23,129 @@ export function useRelatorioExport() {
     } finally {
       setIsExporting(false);
     }
+  };
+
+  const printPDF = async (data: any, title: string, filters: RelatorioFiltersType, reportType?: string) => {
+    setIsExporting(true);
+    try {
+      const doc = await generatePDF(data, title, filters, reportType);
+      
+      // Abrir PDF em nova janela para impressão
+      const pdfBlob = doc.output('blob');
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      
+      const printWindow = window.open(pdfUrl, '_blank');
+      if (printWindow) {
+        printWindow.onload = () => {
+          printWindow.print();
+        };
+      }
+      
+      // Limpar URL após um tempo
+      setTimeout(() => {
+        URL.revokeObjectURL(pdfUrl);
+      }, 10000);
+      
+    } catch (error) {
+      console.error('Erro ao imprimir PDF:', error);
+      throw error;
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const generatePDF = async (data: any, title: string, filters: RelatorioFiltersType, reportType?: string) => {
+    // Criar novo documento PDF
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    let yPosition = 20;
+
+    // Configurar fonte
+    doc.setFont('helvetica');
+    
+    // Título principal
+    doc.setFontSize(16);
+    doc.setTextColor(40, 40, 40);
+    doc.text(title, pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 15;
+
+    // Data de geração
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 10;
+
+    // Período dos filtros
+    if (filters.dataInicial && filters.dataFinal) {
+      doc.text(`Período: ${format(filters.dataInicial, "dd/MM/yyyy")} - ${format(filters.dataFinal, "dd/MM/yyyy")}`, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 15;
+    } else {
+      yPosition += 10;
+    }
+
+    // Filtros aplicados
+    const filtrosAplicados = [];
+    if (filters.statusColetas) {
+      const statusMap: Record<string, string> = {
+        'A': 'Coletas Ativas',
+        'D': 'Coletas Desativadas', 
+        'A,D': 'Todas as Coletas'
+      };
+      filtrosAplicados.push(`Status Coletas: ${statusMap[filters.statusColetas] || filters.statusColetas}`);
+    }
+    if (filters.statusEntidades) {
+      const statusMap: Record<string, string> = {
+        'A': 'Entidades Ativas',
+        'D': 'Entidades Desativadas',
+        'A,D': 'Todas as Entidades'
+      };
+      filtrosAplicados.push(`Status Entidades: ${statusMap[filters.statusEntidades] || filters.statusEntidades}`);
+    }
+    
+    if (filtrosAplicados.length > 0) {
+      doc.setFontSize(9);
+      doc.setTextColor(120, 120, 120);
+      filtrosAplicados.forEach((filtro, index) => {
+        doc.text(filtro, pageWidth / 2, yPosition, { align: 'center' });
+        yPosition += 8;
+      });
+      yPosition += 5;
+    }
+
+    // Gerar conteúdo específico do tipo de relatório
+    switch (reportType) {
+      case 'coletas-periodo':
+        yPosition = await generateColetasPeriodoPDF(doc, data, yPosition);
+        break;
+      case 'residuos-coletados':
+        yPosition = await generateResiduosColetadosPDF(doc, data, yPosition);
+        break;
+      case 'pontos-performance':
+        yPosition = await generatePontosPerformancePDF(doc, data, yPosition);
+        break;
+      case 'entidades-ranking':
+        yPosition = await generateEntidadesRankingPDF(doc, data, yPosition);
+        break;
+      case 'eventos-coleta':
+        yPosition = await generateEventosColetaPDF(doc, data, yPosition);
+        break;
+      default:
+        // Fallback - gerar conteúdo genérico
+        yPosition = await generateGenericPDF(doc, data, yPosition);
+        break;
+    }
+
+    // Rodapé em todas as páginas
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Página ${i} de ${pageCount}`, pageWidth - 14, doc.internal.pageSize.height - 10, { align: 'right' });
+      doc.text('Gerado pelo Sistema ReciclaE', 14, doc.internal.pageSize.height - 10);
+    }
+
+    return doc;
   };
 
   const exportToExcel = async (data: any, title: string, filters: RelatorioFiltersType) => {
@@ -170,6 +205,7 @@ export function useRelatorioExport() {
 
   return {
     exportToPDF,
+    printPDF,
     exportToExcel, 
     exportToCSV,
     isExporting

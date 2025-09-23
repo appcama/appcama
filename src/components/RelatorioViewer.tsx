@@ -20,7 +20,7 @@ interface RelatorioViewerProps {
 
 export function RelatorioViewer({ reportType, category, filters }: RelatorioViewerProps) {
   const { data, isLoading, error, refetch } = useRelatorioData(reportType, category, filters);
-  const { exportToPDF, exportToExcel, exportToCSV, isExporting } = useRelatorioExport();
+  const { exportToPDF, printPDF, exportToExcel, exportToCSV, isExporting } = useRelatorioExport();
 
   const reportTitles: Record<string, string> = {
     "coletas-periodo": "Coletas por Período",
@@ -72,6 +72,22 @@ export function RelatorioViewer({ reportType, category, filters }: RelatorioView
     } catch (error) {
       console.error('Erro ao exportar relatório:', error);
       toast.error('Erro ao exportar relatório', {
+        description: 'Tente novamente ou entre em contato com o suporte.'
+      });
+    }
+  };
+
+  const handlePrint = async () => {
+    const reportTitle = reportTitles[reportType] || "Relatório";
+    
+    try {
+      await printPDF(data, reportTitle, filters, reportType);
+      toast.success('Relatório aberto para impressão!', {
+        description: 'Uma nova janela foi aberta com o PDF do relatório.'
+      });
+    } catch (error) {
+      console.error('Erro ao imprimir relatório:', error);
+      toast.error('Erro ao imprimir relatório', {
         description: 'Tente novamente ou entre em contato com o suporte.'
       });
     }
@@ -131,7 +147,8 @@ export function RelatorioViewer({ reportType, category, filters }: RelatorioView
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => window.print()}
+                onClick={handlePrint}
+                disabled={isExporting}
                 className="gap-2"
               >
                 <Printer className="w-4 h-4" />
