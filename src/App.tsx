@@ -17,8 +17,6 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <Toaster />
-    <Sonner />
     <AuthProvider>
       <PermissionsProvider>
         <BrowserRouter
@@ -28,6 +26,8 @@ const App = () => (
           }}
         >
           <div className="relative">
+            <Toaster />
+            <Sonner />
             <OfflineIndicator className="fixed top-4 right-4 z-50" />
             <PWAPrompt />
             <Routes>
