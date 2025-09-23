@@ -48,6 +48,7 @@ async function fetchRelatorioData(
         cod_coleta,
         dat_coleta,
         vlr_total,
+        des_status,
         coleta_residuo (
           id_coleta_residuo,
           qtd_total,
@@ -62,17 +63,27 @@ async function fetchRelatorioData(
         ponto_coleta (
           nom_ponto_coleta,
           entidade:entidade!ponto_coleta_id_entidade_gestora_fkey (
-            nom_entidade
+            nom_entidade,
+            des_status
           )
         ),
         entidade:entidade!coleta_id_entidade_geradora_fkey (
-          nom_entidade
+          nom_entidade,
+          des_status
         ),
         evento (
           nom_evento
         )
-      `)
-      .in('des_status', ['A', 'D']); // Incluir tanto ativos quanto desativados
+      `);
+
+    // Aplicar filtros de status
+    if (filters.statusColetas) {
+      const statusColetas = filters.statusColetas.split(',');
+      baseQuery = baseQuery.in('des_status', statusColetas);
+    } else {
+      // Padrão: incluir tanto A quanto D se não especificado
+      baseQuery = baseQuery.in('des_status', ['A', 'D']);
+    }
 
     // Aplicar filtros de data
     if (filters.dataInicial) {

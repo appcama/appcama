@@ -21,6 +21,8 @@ export interface RelatorioFiltersType {
   pontoColeta?: string;
   evento?: string;
   municipio?: string;
+  statusColetas?: string;
+  statusEntidades?: string;
 }
 
 interface RelatorioFiltersProps {
@@ -250,6 +252,48 @@ export function RelatorioFilters({ filters, onFiltersChange, onReset }: Relatori
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Status das Coletas */}
+            <div>
+              <Label htmlFor="statusColetas" className="text-xs font-medium text-muted-foreground">
+                STATUS DAS COLETAS
+              </Label>
+              <Select
+                value={filters.statusColetas || ""}
+                onValueChange={(value) => updateFilter('statusColetas', value || undefined)}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Todos os status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos os status</SelectItem>
+                  <SelectItem value="A">Apenas Ativas (A)</SelectItem>
+                  <SelectItem value="D">Apenas Desativadas (D)</SelectItem>
+                  <SelectItem value="A,D">Ativas e Desativadas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Status das Entidades */}
+            <div>
+              <Label htmlFor="statusEntidades" className="text-xs font-medium text-muted-foreground">
+                STATUS DAS ENTIDADES
+              </Label>
+              <Select
+                value={filters.statusEntidades || ""}
+                onValueChange={(value) => updateFilter('statusEntidades', value || undefined)}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Todos os status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos os status</SelectItem>
+                  <SelectItem value="A">Apenas Ativas (A)</SelectItem>
+                  <SelectItem value="D">Apenas Desativadas (D)</SelectItem>
+                  <SelectItem value="A,D">Ativas e Desativadas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         )}
 
@@ -272,10 +316,18 @@ export function RelatorioFilters({ filters, onFiltersChange, onReset }: Relatori
                 </button>
               </Badge>
             )}
-            {filters.entidade && (
+            {filters.statusColetas && (
               <Badge variant="secondary" className="text-xs gap-1">
-                Entidade
-                <button onClick={() => removeFilter('entidade')}>
+                Status Coletas
+                <button onClick={() => removeFilter('statusColetas')}>
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            )}
+            {filters.statusEntidades && (
+              <Badge variant="secondary" className="text-xs gap-1">
+                Status Entidades
+                <button onClick={() => removeFilter('statusEntidades')}>
                   <X className="w-3 h-3" />
                 </button>
               </Badge>

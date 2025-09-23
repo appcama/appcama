@@ -51,7 +51,7 @@ export function RelatorioViewer({ reportType, category, filters }: RelatorioView
     try {
       switch (format) {
         case 'pdf':
-          await exportToPDF(data, reportTitle, filters);
+          await exportToPDF(data, reportTitle, filters, reportType);
           toast.success('PDF gerado com sucesso!', {
             description: 'O arquivo foi baixado para seu dispositivo.'
           });
