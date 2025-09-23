@@ -394,7 +394,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         dat_coleta: formData.dat_coleta,
         vlr_total: totalValor,
         id_tipo_situacao: 1, // Assumindo situação padrão
-        id_usuario_criador: 1, // Usuário logado
+        id_usuario_criador: user?.id || 1, // Usar ID do usuário logado
         dat_criacao: new Date().toISOString(),
       };
 
@@ -406,7 +406,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
           .from('coleta')
           .update({
             ...coletaData,
-            id_usuario_atualizador: 1,
+            id_usuario_atualizador: user?.id || 1,
             dat_atualizacao: new Date().toISOString(),
           })
           .eq('id_coleta', editingColeta.id_coleta);
@@ -452,7 +452,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         qtd_total: residuo.qtd_total,
         vlr_total: residuo.vlr_total,
         id_tipo_situacao: 1,
-        id_usuario_criador: 1,
+        id_usuario_criador: user?.id || 1,
         dat_criacao: new Date().toISOString(),
       }));
 

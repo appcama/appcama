@@ -77,7 +77,7 @@ export type Database = {
           id_coleta: number
           id_entidade_geradora: number | null
           id_evento: number | null
-          id_ponto_coleta: number
+          id_ponto_coleta: number | null
           id_tipo_situacao: number
           id_usuario_atualizador: number | null
           id_usuario_criador: number
@@ -93,7 +93,7 @@ export type Database = {
           id_coleta?: number
           id_entidade_geradora?: number | null
           id_evento?: number | null
-          id_ponto_coleta: number
+          id_ponto_coleta?: number | null
           id_tipo_situacao: number
           id_usuario_atualizador?: number | null
           id_usuario_criador: number
@@ -109,7 +109,7 @@ export type Database = {
           id_coleta?: number
           id_entidade_geradora?: number | null
           id_evento?: number | null
-          id_ponto_coleta?: number
+          id_ponto_coleta?: number | null
           id_tipo_situacao?: number
           id_usuario_atualizador?: number | null
           id_usuario_criador?: number
@@ -479,6 +479,21 @@ export type Database = {
             referencedColumns: ["id_usuario"]
           },
         ]
+      }
+      grupo_residuo: {
+        Row: {
+          des_grupo_residuo: string | null
+          id_grupo_residuo: number
+        }
+        Insert: {
+          des_grupo_residuo?: string | null
+          id_grupo_residuo?: number
+        }
+        Update: {
+          des_grupo_residuo?: string | null
+          id_grupo_residuo?: number
+        }
+        Relationships: []
       }
       indicador: {
         Row: {
@@ -884,6 +899,7 @@ export type Database = {
           des_recurso_natural: string | null
           des_status: string
           des_tipo_residuo: string | null
+          id_grupo_residuo: number | null
           id_tipo_residuo: number
           id_usuario_atualizador: number | null
           id_usuario_criador: number
@@ -895,6 +911,7 @@ export type Database = {
           des_recurso_natural?: string | null
           des_status?: string
           des_tipo_residuo?: string | null
+          id_grupo_residuo?: number | null
           id_tipo_residuo?: number
           id_usuario_atualizador?: number | null
           id_usuario_criador: number
@@ -906,6 +923,7 @@ export type Database = {
           des_recurso_natural?: string | null
           des_status?: string
           des_tipo_residuo?: string | null
+          id_grupo_residuo?: number | null
           id_tipo_residuo?: number
           id_usuario_atualizador?: number | null
           id_usuario_criador?: number
