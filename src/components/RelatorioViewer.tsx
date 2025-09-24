@@ -8,6 +8,7 @@ import { useRelatorioData } from "@/hooks/useRelatorioData";
 import { useRelatorioExport } from "@/hooks/useRelatorioExport";
 import { RelatorioFiltersType } from "./RelatorioFilters";
 import { DashboardCharts } from "./DashboardCharts";
+import { RelatorioVisualizacao } from "./RelatorioVisualizacao";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -29,9 +30,9 @@ export function RelatorioViewer({ reportType, category, filters }: RelatorioView
     "entidades-ranking": "Ranking de Entidades Geradoras",
     "eventos-coleta": "Relatório de Eventos de Coleta",
     "dashboard-executivo": "Dashboard Executivo",
-    "faturamento": "Análise de Faturamento",
+    "analise-faturamento": "Análise de Faturamento",
     "produtividade": "Relatório de Produtividade",
-    "crescimento": "Análise de Crescimento",
+    "analise-crescimento": "Análise de Crescimento",
     "custos-beneficios": "Análise de Custos vs Benefícios",
     "indicadores-ambientais": "Indicadores Ambientais",
     "impacto-ecologico": "Impacto Ecológico Detalhado",
@@ -236,83 +237,6 @@ export function RelatorioViewer({ reportType, category, filters }: RelatorioView
           </TabsContent>
         </Tabs>
       )}
-    </div>
-  );
-}
-
-// Componente para visualização resumida
-function RelatorioVisualizacao({ data, reportType }: { data: any; reportType: string }) {
-  if (!data) {
-    return (
-      <Card>
-        <CardContent className="p-6 text-center">
-          <p className="text-muted-foreground">Nenhum dado encontrado para os filtros selecionados.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Definir KPIs específicos por tipo de relatório
-  const getKPIs = () => {
-    const defaultKPIs = [
-      { value: data.totalColetas || 0, label: 'Total de Coletas', color: 'text-recycle-green' },
-      { value: `${data.totalResiduos || 0} kg`, label: 'Resíduos Coletados', color: 'text-eco-blue' },
-      { value: `R$ ${(data.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, label: 'Valor Total', color: 'text-eco-orange' },
-      { value: data.entidadesAtivas || 0, label: 'Entidades Ativas', color: 'text-earth-brown' }
-    ];
-
-    switch (reportType) {
-      case 'performance-pontos':
-        return [
-          ...defaultKPIs,
-          { 
-            value: Math.round((data.valorTotal || 0) / (data.totalColetas || 1)), 
-            label: 'Valor Médio por Coleta', 
-            color: 'text-purple-600',
-            prefix: 'R$ '
-          }
-        ];
-      case 'ranking-entidades':
-        return [
-          ...defaultKPIs,
-          { 
-            value: Math.round((data.totalResiduos || 0) / (data.entidadesAtivas || 1)), 
-            label: 'Média por Entidade', 
-            color: 'text-indigo-600',
-            suffix: ' kg'
-          }
-        ];
-      case 'eventos-coleta':
-        const eventosUnicos = new Set(data.items?.map((item: any) => item.nome)).size;
-        return [
-          ...defaultKPIs.slice(0, 3),
-          { value: eventosUnicos, label: 'Eventos Únicos', color: 'text-pink-600' }
-        ];
-      case 'residuos-coletados':
-        const tiposResiduos = data.residuosPorTipo?.length || 0;
-        return [
-          ...defaultKPIs.slice(0, 3),
-          { value: tiposResiduos, label: 'Tipos de Resíduo', color: 'text-cyan-600' }
-        ];
-      default:
-        return defaultKPIs;
-    }
-  };
-
-  const kpis = getKPIs();
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      {kpis.map((kpi, index) => (
-        <Card key={index}>
-          <CardContent className="p-6">
-            <div className={`text-2xl font-bold ${kpi.color}`}>
-              {kpi.prefix || ''}{kpi.value}{kpi.suffix || ''}
-            </div>
-            <p className="text-xs text-muted-foreground">{kpi.label}</p>
-          </CardContent>
-        </Card>
-      ))}
     </div>
   );
 }

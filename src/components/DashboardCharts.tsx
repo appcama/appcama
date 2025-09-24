@@ -1,9 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line, AreaChart, Area } from "recharts";
 import type { ResiduoTipoData } from "@/hooks/useDashboardData";
 
 interface DashboardChartsProps {
-  residuosPorTipo: ResiduoTipoData[];
+  residuosPorTipo: ResiduoTipoData[] | Array<{
+    nome: string;
+    quantidade: number;
+    valor: number;
+    percentual: number;
+  }>;
+  chartType?: 'default' | 'financeiro' | 'crescimento' | 'produtividade';
+  data?: any; // Para dados adicionais dos relatórios gerenciais
 }
 
 const COLORS = [
@@ -15,22 +22,33 @@ const COLORS = [
   'hsl(var(--stats-gray))',
 ];
 
-export function DashboardCharts({ residuosPorTipo }: DashboardChartsProps) {
+export function DashboardCharts({ residuosPorTipo, chartType = 'default', data }: DashboardChartsProps) {
+  // Normalizar dados para formato consistente
+  const normalizeData = (data: any[]) => {
+    return data.map(item => ({
+      name: item.nome || item.des_tipo_residuo,
+      value: item.quantidade || item.total_quantidade,
+      valor: item.valor || item.total_valor,
+      percentage: item.percentual || (item.total_quantidade ? ((item.total_quantidade / data.reduce((sum, i) => sum + (i.total_quantidade || i.quantidade), 0)) * 100).toFixed(1) : 0)
+    }));
+  };
+
+  const chartData = normalizeData(residuosPorTipo || []);
   // Prepare data for pie chart (percentage distribution)
-  const totalQuantidade = residuosPorTipo.reduce((sum, item) => sum + item.total_quantidade, 0);
-  const pieData = residuosPorTipo.map((item, index) => ({
-    name: item.des_tipo_residuo,
-    value: item.total_quantidade,
-    percentage: totalQuantidade > 0 ? ((item.total_quantidade / totalQuantidade) * 100).toFixed(1) : 0,
+  const totalQuantidade = chartData.reduce((sum, item) => sum + item.value, 0);
+  const pieData = chartData.map((item, index) => ({
+    name: item.name,
+    value: item.value,
+    percentage: totalQuantidade > 0 ? ((item.value / totalQuantidade) * 100).toFixed(1) : 0,
     fill: COLORS[index % COLORS.length],
   }));
 
   // Prepare data for bar chart (financial totals)
-  const barData = residuosPorTipo
-    .sort((a, b) => b.total_valor - a.total_valor)
+  const barData = chartData
+    .sort((a, b) => (b.valor || 0) - (a.valor || 0))
     .map((item, index) => ({
-      name: item.des_tipo_residuo,
-      valor: item.total_valor,
+      name: item.name,
+      valor: item.valor || 0,
       fill: COLORS[index % COLORS.length],
     }));
 
@@ -75,7 +93,7 @@ export function DashboardCharts({ residuosPorTipo }: DashboardChartsProps) {
     );
   };
 
-  if (residuosPorTipo.length === 0) {
+  if (chartData.length === 0) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
@@ -98,6 +116,91 @@ export function DashboardCharts({ residuosPorTipo }: DashboardChartsProps) {
     );
   }
 
+  // Renderizar gráficos específicos por tipo de relatório
+  if (chartType === 'crescimento' && data?.metricas?.crescimento) {
+    return (
+      <div className="grid grid-cols-1 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Evolução do Crescimento</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={350}>
+              <LineChart data={data.metricas.crescimento}>
+                <defs>
+                  <linearGradient id="lineGradient" x1="0" y1="1" x2="0" y2="0">
+                    <stop offset="0%" stopColor="hsl(var(--eco-blue))" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="hsl(var(--recycle-green))" stopOpacity={0.8} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="2 2" className="stroke-muted/30" />
+                <XAxis dataKey="mes" className="text-xs fill-muted-foreground" />
+                <YAxis className="text-xs fill-muted-foreground" />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                <Line 
+                  type="monotone" 
+                  dataKey="coletas" 
+                  stroke="hsl(var(--recycle-green))" 
+                  strokeWidth={3}
+                  dot={{ fill: "hsl(var(--recycle-green))", strokeWidth: 2, r: 4 }}
+                  name="Coletas"
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="residuos" 
+                  stroke="hsl(var(--eco-blue))" 
+                  strokeWidth={3}
+                  dot={{ fill: "hsl(var(--eco-blue))", strokeWidth: 2, r: 4 }}
+                  name="Resíduos (kg)"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (chartType === 'financeiro' && data?.metricas?.receitas) {
+    return (
+      <div className="grid grid-cols-1 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Evolução da Receita</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={350}>
+              <AreaChart data={data.metricas.receitas}>
+                <defs>
+                  <linearGradient id="areaGradient" x1="0" y1="1" x2="0" y2="0">
+                    <stop offset="0%" stopColor="hsl(var(--eco-orange))" stopOpacity={0.1} />
+                    <stop offset="100%" stopColor="hsl(var(--eco-orange))" stopOpacity={0.8} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="2 2" className="stroke-muted/30" />
+                <XAxis dataKey="periodo" className="text-xs fill-muted-foreground" />
+                <YAxis 
+                  tickFormatter={(value) => `R$ ${value.toLocaleString('pt-BR')}`}
+                  className="text-xs fill-muted-foreground" 
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Area 
+                  type="monotone" 
+                  dataKey="valor" 
+                  stroke="hsl(var(--eco-orange))" 
+                  strokeWidth={2}
+                  fill="url(#areaGradient)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Gráficos padrão para outros tipos de relatório
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Pie Chart - Distribution by Weight */}
