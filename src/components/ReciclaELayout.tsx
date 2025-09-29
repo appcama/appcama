@@ -31,6 +31,7 @@ import { PWAOfflineBanner } from '@/components/PWAOfflineBanner';
 import { RelatoriosLayout } from '@/components/RelatoriosLayout';
 import { useBreakpoints } from '@/hooks/use-breakpoints';
 import { cn } from '@/lib/utils';
+import { Footer } from '@/components/Footer';
 
 export function ReciclaELayout() {
   const [activeItem, setActiveItem] = useState('dashboard');
@@ -245,13 +246,14 @@ export function ReciclaELayout() {
             allowedFeatures={allowedFeatures}
             userName={user?.email || 'Usuário'}
           />
-          <main className="flex-1 overflow-hidden">
-            <div className="h-full overflow-y-auto">
+          <main className="flex-1 overflow-hidden flex flex-col">
+            <div className="flex-1 overflow-y-auto">
               <div className="p-4 space-y-4">
                 <OfflineIndicator />
                 {renderContent()}
               </div>
             </div>
+            <Footer />
           </main>
         </>
       ) : (
@@ -261,13 +263,14 @@ export function ReciclaELayout() {
             onItemClick={handleItemClick}
             allowedFeatures={allowedFeatures}
           />
-          <main className="flex-1 overflow-hidden">
-            <div className="h-full overflow-y-auto bg-gray-50">
+          <main className="flex-1 overflow-hidden flex flex-col">
+            <div className="flex-1 overflow-y-auto bg-gray-50">
               <div className="p-6 space-y-6">
                 <OfflineIndicator />
                 {renderContent()}
               </div>
             </div>
+            <Footer />
           </main>
         </div>
       )}

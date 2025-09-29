@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { applyCpfCnpjMask, validateCpfOrCnpj } from '@/lib/cpf-cnpj-utils';
 import { useBreakpoints } from '@/hooks/use-breakpoints';
 import { cn } from '@/lib/utils';
+import { Footer } from '@/components/Footer';
 
 export default function Login() {
   const [loginForm, setLoginForm] = useState({ cpfCnpj: '', password: '' });
@@ -107,7 +108,8 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-recycle-green-light to-eco-blue/10 p-4">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-recycle-green-light to-eco-blue/10">
+      <div className="flex-1 flex items-center justify-center p-4">
       <div className={cn(
         "w-full",
         isMobile ? "max-w-sm" : "max-w-md"
@@ -309,6 +311,8 @@ export default function Login() {
           </TabsContent>
         </Tabs>
       </div>
+      </div>
+      <Footer />
     </div>
   );
 }
