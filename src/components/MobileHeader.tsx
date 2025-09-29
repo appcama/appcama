@@ -42,11 +42,13 @@ export function MobileHeader({ activeItem, onItemClick, allowedFeatures, userNam
             <div className="flex h-full flex-col">
               <div className="flex h-14 items-center border-b px-4">
                 <div className="flex items-center gap-2">
-                  <img 
-                    src="/recyclae-logo.png" 
-                    alt="ReciclaÊ" 
-                    className="h-10 w-auto object-contain"
-                  />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-recycle-green">
+                    <Recycle className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-lg font-bold text-gray-900">ReciclaÊ</h1>
+                    <p className="text-xs text-gray-500">Sistema de Gestão</p>
+                  </div>
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto">
@@ -62,11 +64,12 @@ export function MobileHeader({ activeItem, onItemClick, allowedFeatures, userNam
         </Sheet>
 
         <div className="flex flex-1 items-center justify-center">
-          <img 
-            src="/recyclae-logo.png" 
-            alt="ReciclaÊ" 
-            className="h-8 w-auto object-contain"
-          />
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-recycle-green">
+              <Recycle className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-lg font-bold text-gray-900">ReciclaÊ</span>
+          </div>
         </div>
 
         <div className="w-11" /> {/* Spacer para centralizar o logo */}
