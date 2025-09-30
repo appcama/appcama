@@ -10,7 +10,7 @@ export function CertificadosLayout() {
     return <CertificadoEmitir />;
   }
 
-  if (id) {
+  if (action === "view" && id) {
     return <CertificadoView idCertificado={parseInt(id)} />;
   }
 

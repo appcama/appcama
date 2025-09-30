@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, FileCheck } from "lucide-react";
 import { format } from "date-fns";
@@ -26,22 +26,34 @@ export function CertificadoEmitir() {
     queryFn: async () => {
       if (!cpfCnpj || !periodoInicio || !periodoFim) return null;
 
-      const { data: entidade } = await supabase
+      console.log('[CertificadoEmitir] Buscando entidade com CPF/CNPJ:', cpfCnpj);
+
+      // Buscar entidade pelo CPF/CNPJ formatado ou sem formatação
+      const cpfCnpjLimpo = cpfCnpj.replace(/[^\d]/g, '');
+      const { data: entidade, error: entidadeError } = await supabase
         .from("entidade")
         .select("*")
-        .eq("num_cpf_cnpj", cpfCnpj)
+        .or(`num_cpf_cnpj.eq.${cpfCnpj},num_cpf_cnpj.eq.${cpfCnpjLimpo}`)
         .single();
 
+      console.log('[CertificadoEmitir] Entidade encontrada:', entidade);
+      console.log('[CertificadoEmitir] Erro na busca de entidade:', entidadeError);
+
       if (!entidade) {
-        toast({
-          title: "Erro",
-          description: "Entidade geradora não encontrada",
-          variant: "destructive",
-        });
+        toast.error("Entidade geradora não encontrada com o CPF/CNPJ informado");
         return null;
       }
 
       setEntidadeGeradora(entidade);
+
+      // Ajustar as datas para incluir todo o dia
+      const dataInicio = `${periodoInicio}T00:00:00`;
+      const dataFim = `${periodoFim}T23:59:59`;
+
+      console.log('[CertificadoEmitir] Buscando coletas para:', {
+        id_entidade: entidade.id_entidade,
+        periodo: { inicio: dataInicio, fim: dataFim }
+      });
 
       const { data: coletasData, error } = await supabase
         .from("coleta")
@@ -56,11 +68,23 @@ export function CertificadoEmitir() {
           )
         `)
         .eq("id_entidade_geradora", entidade.id_entidade)
-        .gte("dat_coleta", periodoInicio)
-        .lte("dat_coleta", periodoFim)
+        .gte("dat_coleta", dataInicio)
+        .lte("dat_coleta", dataFim)
         .eq("des_status", "A");
 
-      if (error) throw error;
+      console.log('[CertificadoEmitir] Coletas encontradas:', coletasData?.length || 0);
+      console.log('[CertificadoEmitir] Coletas data:', coletasData);
+      console.log('[CertificadoEmitir] Erro na busca de coletas:', error);
+
+      if (error) {
+        console.error('[CertificadoEmitir] Erro ao buscar coletas:', error);
+        throw error;
+      }
+
+      if (!coletasData || coletasData.length === 0) {
+        toast.error("Nenhuma coleta encontrada no período selecionado para esta entidade");
+      }
+
       return coletasData;
     },
     enabled: etapa === 2,
@@ -87,13 +111,10 @@ export function CertificadoEmitir() {
 
   const handleBuscar = () => {
     if (!cpfCnpj || !periodoInicio || !periodoFim) {
-      toast({
-        title: "Atenção",
-        description: "Preencha todos os campos",
-        variant: "destructive",
-      });
+      toast.error("Preencha todos os campos");
       return;
     }
+    console.log('[CertificadoEmitir] Buscando coletas com:', { cpfCnpj, periodoInicio, periodoFim });
     setEtapa(2);
   };
 
@@ -151,19 +172,11 @@ export function CertificadoEmitir() {
         id_usuario: user?.id,
       });
 
-      toast({
-        title: "Sucesso",
-        description: "Certificado emitido com sucesso!",
-      });
-
-      window.location.href = `/certificados/${certificado.id_certificado}`;
+      toast.success("Certificado emitido com sucesso!");
+      window.location.href = `/certificados/view/${certificado.id_certificado}`;
     } catch (error) {
       console.error("Erro ao emitir certificado:", error);
-      toast({
-        title: "Erro",
-        description: "Erro ao emitir certificado",
-        variant: "destructive",
-      });
+      toast.error("Erro ao emitir certificado");
     }
   };
 
