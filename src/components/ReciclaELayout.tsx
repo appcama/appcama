@@ -1,5 +1,5 @@
+
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Dashboard } from '@/components/Dashboard';
@@ -14,7 +14,6 @@ import { Indicadores } from '@/components/Indicadores';
 import { PerfilList } from '@/components/PerfilList';
 import { UsuariosList } from '@/components/UsuariosList';
 import { ColetaList } from '@/components/ColetaList';
-import { CertificadosLayout } from '@/components/CertificadosLayout';
 import { PerfilFuncionalidades } from '@/components/PerfilFuncionalidades';
 import { EntidadeForm } from '@/components/EntidadeForm';
 import { EventoForm } from '@/components/EventoForm';
@@ -34,7 +33,6 @@ import { useBreakpoints } from '@/hooks/use-breakpoints';
 import { cn } from '@/lib/utils';
 
 export function ReciclaELayout() {
-  const location = useLocation();
   const [activeItem, setActiveItem] = useState('dashboard');
   const [currentView, setCurrentView] = useState<'list' | 'form'>('list');
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -43,17 +41,9 @@ export function ReciclaELayout() {
   const { allowedFeatures, loading: permissionsLoading } = usePermissions();
   const { isMobile } = useBreakpoints();
 
-  // Detectar rota de certificados e definir activeItem
-  useEffect(() => {
-    if (location.pathname.startsWith('/certificados')) {
-      setActiveItem('certificados');
-    }
-  }, [location.pathname]);
-
   console.log('[ReciclaELayout] Current user:', user);
   console.log('[ReciclaELayout] Allowed features:', allowedFeatures);
   console.log('[ReciclaELayout] Active item:', activeItem);
-  console.log('[ReciclaELayout] Current path:', location.pathname);
 
   // Listener para limpar filtro de perfil
   useEffect(() => {
@@ -221,8 +211,6 @@ export function ReciclaELayout() {
         return <UsuariosList onAddNew={handleAddNew} onEdit={handleEdit} perfilFilter={selectedPerfilId} />;
       case 'funcionalidades':
         return <PerfilFuncionalidades />;
-      case 'certificados':
-        return <CertificadosLayout />;
       case 'relatorios-operacionais':
       case 'relatorios-gerenciais':
       case 'relatorios-ambientais':
