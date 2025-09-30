@@ -13,6 +13,7 @@ import Login from "./pages/Login";
 import ValidatePassword from "./pages/ValidatePassword";
 import NotFound from "./pages/NotFound";
 import CertificadoValidar from "./pages/CertificadoValidar";
+import { ReciclaELayout } from "@/components/ReciclaELayout";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,11 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/validate-password" element={<ValidatePassword />} />
               <Route path="/certificados/validar/:codigo" element={<CertificadoValidar />} />
+              <Route path="/certificados/*" element={
+                <ProtectedRoute>
+                  <ReciclaELayout />
+                </ProtectedRoute>
+              } />
               <Route path="/" element={
                 <ProtectedRoute>
                   <Index />
