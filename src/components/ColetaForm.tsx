@@ -167,27 +167,19 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
           .order('nom_evento')
       ]);
 
-      // Carregar entidades e tipos apenas se for admin
-      let entidadesResult = null;
-      let tiposEntidadeResult = null;
-      
-      if (isAdmin) {
-        const [entResult, tiposResult] = await Promise.all([
-          supabase
-            .from('entidade')
-            .select('id_entidade, nom_entidade, id_tipo_entidade')
-            .eq('des_status', 'A')
-            .order('nom_entidade'),
-          
-          supabase
-            .from('tipo_entidade')
-            .select('id_tipo_entidade, des_geradora_residuo')
-            .eq('des_status', 'A')
-        ]);
+      // Carregar entidades e tipos para todos os usuários
+      const [entResult, tiposResult] = await Promise.all([
+        supabase
+          .from('entidade')
+          .select('id_entidade, nom_entidade, id_tipo_entidade')
+          .eq('des_status', 'A')
+          .order('nom_entidade'),
         
-        entidadesResult = entResult;
-        tiposEntidadeResult = tiposResult;
-      }
+        supabase
+          .from('tipo_entidade')
+          .select('id_tipo_entidade, des_geradora_residuo')
+          .eq('des_status', 'A')
+      ]);
 
       // Processar pontos de coleta
       if (pontosResult.error) {
@@ -206,41 +198,38 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         setPontosColeta(pontosResult.data || []);
       }
 
-      // Processar entidades geradoras (só para admin)
-      if (isAdmin) {
-        if (entidadesResult?.error || tiposEntidadeResult?.error) {
-          console.error('[ColetaForm] Error loading entidades/tipos:', entidadesResult?.error || tiposEntidadeResult?.error);
-          toast({
-            title: "Erro",
-            description: "Erro ao carregar entidades geradoras",
-            variant: "destructive"
-          });
-          setEntidades([]);
-        } else {
-          // Filtrar entidades geradoras
-          const tiposGeradoras = new Set(
-            (tiposEntidadeResult?.data || [])
-              .filter((tipo: any) => tipo.des_geradora_residuo === 'A')
-              .map((tipo: any) => tipo.id_tipo_entidade)
-          );
-          
-          const entidadesGeradoras = (entidadesResult?.data || []).filter(
-            (entidade: any) => tiposGeradoras.has(entidade.id_tipo_entidade)
-          );
-          
-          console.log('[ColetaForm] Entidades geradoras loaded:', entidadesGeradoras.length);
-          setEntidades(entidadesGeradoras);
-        }
+      // Processar entidades geradoras (disponível para todos os usuários)
+      if (entResult?.error || tiposResult?.error) {
+        console.error('[ColetaForm] Error loading entidades/tipos:', entResult?.error || tiposResult?.error);
+        toast({
+          title: "Erro",
+          description: "Erro ao carregar entidades geradoras",
+          variant: "destructive"
+        });
+        setEntidades([]);
       } else {
-        // Para usuários não-admin, definir automaticamente a entidade do usuário
-        if (userEntityId) {
-          console.log('[ColetaForm] Non-admin user - setting entity automatically:', userEntityId);
+        // Filtrar entidades geradoras
+        const tiposGeradoras = new Set(
+          (tiposResult?.data || [])
+            .filter((tipo: any) => tipo.des_geradora_residuo === 'A')
+            .map((tipo: any) => tipo.id_tipo_entidade)
+        );
+        
+        const entidadesGeradoras = (entResult?.data || []).filter(
+          (entidade: any) => tiposGeradoras.has(entidade.id_tipo_entidade)
+        );
+        
+        console.log('[ColetaForm] Entidades geradoras loaded for all users:', entidadesGeradoras.length);
+        setEntidades(entidadesGeradoras);
+
+        // Para usuários não-admin, ainda definir automaticamente a entidade do usuário como padrão
+        if (!isAdmin && userEntityId) {
+          console.log('[ColetaForm] Non-admin user - setting entity as default:', userEntityId);
           setFormData(prev => ({ 
             ...prev, 
             id_entidade_geradora: userEntityId.toString() 
           }));
         }
-        setEntidades([]);
       }
 
       // Processar eventos
@@ -588,27 +577,25 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
               </Select>
             </div>
 
-            {user?.isAdmin && (
-              <div>
-                <Label htmlFor="id_entidade_geradora">Entidade Geradora (Opcional)</Label>
-                <Select
-                  value={formData.id_entidade_geradora}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, id_entidade_geradora: value }))}
-                  disabled={!isDataLoaded}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={isDataLoaded ? "Selecione a entidade geradora" : "Carregando..."} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {entidades.map((entidade) => (
-                      <SelectItem key={entidade.id_entidade} value={entidade.id_entidade.toString()}>
-                        {entidade.nom_entidade}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div>
+              <Label htmlFor="id_entidade_geradora">Entidade Geradora (Opcional)</Label>
+              <Select
+                value={formData.id_entidade_geradora}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, id_entidade_geradora: value }))}
+                disabled={!isDataLoaded}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={isDataLoaded ? "Selecione a entidade geradora" : "Carregando..."} />
+                </SelectTrigger>
+                <SelectContent>
+                  {entidades.map((entidade) => (
+                    <SelectItem key={entidade.id_entidade} value={entidade.id_entidade.toString()}>
+                      {entidade.nom_entidade}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             <div>
               <Label htmlFor="id_evento">Evento (Opcional)</Label>
