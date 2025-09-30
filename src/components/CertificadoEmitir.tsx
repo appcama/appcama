@@ -7,74 +7,72 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, FileCheck } from "lucide-react";
+import { ArrowLeft, FileCheck, Filter, Plus } from "lucide-react";
 import { format } from "date-fns";
+
+interface ColetaData {
+  id_coleta: number;
+  cod_coleta: string;
+  dat_coleta: string;
+  vlr_total: number;
+  ponto_coleta?: {
+    nom_ponto_coleta: string;
+  };
+  coleta_residuo: Array<{
+    qtd_total: number;
+    vlr_total: number;
+    residuo: {
+      nom_residuo: string;
+      id_tipo_residuo: number;
+      tipo_residuo: {
+        des_tipo_residuo: string;
+      };
+    };
+  }>;
+}
 
 export function CertificadoEmitir() {
   const { user } = useAuth();
-  const [etapa, setEtapa] = useState(1);
-  const [cpfCnpj, setCpfCnpj] = useState("");
   const [periodoInicio, setPeriodoInicio] = useState("");
   const [periodoFim, setPeriodoFim] = useState("");
   const [observacoes, setObservacoes] = useState("");
-  const [entidadeGeradora, setEntidadeGeradora] = useState<any>(null);
+  const [coletasSelecionadas, setColetasSelecionadas] = useState<Set<number>>(new Set());
+  const [filtroAplicado, setFiltroAplicado] = useState(false);
 
-  const { data: coletas, isLoading: loadingColetas } = useQuery({
-    queryKey: ["coletas-certificado", cpfCnpj, periodoInicio, periodoFim],
+  const { data: coletas, isLoading: loadingColetas, refetch } = useQuery({
+    queryKey: ["coletas-certificado", user?.entityId, periodoInicio, periodoFim],
     queryFn: async () => {
-      if (!cpfCnpj || !periodoInicio || !periodoFim) return null;
+      if (!user?.entityId || !periodoInicio || !periodoFim) return null;
 
-      console.log('[CertificadoEmitir] Buscando entidade com CPF/CNPJ:', cpfCnpj);
-
-      // Buscar entidade pelo CPF/CNPJ formatado ou sem formatação
-      const cpfCnpjLimpo = cpfCnpj.replace(/[^\d]/g, '');
-      const { data: entidade, error: entidadeError } = await supabase
-        .from("entidade")
-        .select("*")
-        .or(`num_cpf_cnpj.eq.${cpfCnpj},num_cpf_cnpj.eq.${cpfCnpjLimpo}`)
-        .single();
-
-      console.log('[CertificadoEmitir] Entidade encontrada:', entidade);
-      console.log('[CertificadoEmitir] Erro na busca de entidade:', entidadeError);
-
-      if (!entidade) {
-        toast.error("Entidade geradora não encontrada com o CPF/CNPJ informado");
-        return null;
-      }
-
-      setEntidadeGeradora(entidade);
-
-      // Ajustar as datas para incluir todo o dia
       const dataInicio = `${periodoInicio}T00:00:00`;
       const dataFim = `${periodoFim}T23:59:59`;
-
-      console.log('[CertificadoEmitir] Buscando coletas para:', {
-        id_entidade: entidade.id_entidade,
-        periodo: { inicio: dataInicio, fim: dataFim }
-      });
 
       const { data: coletasData, error } = await supabase
         .from("coleta")
         .select(`
           *,
+          ponto_coleta:id_ponto_coleta (
+            nom_ponto_coleta
+          ),
           coleta_residuo (
-            *,
+            qtd_total,
+            vlr_total,
             residuo (
-              *,
-              tipo_residuo (*)
+              nom_residuo,
+              id_tipo_residuo,
+              tipo_residuo (
+                des_tipo_residuo
+              )
             )
           )
         `)
-        .eq("id_entidade_geradora", entidade.id_entidade)
+        .eq("id_entidade_geradora", user.entityId)
         .gte("dat_coleta", dataInicio)
         .lte("dat_coleta", dataFim)
         .eq("des_status", "A");
-
-      console.log('[CertificadoEmitir] Coletas encontradas:', coletasData?.length || 0);
-      console.log('[CertificadoEmitir] Coletas data:', coletasData);
-      console.log('[CertificadoEmitir] Erro na busca de coletas:', error);
 
       if (error) {
         console.error('[CertificadoEmitir] Erro ao buscar coletas:', error);
@@ -82,46 +80,104 @@ export function CertificadoEmitir() {
       }
 
       if (!coletasData || coletasData.length === 0) {
-        toast.error("Nenhuma coleta encontrada no período selecionado para esta entidade");
+        toast.info("Nenhuma coleta encontrada no período selecionado");
+        return [];
       }
 
-      return coletasData;
+      return coletasData as ColetaData[];
     },
-    enabled: etapa === 2,
+    enabled: false,
   });
 
-  const resumoResiduos = coletas?.reduce((acc: any[], coleta: any) => {
-    coleta.coleta_residuo?.forEach((cr: any) => {
-      const existing = acc.find((r) => r.id_tipo_residuo === cr.residuo.id_tipo_residuo);
-      if (existing) {
-        existing.qtd_total += cr.qtd_total;
-        existing.vlr_total += cr.vlr_total;
-      } else {
-        acc.push({
-          id_tipo_residuo: cr.residuo.id_tipo_residuo,
-          nom_residuo: cr.residuo.nom_residuo,
-          des_tipo: cr.residuo.tipo_residuo.des_tipo_residuo,
-          qtd_total: cr.qtd_total,
-          vlr_total: cr.vlr_total,
-        });
+  // Calcular totais das coletas selecionadas
+  const totaisSelecionados = coletas?.reduce(
+    (acc, coleta) => {
+      if (coletasSelecionadas.has(coleta.id_coleta)) {
+        const qtdTotal = coleta.coleta_residuo.reduce((sum, cr) => sum + cr.qtd_total, 0);
+        return {
+          quantidade: acc.quantidade + qtdTotal,
+          valor: acc.valor + coleta.vlr_total,
+        };
       }
-    });
-    return acc;
-  }, []);
+      return acc;
+    },
+    { quantidade: 0, valor: 0 }
+  ) || { quantidade: 0, valor: 0 };
 
-  const handleBuscar = () => {
-    if (!cpfCnpj || !periodoInicio || !periodoFim) {
-      toast.error("Preencha todos os campos");
+  // Calcular resumo de resíduos das coletas selecionadas
+  const resumoResiduos = coletas
+    ?.filter((coleta) => coletasSelecionadas.has(coleta.id_coleta))
+    .reduce((acc: any[], coleta) => {
+      coleta.coleta_residuo?.forEach((cr) => {
+        const existing = acc.find((r) => r.id_tipo_residuo === cr.residuo.id_tipo_residuo);
+        if (existing) {
+          existing.qtd_total += cr.qtd_total;
+          existing.vlr_total += cr.vlr_total;
+        } else {
+          acc.push({
+            id_tipo_residuo: cr.residuo.id_tipo_residuo,
+            nom_residuo: cr.residuo.nom_residuo,
+            des_tipo: cr.residuo.tipo_residuo.des_tipo_residuo,
+            qtd_total: cr.qtd_total,
+            vlr_total: cr.vlr_total,
+          });
+        }
+      });
+      return acc;
+    }, []);
+
+  const handleFiltrar = () => {
+    if (!periodoInicio || !periodoFim) {
+      toast.error("Preencha as datas de início e fim do período");
       return;
     }
-    console.log('[CertificadoEmitir] Buscando coletas com:', { cpfCnpj, periodoInicio, periodoFim });
-    setEtapa(2);
+
+    if (new Date(periodoFim) < new Date(periodoInicio)) {
+      toast.error("A data fim deve ser maior ou igual à data início");
+      return;
+    }
+
+    setColetasSelecionadas(new Set());
+    setFiltroAplicado(true);
+    refetch();
+  };
+
+  const handleToggleColeta = (idColeta: number) => {
+    const newSet = new Set(coletasSelecionadas);
+    if (newSet.has(idColeta)) {
+      newSet.delete(idColeta);
+    } else {
+      newSet.add(idColeta);
+    }
+    setColetasSelecionadas(newSet);
+  };
+
+  const handleToggleAll = () => {
+    if (!coletas) return;
+
+    if (coletasSelecionadas.size === coletas.length) {
+      setColetasSelecionadas(new Set());
+    } else {
+      setColetasSelecionadas(new Set(coletas.map((c) => c.id_coleta)));
+    }
   };
 
   const handleEmitir = async () => {
+    if (coletasSelecionadas.size === 0) {
+      toast.error("Selecione pelo menos uma coleta para emitir o certificado");
+      return;
+    }
+
     try {
-      const qtdTotal = resumoResiduos?.reduce((sum, r) => sum + r.qtd_total, 0) || 0;
-      const vlrTotal = resumoResiduos?.reduce((sum, r) => sum + r.vlr_total, 0) || 0;
+      // Buscar dados da entidade
+      const { data: entidade } = await supabase
+        .from("entidade")
+        .select("num_cpf_cnpj")
+        .eq("id_entidade", user?.entityId)
+        .single();
+
+      const qtdTotal = totaisSelecionados.quantidade;
+      const vlrTotal = totaisSelecionados.valor;
 
       // Gerar código validador único
       const codValidador = `CERT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
@@ -131,7 +187,7 @@ export function CertificadoEmitir() {
         .from("certificado")
         .insert({
           id_entidade: user?.entityId,
-          num_cpf_cnpj_gerador: cpfCnpj,
+          num_cpf_cnpj_gerador: entidade?.num_cpf_cnpj || "",
           dat_periodo_inicio: periodoInicio,
           dat_periodo_fim: periodoFim,
           cod_validador: codValidador,
@@ -156,7 +212,7 @@ export function CertificadoEmitir() {
         vlr_total: r.vlr_total,
       }));
 
-      if (residuosInsert) {
+      if (residuosInsert && residuosInsert.length > 0) {
         const { error: residuosError } = await supabase
           .from("certificado_residuo")
           .insert(residuosInsert);
@@ -168,7 +224,7 @@ export function CertificadoEmitir() {
       await supabase.from("certificado_log").insert({
         id_certificado: certificado.id_certificado,
         des_acao: "EMISSAO",
-        des_observacao: "Certificado emitido",
+        des_observacao: `Certificado emitido com ${coletasSelecionadas.size} coleta(s)`,
         id_usuario: user?.id,
       });
 
@@ -181,99 +237,135 @@ export function CertificadoEmitir() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => (window.location.href = "/certificados")}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Voltar
-        </Button>
-        <h2 className="text-2xl font-bold">Emitir Certificado</h2>
-      </div>
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex flex-row items-center justify-between space-y-0 pb-6">
+            <CardTitle className="flex items-center gap-2">
+              <FileCheck className="h-5 w-5" />
+              Emitir Certificado
+            </CardTitle>
+          </div>
 
-      {etapa === 1 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Dados do Certificado</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label>CPF/CNPJ do Gerador</Label>
-              <Input
-                value={cpfCnpj}
-                onChange={(e) => setCpfCnpj(e.target.value)}
-                placeholder="Digite o CPF ou CNPJ"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label>Período Início</Label>
-                <Input type="date" value={periodoInicio} onChange={(e) => setPeriodoInicio(e.target.value)} />
+                <Input
+                  type="date"
+                  value={periodoInicio}
+                  onChange={(e) => setPeriodoInicio(e.target.value)}
+                />
               </div>
               <div>
                 <Label>Período Fim</Label>
-                <Input type="date" value={periodoFim} onChange={(e) => setPeriodoFim(e.target.value)} />
+                <Input
+                  type="date"
+                  value={periodoFim}
+                  onChange={(e) => setPeriodoFim(e.target.value)}
+                />
+              </div>
+              <div className="flex items-end">
+                <Button
+                  onClick={handleFiltrar}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  disabled={loadingColetas}
+                >
+                  <Filter className="mr-2 h-4 w-4" />
+                  Filtrar Coletas
+                </Button>
               </div>
             </div>
-            <Button onClick={handleBuscar} className="w-full">
-              Buscar Coletas
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </CardHeader>
 
-      {etapa === 2 && (
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Entidade Geradora</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="font-semibold">{entidadeGeradora?.nom_entidade}</p>
-              <p className="text-sm text-muted-foreground">{entidadeGeradora?.num_cpf_cnpj}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Resíduos Entregues no Período</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loadingColetas ? (
-                <p>Carregando...</p>
-              ) : (
+        <CardContent>
+          {!filtroAplicado ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Selecione um período e clique em "Filtrar Coletas" para visualizar as coletas disponíveis.
+            </div>
+          ) : loadingColetas ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Carregando coletas...
+            </div>
+          ) : !coletas || coletas.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhuma coleta encontrada no período selecionado.
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Resíduo</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Quantidade</TableHead>
-                      <TableHead>Valor</TableHead>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={coletasSelecionadas.size === coletas.length && coletas.length > 0}
+                          onCheckedChange={handleToggleAll}
+                        />
+                      </TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Código</TableHead>
+                      <TableHead>Ponto de Coleta</TableHead>
+                      <TableHead className="text-right">Quantidade (kg)</TableHead>
+                      <TableHead className="text-right">Valor Total</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {resumoResiduos?.map((r: any, idx: number) => (
-                      <TableRow key={idx}>
-                        <TableCell>{r.nom_residuo}</TableCell>
-                        <TableCell>{r.des_tipo}</TableCell>
-                        <TableCell>{r.qtd_total.toFixed(3)} kg</TableCell>
-                        <TableCell>R$ {r.vlr_total.toFixed(2)}</TableCell>
-                      </TableRow>
-                    ))}
-                    <TableRow className="font-bold">
-                      <TableCell colSpan={2}>TOTAL</TableCell>
-                      <TableCell>
-                        {resumoResiduos?.reduce((s: number, r: any) => s + r.qtd_total, 0).toFixed(3)} kg
-                      </TableCell>
-                      <TableCell>
-                        R$ {resumoResiduos?.reduce((s: number, r: any) => s + r.vlr_total, 0).toFixed(2)}
-                      </TableCell>
-                    </TableRow>
+                    {coletas.map((coleta) => {
+                      const qtdTotal = coleta.coleta_residuo.reduce((sum, cr) => sum + cr.qtd_total, 0);
+                      return (
+                        <TableRow key={coleta.id_coleta}>
+                          <TableCell>
+                            <Checkbox
+                              checked={coletasSelecionadas.has(coleta.id_coleta)}
+                              onCheckedChange={() => handleToggleColeta(coleta.id_coleta)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {format(new Date(coleta.dat_coleta), "dd/MM/yyyy")}
+                          </TableCell>
+                          <TableCell>{coleta.cod_coleta}</TableCell>
+                          <TableCell>
+                            {coleta.ponto_coleta?.nom_ponto_coleta || "N/A"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {qtdTotal.toFixed(3)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            R$ {coleta.vlr_total.toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
-              )}
-            </CardContent>
-          </Card>
+              </div>
 
+              {coletasSelecionadas.size > 0 && (
+                <div className="mt-6 p-4 bg-muted rounded-lg space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">
+                      {coletasSelecionadas.size} coleta(s) selecionada(s)
+                    </span>
+                    <div className="text-right">
+                      <div className="text-sm text-muted-foreground">Quantidade Total</div>
+                      <div className="font-bold">{totaisSelecionados.quantidade.toFixed(3)} kg</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm text-muted-foreground">Valor Total</div>
+                      <div className="font-bold">R$ {totaisSelecionados.valor.toFixed(2)}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {filtroAplicado && coletas && coletas.length > 0 && (
+        <>
           <Card>
             <CardHeader>
               <CardTitle>Observações (Opcional)</CardTitle>
@@ -288,17 +380,18 @@ export function CertificadoEmitir() {
             </CardContent>
           </Card>
 
-          <div className="flex gap-4">
-            <Button variant="outline" onClick={() => setEtapa(1)} className="flex-1">
-              Voltar
-            </Button>
-            <Button onClick={handleEmitir} className="flex-1">
+          <div className="flex justify-end">
+            <Button
+              onClick={handleEmitir}
+              disabled={coletasSelecionadas.size === 0}
+              className="bg-green-600 hover:bg-green-700"
+            >
               <FileCheck className="mr-2 h-4 w-4" />
               Emitir Certificado
             </Button>
           </div>
-        </div>
+        </>
       )}
-    </div>
+    </>
   );
 }
