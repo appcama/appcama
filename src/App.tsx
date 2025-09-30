@@ -12,6 +12,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import ValidatePassword from "./pages/ValidatePassword";
 import NotFound from "./pages/NotFound";
+import CertificadoValidar from "./pages/CertificadoValidar";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/validate-password" element={<ValidatePassword />} />
+              <Route path="/certificados/validar/:codigo" element={<CertificadoValidar />} />
               <Route path="/" element={
                 <ProtectedRoute>
                   <Index />

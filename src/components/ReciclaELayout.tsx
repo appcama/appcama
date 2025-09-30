@@ -14,6 +14,7 @@ import { Indicadores } from '@/components/Indicadores';
 import { PerfilList } from '@/components/PerfilList';
 import { UsuariosList } from '@/components/UsuariosList';
 import { ColetaList } from '@/components/ColetaList';
+import { CertificadosLayout } from '@/components/CertificadosLayout';
 import { PerfilFuncionalidades } from '@/components/PerfilFuncionalidades';
 import { EntidadeForm } from '@/components/EntidadeForm';
 import { EventoForm } from '@/components/EventoForm';
@@ -211,6 +212,8 @@ export function ReciclaELayout() {
         return <UsuariosList onAddNew={handleAddNew} onEdit={handleEdit} perfilFilter={selectedPerfilId} />;
       case 'funcionalidades':
         return <PerfilFuncionalidades />;
+      case 'certificados':
+        return <CertificadosLayout />;
       case 'relatorios-operacionais':
       case 'relatorios-gerenciais':
       case 'relatorios-ambientais':

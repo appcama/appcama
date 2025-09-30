@@ -18,7 +18,8 @@ import {
   FileText,
   TrendingUp,
   Package,
-  LogOut
+  LogOut,
+  Award
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { featureByItemId } from "@/lib/featureMap";
@@ -141,7 +142,13 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose 
     },
     {
       label: "DADOS",
-      items: []
+      items: [
+        {
+          id: "certificados",
+          label: "Certificados",
+          icon: Award,
+        },
+      ]
     },
     {
       label: "RELATÓRIOS",
