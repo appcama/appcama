@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { 
   Home, 
   Users, 
@@ -42,6 +43,12 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose 
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const { isMobile } = useBreakpoints();
   const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogoClick = () => {
+    navigate('/');
+    onItemClick('dashboard');
+  };
 
   const toggleExpanded = (itemId: string) => {
     setExpandedItems(prev => 
@@ -243,13 +250,13 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose 
     )}>
       {!isMobile && (
         <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-recycle-green rounded-lg flex items-center justify-center">
-              <Recycle className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-900">ReciclaÊ</h1>
-              <p className="text-xs text-gray-500">Sistema de Gestão</p>
+          <div className="flex items-center justify-center">
+            <div className="flex items-center justify-center cursor-pointer" onClick={handleLogoClick}>
+              <img 
+                src="/logo-original.png" 
+                alt="ReciclaÊ Logo" 
+                className="w-36 h-36 object-contain hover:opacity-80 transition-opacity"
+              />
             </div>
           </div>
         </div>

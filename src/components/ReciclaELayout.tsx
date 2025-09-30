@@ -266,6 +266,15 @@ export function ReciclaELayout() {
               <div className="p-6 space-y-6">
                 <OfflineIndicator />
                 {renderContent()}
+                
+                {/* Rodapé com logo da CAMA */}
+                <div className="mt-8 flex justify-center">
+                  <img 
+                    src="/rodapecama.png" 
+                    alt="CAMA" 
+                    className="h-20 w-auto object-contain opacity-80"
+                  />
+                </div>
               </div>
             </div>
           </main>

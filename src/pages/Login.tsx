@@ -119,7 +119,7 @@ export default function Login() {
               isMobile ? "mb-2" : "mb-4"
             )}>
               <img 
-                src="/horizontallogo.png" 
+                src="/logo-original.png" 
                 alt="ReciclaÊ Logo" 
                 className={cn(
                   "object-contain",
@@ -308,6 +308,18 @@ export default function Login() {
             </Card>
           </TabsContent>
         </Tabs>
+        
+        {/* Rodapé com logo da CAMA */}
+        <div className="mt-8 flex justify-center">
+          <img 
+            src="/rodapecama.png" 
+            alt="CAMA" 
+            className={cn(
+              "object-contain opacity-80",
+              isMobile ? "h-12 w-auto" : "h-20 w-auto"
+            )}
+          />
+        </div>
       </div>
     </div>
   );
