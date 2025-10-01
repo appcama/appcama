@@ -48,7 +48,7 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
 
   const fetchEntidades = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('entidade')
         .select(`
           *,
@@ -56,8 +56,15 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
             des_tipo_entidade
           )
         `)
-        .in('des_status', ['A', 'D'])
-        .order('nom_entidade');
+        .in('des_status', ['A', 'D']);
+
+      // Apenas administradores têm acesso à lista completa de entidades
+      // Demais tipos de usuário só podem ver as entidades criadas por eles
+      if (user && !user.isAdmin) {
+        query = query.eq('id_usuario_criador', user.id);
+      }
+
+      const { data, error } = await query.order('nom_entidade');
 
       if (error) throw error;
 

@@ -37,6 +37,9 @@ interface Coleta {
   evento?: {
     nom_evento: string;
   };
+  entidade_coletora?: {
+    nom_entidade: string;
+  };
 }
 
 interface ColetaListProps {
@@ -86,6 +89,11 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
           ),
           evento:id_evento (
             nom_evento
+          ),
+          usuario:id_usuario_criador (
+            entidade:id_entidade (
+              nom_entidade
+            )
           )
         `)
         .eq('des_status', 'A');
@@ -104,21 +112,24 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
       }
 
       const { data, error } = await query.order('dat_coleta', { ascending: false });
-      
-      console.log('Coletas query result:', { data, error });
 
       if (error) {
         console.error('[ColetaList] Error loading coletas:', error);
-        toast({
-          title: 'Erro',
-          description: 'Erro ao carregar coletas',
-          variant: 'destructive',
-        });
-        return;
+        throw error;
       }
 
-      console.log('[ColetaList] Coletas loaded:', data);
-      setColetas(data || []);
+      console.log('[ColetaList] Raw data from query:', data);
+
+      // Processar os dados para incluir a entidade coletora
+      const processedData = (data || []).map((coleta: any) => ({
+        ...coleta,
+        entidade_coletora: coleta.usuario?.entidade ? {
+          nom_entidade: coleta.usuario.entidade.nom_entidade
+        } : null
+      }));
+
+      console.log('[ColetaList] Processed coletas:', processedData);
+      setColetas(processedData);
     } catch (error) {
       console.error('[ColetaList] Unexpected error:', error);
       toast({
@@ -248,6 +259,7 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
                     <th className="text-left p-4 font-semibold">Data</th>
                     <th className="text-left p-4 font-semibold">Ponto de Coleta</th>
                     <th className="text-left p-4 font-semibold">Entidade Geradora</th>
+                    <th className="text-left p-4 font-semibold">Entidade Coletora</th>
                     <th className="text-left p-4 font-semibold">Evento</th>
                     <th className="text-right p-4 font-semibold">Valor Total</th>
                     <th className="text-center p-4 font-semibold">Ações</th>
@@ -260,6 +272,7 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
                       <td className="p-4">{formatDate(coleta.dat_coleta)}</td>
                       <td className="p-4">{coleta.ponto_coleta?.nom_ponto_coleta || '-'}</td>
                       <td className="p-4">{coleta.entidade?.nom_entidade || '-'}</td>
+                      <td className="p-4">{coleta.entidade_coletora?.nom_entidade || '-'}</td>
                       <td className="p-4">{coleta.evento?.nom_evento || '-'}</td>
                       <td className="p-4 text-right font-semibold text-recycle-green">
                         {formatCurrency(coleta.vlr_total)}
