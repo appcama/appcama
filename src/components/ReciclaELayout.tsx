@@ -29,6 +29,7 @@ import { MobileHeader } from '@/components/MobileHeader';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { PWAOfflineBanner } from '@/components/PWAOfflineBanner';
 import { RelatoriosLayout } from '@/components/RelatoriosLayout';
+import { Certificados } from '@/components/Certificados';
 import { useBreakpoints } from '@/hooks/use-breakpoints';
 import { cn } from '@/lib/utils';
 
@@ -195,6 +196,8 @@ export function ReciclaELayout() {
         return <EventosList onAddNew={handleAddNew} onEdit={handleEdit} />;
       case 'coletas':
         return <ColetaList onAddNew={handleAddNew} onEdit={handleEdit} />;
+      case 'certificados':
+        return <Certificados />;
       case 'tipos-ponto-coleta':
         return <TipoPontoColetaList onAddNew={handleAddNew} onEdit={handleEdit} />;
       case 'tipos-entidades':

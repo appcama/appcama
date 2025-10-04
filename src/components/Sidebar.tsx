@@ -87,6 +87,11 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose 
           label: "Coletas",
           icon: Package,
         },
+        {
+          id: "certificados",
+          label: "Certificados",
+          icon: FileText,
+        },
       ]
     },
     {
