@@ -202,14 +202,14 @@ export function RelatorioFilters({ filters, onFiltersChange, onReset }: Relatori
                 ENTIDADE
               </Label>
               <Select
-                value={filters.entidade || ""}
-                onValueChange={(value) => updateFilter('entidade', value || undefined)}
+                value={filters.entidade || "all"}
+                onValueChange={(value) => updateFilter('entidade', value === 'all' ? undefined : value)}
               >
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="Todas as entidades" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas as entidades</SelectItem>
+                  <SelectItem value="all">Todas as entidades</SelectItem>
                   {/* TODO: Carregar entidades da base */}
                 </SelectContent>
               </Select>
@@ -221,14 +221,14 @@ export function RelatorioFilters({ filters, onFiltersChange, onReset }: Relatori
                 TIPO DE ENTIDADE
               </Label>
               <Select
-                value={filters.tipoEntidade || ""}
-                onValueChange={(value) => updateFilter('tipoEntidade', value || undefined)}
+                value={filters.tipoEntidade || "all"}
+                onValueChange={(value) => updateFilter('tipoEntidade', value === 'all' ? undefined : value)}
               >
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="Todos os tipos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os tipos</SelectItem>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
                   {/* TODO: Carregar tipos da base */}
                 </SelectContent>
               </Select>
@@ -240,14 +240,14 @@ export function RelatorioFilters({ filters, onFiltersChange, onReset }: Relatori
                 TIPO DE RESÍDUO
               </Label>
               <Select
-                value={filters.tipoResiduo || ""}
-                onValueChange={(value) => updateFilter('tipoResiduo', value || undefined)}
+                value={filters.tipoResiduo || "all"}
+                onValueChange={(value) => updateFilter('tipoResiduo', value === 'all' ? undefined : value)}
               >
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="Todos os tipos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os tipos</SelectItem>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
                   {/* TODO: Carregar tipos da base */}
                 </SelectContent>
               </Select>
@@ -259,14 +259,14 @@ export function RelatorioFilters({ filters, onFiltersChange, onReset }: Relatori
                 STATUS DAS COLETAS
               </Label>
               <Select
-                value={filters.statusColetas || ""}
-                onValueChange={(value) => updateFilter('statusColetas', value || undefined)}
+                value={filters.statusColetas || "all"}
+                onValueChange={(value) => updateFilter('statusColetas', value === 'all' ? undefined : value)}
               >
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="Todos os status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os status</SelectItem>
+                  <SelectItem value="all">Todos os status</SelectItem>
                   <SelectItem value="A">Apenas Ativas (A)</SelectItem>
                   <SelectItem value="D">Apenas Desativadas (D)</SelectItem>
                   <SelectItem value="A,D">Ativas e Desativadas</SelectItem>
@@ -280,14 +280,14 @@ export function RelatorioFilters({ filters, onFiltersChange, onReset }: Relatori
                 STATUS DAS ENTIDADES
               </Label>
               <Select
-                value={filters.statusEntidades || ""}
-                onValueChange={(value) => updateFilter('statusEntidades', value || undefined)}
+                value={filters.statusEntidades || "all"}
+                onValueChange={(value) => updateFilter('statusEntidades', value === 'all' ? undefined : value)}
               >
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="Todos os status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os status</SelectItem>
+                  <SelectItem value="all">Todos os status</SelectItem>
                   <SelectItem value="A">Apenas Ativas (A)</SelectItem>
                   <SelectItem value="D">Apenas Desativadas (D)</SelectItem>
                   <SelectItem value="A,D">Ativas e Desativadas</SelectItem>

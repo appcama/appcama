@@ -478,7 +478,7 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
 
               <div className="space-y-2">
                 <Label htmlFor="entidade">Entidade *</Label>
-                <Select value={idEntidade?.toString() || ""} onValueChange={(value) => setIdEntidade(parseInt(value))}>
+                <Select value={idEntidade?.toString()} onValueChange={(value) => setIdEntidade(parseInt(value))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione uma entidade" />
                   </SelectTrigger>
@@ -494,7 +494,7 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
 
               <div className="space-y-2">
                 <Label htmlFor="perfil">Perfil *</Label>
-                <Select value={idPerfil?.toString() || ""} onValueChange={(value) => setIdPerfil(parseInt(value))}>
+                <Select value={idPerfil?.toString()} onValueChange={(value) => setIdPerfil(parseInt(value))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um perfil" />
                   </SelectTrigger>
