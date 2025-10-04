@@ -345,16 +345,24 @@ export function useRelatorioExport() {
       const footerY = doc.internal.pageSize.height - 50;
       const validationUrl = `${window.location.origin}/validar-certificado/${certificado.cod_validador}`;
       
+      console.log('🔍 Iniciando geração de QR Code para:', validationUrl);
+      
       try {
         // Gerar QR Code
+        console.log('📱 Gerando QR Code...');
         const qrCodeDataUrl = await QRCode.toDataURL(validationUrl, {
           width: 200,
           margin: 1,
+          errorCorrectionLevel: 'M',
         });
+        
+        console.log('✅ QR Code gerado com sucesso');
         
         // Adicionar QR Code no canto inferior direito
         const qrSize = 35;
         doc.addImage(qrCodeDataUrl, 'PNG', pageWidth - 50, footerY, qrSize, qrSize);
+        
+        console.log('✅ QR Code adicionado ao PDF');
         
         // Texto de validação ao lado do QR Code
         doc.setFont('helvetica', 'bold');
@@ -386,7 +394,9 @@ export function useRelatorioExport() {
         doc.text('Este documento possui validade jurídica e pode ser verificado através do link ou QR Code acima.', pageWidth / 2, footerY + 37, { align: 'center' });
         
       } catch (qrError) {
-        console.error('Erro ao gerar QR Code:', qrError);
+        console.error('❌ ERRO ao gerar QR Code:', qrError);
+        console.error('❌ Tipo do erro:', typeof qrError);
+        console.error('❌ Detalhes:', qrError);
         
         // Fallback sem QR Code
         doc.setDrawColor(200, 200, 200);
@@ -397,6 +407,11 @@ export function useRelatorioExport() {
         doc.setTextColor(100, 100, 100);
         doc.text('Este certificado comprova que os resíduos listados foram coletados e destinados adequadamente.', pageWidth / 2, footerY + 5, { align: 'center' });
         doc.text(`Código de Validação: ${certificado.cod_validador}`, pageWidth / 2, footerY + 11, { align: 'center' });
+        
+        // Adicionar mensagem de erro no PDF para debug
+        doc.setFontSize(7);
+        doc.setTextColor(255, 0, 0);
+        doc.text('(QR Code não pôde ser gerado - veja o console)', pageWidth / 2, footerY + 17, { align: 'center' });
       }
 
       // Download
