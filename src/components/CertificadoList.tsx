@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Eye, Trash2, FileText } from 'lucide-react';
+import { Plus, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -21,13 +21,14 @@ import {
 interface Certificado {
   id_certificado: number;
   cod_validador?: string;
+  dat_periodo_inicio?: string;
+  dat_periodo_fim?: string;
   qtd_total_certificado?: number;
   vlr_total_certificado?: number;
   num_cpf_cnpj_gerador?: string;
   id_entidade?: number;
   observacoes?: string;
-  dat_periodo_fim?: string;
-  dat_periodo_inicio?: string;
+  id_usuario_criador?: number;
   entidade?: {
     nom_entidade: string;
   };
@@ -35,11 +36,11 @@ interface Certificado {
 
 interface CertificadoListProps {
   onAddNew: () => void;
-  onEdit: (certificado: Certificado) => void;
+  onEdit: (certificado: any) => void;
 }
 
 export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
-  const [certificados, setCertificados] = useState<Certificado[]>([]);
+  const [certificados, setCertificados] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
@@ -57,45 +58,65 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
         return;
       }
 
-      const queryBuilder = supabase
+      // Query básica para certificados
+      const baseQuery = {
+        from: 'certificado',
+        select: '*',
+        filters: [
+          { field: 'des_status', value: 'A' },
+          { field: 'des_locked', value: 'D' }
+        ]
+      };
+
+      const query = (supabase as any)
         .from('certificado')
-        .select('*')
+        .select('id_certificado, cod_validador, dat_periodo_inicio, dat_periodo_fim, qtd_total_certificado, vlr_total_certificado, num_cpf_cnpj_gerador, id_entidade, observacoes, id_usuario_criador, des_status, des_locked')
         .eq('des_status', 'A')
         .eq('des_locked', 'D');
 
-      // Se não é administrador, filtrar pela entidade do usuário
+      // Filtrar por entidade se não for admin
       if (!user.isAdmin && user.entityId) {
         console.log('Non-admin user, filtering by entityId:', user.entityId);
-        queryBuilder.eq('id_entidade', user.entityId);
+        query.eq('id_entidade', user.entityId);
       }
 
-      const { data: certData, error } = await queryBuilder.order('id_certificado', { ascending: false });
+      const result = await query.order('id_certificado', { ascending: false });
+      const { data, error } = result;
 
       if (error) {
         console.error('[CertificadoList] Error loading certificados:', error);
         throw error;
       }
 
-      // Buscar entidades separadamente
-      if (certData && certData.length > 0) {
-        const entidadeIds = certData.map((c: any) => c.id_entidade).filter(Boolean);
-        const { data: entidadesData } = await supabase
-          .from('entidade')
-          .select('id_entidade, nom_entidade')
-          .in('id_entidade', entidadeIds);
+      console.log('[CertificadoList] Raw data from query:', data);
 
-        const entidadesMap = new Map();
-        entidadesData?.forEach((e: any) => {
-          entidadesMap.set(e.id_entidade, e);
-        });
+      // Buscar entidades se houver dados
+      if (data && data.length > 0) {
+        const entidadeIds = [...new Set(data.map((cert: any) => cert.id_entidade).filter(Boolean))] as number[];
+        
+        if (entidadeIds.length > 0) {
+          const { data: entidadesData }: any = await supabase
+            .from('entidade')
+            .select('id_entidade, nom_entidade')
+            .in('id_entidade', entidadeIds);
 
-        const certWithEntidades = certData.map((cert: any) => ({
-          ...cert,
-          entidade: entidadesMap.get(cert.id_entidade)
-        }));
+          const entidadesMap = new Map();
+          if (entidadesData) {
+            entidadesData.forEach((ent: any) => {
+              entidadesMap.set(ent.id_entidade, { nom_entidade: ent.nom_entidade });
+            });
+          }
 
-        console.log('[CertificadoList] Certificados loaded:', certWithEntidades);
-        setCertificados(certWithEntidades);
+          const processedData = data.map((cert: any) => ({
+            ...cert,
+            entidade: cert.id_entidade ? entidadesMap.get(cert.id_entidade) : null
+          }));
+
+          console.log('[CertificadoList] Processed certificados:', processedData);
+          setCertificados(processedData);
+        } else {
+          setCertificados(data);
+        }
       } else {
         setCertificados([]);
       }
@@ -115,7 +136,7 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
     loadCertificados();
   }, [user]);
 
-  const filteredCertificados = certificados.filter(cert =>
+  const filteredCertificados = certificados.filter((cert: any) =>
     cert.cod_validador?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     cert.entidade?.nom_entidade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     cert.num_cpf_cnpj_gerador?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -129,17 +150,19 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
   };
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
-  const canDeleteCertificado = (certificado: Certificado) => {
+  const canDeleteCertificado = (certificado: any) => {
     if (!user) return false;
     if (user.isAdmin) return true;
     if (certificado.id_entidade === user.entityId) return true;
+    if (certificado.id_usuario_criador === user.id) return true;
     return false;
   };
 
-  const handleDeleteCertificado = async (certificado: Certificado) => {
+  const handleDeleteCertificado = async (certificado: any) => {
     try {
       const { error } = await supabase
         .from('certificado')
@@ -216,16 +239,17 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left p-4 font-semibold">Código Validador</th>
+                    <th className="text-left p-4 font-semibold">Código</th>
                     <th className="text-left p-4 font-semibold">Período</th>
                     <th className="text-left p-4 font-semibold">Entidade</th>
+                    <th className="text-left p-4 font-semibold">CPF/CNPJ</th>
                     <th className="text-right p-4 font-semibold">Quantidade Total</th>
                     <th className="text-right p-4 font-semibold">Valor Total</th>
                     <th className="text-center p-4 font-semibold">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredCertificados.map((certificado) => (
+                  {filteredCertificados.map((certificado: any) => (
                     <tr key={certificado.id_certificado} className="border-b hover:bg-gray-50">
                       <td className="p-4">{certificado.cod_validador || '-'}</td>
                       <td className="p-4">
@@ -234,9 +258,13 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
                           : '-'}
                       </td>
                       <td className="p-4">{certificado.entidade?.nom_entidade || '-'}</td>
+                      <td className="p-4">{certificado.num_cpf_cnpj_gerador || '-'}</td>
                       <td className="p-4 text-right">
                         {certificado.qtd_total_certificado 
-                          ? new Intl.NumberFormat('pt-BR').format(certificado.qtd_total_certificado) + ' kg'
+                          ? `${new Intl.NumberFormat('pt-BR', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2
+                            }).format(certificado.qtd_total_certificado)} kg`
                           : '-'}
                       </td>
                       <td className="p-4 text-right font-semibold text-recycle-green">
@@ -250,9 +278,9 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
                             variant="outline"
                             size="sm"
                             onClick={() => onEdit(certificado)}
-                            title="Visualizar"
+                            title="Editar"
                           >
-                            <Eye className="w-4 h-4" />
+                            <Edit className="w-4 h-4" />
                           </Button>
                           {canDeleteCertificado(certificado) && (
                             <AlertDialog>
