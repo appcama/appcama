@@ -20,15 +20,14 @@ import {
 
 interface Certificado {
   id_certificado: number;
-  cod_validador?: string;
-  dat_periodo_inicio?: string;
-  dat_periodo_fim?: string;
-  qtd_total_certificado?: number;
-  vlr_total_certificado?: number;
-  num_cpf_cnpj_gerador?: string;
+  cod_validador: string;
+  dat_periodo_inicio: string;
+  dat_periodo_fim: string;
+  qtd_total_certificado: number;
+  vlr_total_certificado: number;
+  num_cpf_cnpj_gerador: string;
   id_entidade?: number;
-  observacoes?: string;
-  id_usuario_criador?: number;
+  id_usuario_criador: number;
   entidade?: {
     nom_entidade: string;
   };
@@ -36,11 +35,11 @@ interface Certificado {
 
 interface CertificadoListProps {
   onAddNew: () => void;
-  onEdit: (certificado: any) => void;
+  onEdit: (certificado: Certificado) => void;
 }
 
 export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
-  const [certificados, setCertificados] = useState<any[]>([]);
+  const [certificados, setCertificados] = useState<Certificado[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
@@ -50,6 +49,9 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
     try {
       setLoading(true);
       console.log('[CertificadoList] Loading certificados...');
+      console.log('User data:', user);
+      console.log('User entityId:', user?.entityId);
+      console.log('User isAdmin:', user?.isAdmin);
       
       if (!user) {
         console.log('No user found, not loading certificados');
@@ -58,30 +60,39 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
         return;
       }
 
-      // Query básica para certificados
-      const baseQuery = {
-        from: 'certificado',
-        select: '*',
-        filters: [
-          { field: 'des_status', value: 'A' },
-          { field: 'des_locked', value: 'D' }
-        ]
-      };
+      // Query básica
+      let queryText = `
+        id_certificado,
+        cod_validador,
+        dat_periodo_inicio,
+        dat_periodo_fim,
+        qtd_total_certificado,
+        vlr_total_certificado,
+        num_cpf_cnpj_gerador,
+        id_entidade,
+        id_usuario_criador
+      `;
 
-      const query = (supabase as any)
+      let query = (supabase as any)
         .from('certificado')
-        .select('id_certificado, cod_validador, dat_periodo_inicio, dat_periodo_fim, qtd_total_certificado, vlr_total_certificado, num_cpf_cnpj_gerador, id_entidade, observacoes, id_usuario_criador, des_status, des_locked')
+        .select(queryText)
         .eq('des_status', 'A')
         .eq('des_locked', 'D');
 
-      // Filtrar por entidade se não for admin
+      // Se não é administrador, filtrar pela entidade do usuário
       if (!user.isAdmin && user.entityId) {
         console.log('Non-admin user, filtering by entityId:', user.entityId);
-        query.eq('id_entidade', user.entityId);
+        query = query.eq('id_entidade', user.entityId);
+      } else if (user.isAdmin) {
+        console.log('Admin user, showing all certificados');
+      } else {
+        console.log('No entityId found and not admin, not loading certificados');
+        setCertificados([]);
+        setLoading(false);
+        return;
       }
 
-      const result = await query.order('id_certificado', { ascending: false });
-      const { data, error } = result;
+      const { data, error } = await query.order('id_certificado', { ascending: false });
 
       if (error) {
         console.error('[CertificadoList] Error loading certificados:', error);
@@ -90,36 +101,35 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
 
       console.log('[CertificadoList] Raw data from query:', data);
 
-      // Buscar entidades se houver dados
+      // Buscar informações das entidades separadamente
+      const processedData: Certificado[] = [];
       if (data && data.length > 0) {
-        const entidadeIds = [...new Set(data.map((cert: any) => cert.id_entidade).filter(Boolean))] as number[];
+        const entidadeIds = [...new Set(data.map((cert: any) => cert.id_entidade).filter(Boolean))];
         
+        let entidadesMap = new Map();
         if (entidadeIds.length > 0) {
-          const { data: entidadesData }: any = await supabase
+          const { data: entidadesData } = await (supabase as any)
             .from('entidade')
             .select('id_entidade, nom_entidade')
             .in('id_entidade', entidadeIds);
 
-          const entidadesMap = new Map();
           if (entidadesData) {
             entidadesData.forEach((ent: any) => {
               entidadesMap.set(ent.id_entidade, { nom_entidade: ent.nom_entidade });
             });
           }
-
-          const processedData = data.map((cert: any) => ({
-            ...cert,
-            entidade: cert.id_entidade ? entidadesMap.get(cert.id_entidade) : null
-          }));
-
-          console.log('[CertificadoList] Processed certificados:', processedData);
-          setCertificados(processedData);
-        } else {
-          setCertificados(data);
         }
-      } else {
-        setCertificados([]);
+
+        data.forEach((cert: any) => {
+          processedData.push({
+            ...cert,
+            entidade: cert.id_entidade ? entidadesMap.get(cert.id_entidade) : undefined
+          });
+        });
       }
+
+      console.log('[CertificadoList] Processed certificados:', processedData);
+      setCertificados(processedData);
     } catch (error) {
       console.error('[CertificadoList] Unexpected error:', error);
       toast({
@@ -136,7 +146,7 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
     loadCertificados();
   }, [user]);
 
-  const filteredCertificados = certificados.filter((cert: any) =>
+  const filteredCertificados = certificados.filter(cert =>
     cert.cod_validador?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     cert.entidade?.nom_entidade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     cert.num_cpf_cnpj_gerador?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -150,11 +160,10 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
   };
 
   const formatDate = (dateString: string) => {
-    if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
-  const canDeleteCertificado = (certificado: any) => {
+  const canDeleteCertificado = (certificado: Certificado) => {
     if (!user) return false;
     if (user.isAdmin) return true;
     if (certificado.id_entidade === user.entityId) return true;
@@ -162,9 +171,9 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
     return false;
   };
 
-  const handleDeleteCertificado = async (certificado: any) => {
+  const handleDeleteCertificado = async (certificado: Certificado) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('certificado')
         .update({ 
           des_locked: 'A',
@@ -242,35 +251,29 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
                     <th className="text-left p-4 font-semibold">Código</th>
                     <th className="text-left p-4 font-semibold">Período</th>
                     <th className="text-left p-4 font-semibold">Entidade</th>
-                    <th className="text-left p-4 font-semibold">CPF/CNPJ</th>
+                    <th className="text-left p-4 font-semibold">CPF/CNPJ Gerador</th>
                     <th className="text-right p-4 font-semibold">Quantidade Total</th>
                     <th className="text-right p-4 font-semibold">Valor Total</th>
                     <th className="text-center p-4 font-semibold">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredCertificados.map((certificado: any) => (
+                  {filteredCertificados.map((certificado) => (
                     <tr key={certificado.id_certificado} className="border-b hover:bg-gray-50">
-                      <td className="p-4">{certificado.cod_validador || '-'}</td>
+                      <td className="p-4">{certificado.cod_validador}</td>
                       <td className="p-4">
-                        {certificado.dat_periodo_inicio && certificado.dat_periodo_fim 
-                          ? `${formatDate(certificado.dat_periodo_inicio)} - ${formatDate(certificado.dat_periodo_fim)}`
-                          : '-'}
+                        {formatDate(certificado.dat_periodo_inicio)} - {formatDate(certificado.dat_periodo_fim)}
                       </td>
                       <td className="p-4">{certificado.entidade?.nom_entidade || '-'}</td>
                       <td className="p-4">{certificado.num_cpf_cnpj_gerador || '-'}</td>
                       <td className="p-4 text-right">
-                        {certificado.qtd_total_certificado 
-                          ? `${new Intl.NumberFormat('pt-BR', {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2
-                            }).format(certificado.qtd_total_certificado)} kg`
-                          : '-'}
+                        {new Intl.NumberFormat('pt-BR', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2
+                        }).format(certificado.qtd_total_certificado)} kg
                       </td>
                       <td className="p-4 text-right font-semibold text-recycle-green">
-                        {certificado.vlr_total_certificado 
-                          ? formatCurrency(certificado.vlr_total_certificado)
-                          : '-'}
+                        {formatCurrency(certificado.vlr_total_certificado)}
                       </td>
                       <td className="p-4">
                         <div className="flex justify-center gap-2">
