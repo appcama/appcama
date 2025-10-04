@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileCheck, CheckSquare, Square } from 'lucide-react';
+import { FileCheck, CheckSquare, Square, Filter, Calendar as CalendarIcon, X, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { CertificadoPreviewDialog } from './CertificadoPreviewDialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 interface Coleta {
   id_coleta: number;
@@ -25,12 +30,21 @@ interface Coleta {
   };
 }
 
+interface Entidade {
+  id_entidade: number;
+  nom_entidade: string;
+}
+
 export function GerarCertificado() {
   const [coletas, setColetas] = useState<Coleta[]>([]);
   const [selectedColetas, setSelectedColetas] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showPreview, setShowPreview] = useState(false);
+  const [dataInicio, setDataInicio] = useState<Date | undefined>(undefined);
+  const [dataFim, setDataFim] = useState<Date | undefined>(undefined);
+  const [entidadeId, setEntidadeId] = useState<string>('');
+  const [entidades, setEntidades] = useState<Entidade[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -89,16 +103,39 @@ export function GerarCertificado() {
     }
   };
 
+  const loadEntidades = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('entidade')
+        .select('id_entidade, nom_entidade')
+        .eq('des_status', 'A')
+        .order('nom_entidade');
+
+      if (error) throw error;
+      setEntidades(data || []);
+    } catch (error) {
+      console.error('[GerarCertificado] Error loading entidades:', error);
+    }
+  };
+
   useEffect(() => {
     loadColetas();
+    loadEntidades();
   }, [user]);
 
-  const filteredColetas = coletas.filter(coleta =>
-    coleta.cod_coleta?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    coleta.entidade?.nom_entidade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    coleta.entidade?.num_cpf_cnpj?.includes(searchTerm) ||
-    coleta.ponto_coleta?.nom_ponto_coleta?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredColetas = coletas.filter(coleta => {
+    const matchesSearch = 
+      coleta.cod_coleta?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      coleta.entidade?.nom_entidade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      coleta.entidade?.num_cpf_cnpj?.includes(searchTerm) ||
+      coleta.ponto_coleta?.nom_ponto_coleta?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesDataInicio = !dataInicio || new Date(coleta.dat_coleta) >= dataInicio;
+    const matchesDataFim = !dataFim || new Date(coleta.dat_coleta) <= dataFim;
+    const matchesEntidade = !entidadeId || coleta.id_entidade_geradora?.toString() === entidadeId;
+
+    return matchesSearch && matchesDataInicio && matchesDataFim && matchesEntidade;
+  });
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -163,6 +200,15 @@ export function GerarCertificado() {
     setShowPreview(true);
   };
 
+  const handleLimparFiltros = () => {
+    setDataInicio(undefined);
+    setDataFim(undefined);
+    setEntidadeId('');
+    setSearchTerm('');
+  };
+
+  const hasActiveFilters = dataInicio || dataFim || entidadeId || searchTerm;
+
   const validation = validateSelection();
   const allSelected = filteredColetas.length > 0 && selectedColetas.length === filteredColetas.length;
 
@@ -196,8 +242,102 @@ export function GerarCertificado() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Selecione as Coletas</CardTitle>
-          <div className="flex gap-4 mt-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Filter className="w-5 h-5 text-green-600" />
+            <CardTitle>Filtros</CardTitle>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            {/* Entidade Geradora */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Entidade</label>
+              <Select value={entidadeId} onValueChange={setEntidadeId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas as entidades" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todas as entidades</SelectItem>
+                  {entidades.map((entidade) => (
+                    <SelectItem key={entidade.id_entidade} value={entidade.id_entidade.toString()}>
+                      {entidade.nom_entidade}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Data Inicial */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Data Inicial</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !dataInicio && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dataInicio ? format(dataInicio, "dd/MM/yyyy") : "Selecione"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dataInicio}
+                    onSelect={setDataInicio}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Data Final */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Data Final</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !dataFim && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dataFim ? format(dataFim, "dd/MM/yyyy") : "Selecione"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dataFim}
+                    onSelect={setDataFim}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Botão Limpar Filtros */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium invisible">Ações</label>
+              <Button
+                variant="outline"
+                onClick={handleLimparFiltros}
+                disabled={!hasActiveFilters}
+                className="w-full"
+              >
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Limpar Filtros
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex gap-4">
             <Input
               placeholder="Buscar por código, entidade ou CPF/CNPJ"
               value={searchTerm}
