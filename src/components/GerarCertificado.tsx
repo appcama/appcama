@@ -43,7 +43,7 @@ export function GerarCertificado() {
   const [showPreview, setShowPreview] = useState(false);
   const [dataInicio, setDataInicio] = useState<Date | undefined>(undefined);
   const [dataFim, setDataFim] = useState<Date | undefined>(undefined);
-  const [entidadeId, setEntidadeId] = useState<string>('');
+  const [entidadeId, setEntidadeId] = useState<string>('all');
   const [entidades, setEntidades] = useState<Entidade[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -132,7 +132,7 @@ export function GerarCertificado() {
 
     const matchesDataInicio = !dataInicio || new Date(coleta.dat_coleta) >= dataInicio;
     const matchesDataFim = !dataFim || new Date(coleta.dat_coleta) <= dataFim;
-    const matchesEntidade = !entidadeId || coleta.id_entidade_geradora?.toString() === entidadeId;
+    const matchesEntidade = entidadeId === 'all' || coleta.id_entidade_geradora?.toString() === entidadeId;
 
     return matchesSearch && matchesDataInicio && matchesDataFim && matchesEntidade;
   });
@@ -203,11 +203,11 @@ export function GerarCertificado() {
   const handleLimparFiltros = () => {
     setDataInicio(undefined);
     setDataFim(undefined);
-    setEntidadeId('');
+    setEntidadeId('all');
     setSearchTerm('');
   };
 
-  const hasActiveFilters = dataInicio || dataFim || entidadeId || searchTerm;
+  const hasActiveFilters = dataInicio || dataFim || (entidadeId !== 'all') || searchTerm;
 
   const validation = validateSelection();
   const allSelected = filteredColetas.length > 0 && selectedColetas.length === filteredColetas.length;
@@ -256,7 +256,7 @@ export function GerarCertificado() {
                   <SelectValue placeholder="Todas as entidades" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas as entidades</SelectItem>
+                  <SelectItem value="all">Todas as entidades</SelectItem>
                   {entidades.map((entidade) => (
                     <SelectItem key={entidade.id_entidade} value={entidade.id_entidade.toString()}>
                       {entidade.nom_entidade}
