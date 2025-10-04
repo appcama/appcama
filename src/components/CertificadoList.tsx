@@ -241,7 +241,34 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
 
   const handleDeleteCertificado = async (certificado: Certificado) => {
     try {
-      const { error } = await (supabase as any)
+      console.log('🗑️ Excluindo certificado:', certificado.cod_validador);
+      
+      // 1️⃣ Liberar as coletas associadas ao certificado
+      console.log('📋 Liberando coletas associadas...');
+      const { error: coletaError } = await (supabase as any)
+        .from('coleta')
+        .update({ 
+          id_certificado: null,
+          dat_atualizacao: new Date().toISOString(),
+          id_usuario_atualizador: user?.id || 1
+        })
+        .eq('id_certificado', certificado.id_certificado);
+
+      if (coletaError) {
+        console.error('❌ Erro ao liberar coletas:', coletaError);
+        toast({
+          title: 'Erro',
+          description: 'Erro ao liberar coletas do certificado',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      console.log('✅ Coletas liberadas com sucesso');
+
+      // 2️⃣ Marcar certificado como locked
+      console.log('🔒 Marcando certificado como locked...');
+      const { error: certError } = await (supabase as any)
         .from('certificado')
         .update({ 
           des_locked: 'A',
@@ -250,8 +277,8 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
         })
         .eq('id_certificado', certificado.id_certificado);
 
-      if (error) {
-        console.error('Erro ao excluir certificado:', error);
+      if (certError) {
+        console.error('❌ Erro ao excluir certificado:', certError);
         toast({
           title: 'Erro',
           description: 'Erro ao excluir certificado',
@@ -259,15 +286,17 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
         });
         return;
       }
+      
+      console.log('✅ Certificado excluído com sucesso');
 
       toast({
         title: 'Sucesso',
-        description: 'Certificado excluído com sucesso',
+        description: 'Certificado excluído e coletas liberadas com sucesso',
       });
 
       loadCertificados();
     } catch (error) {
-      console.error('Erro inesperado ao excluir certificado:', error);
+      console.error('❌ Erro inesperado ao excluir certificado:', error);
       toast({
         title: 'Erro',
         description: 'Erro inesperado ao excluir certificado',
