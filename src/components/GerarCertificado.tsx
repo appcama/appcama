@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileCheck, CheckSquare, Square } from 'lucide-react';
+import { FileCheck, CheckSquare, Square, X, CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { CertificadoPreviewDialog } from './CertificadoPreviewDialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 interface Coleta {
   id_coleta: number;
@@ -31,6 +36,10 @@ export function GerarCertificado() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showPreview, setShowPreview] = useState(false);
+  const [dataInicio, setDataInicio] = useState<Date | undefined>();
+  const [dataFim, setDataFim] = useState<Date | undefined>();
+  const [entidadeId, setEntidadeId] = useState<string>('');
+  const [entidades, setEntidades] = useState<Array<{ id_entidade: number; nom_entidade: string }>>([]);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -91,14 +100,46 @@ export function GerarCertificado() {
 
   useEffect(() => {
     loadColetas();
+    loadEntidades();
   }, [user]);
 
-  const filteredColetas = coletas.filter(coleta =>
-    coleta.cod_coleta?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    coleta.entidade?.nom_entidade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    coleta.entidade?.num_cpf_cnpj?.includes(searchTerm) ||
-    coleta.ponto_coleta?.nom_ponto_coleta?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const loadEntidades = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('entidade')
+        .select('id_entidade, nom_entidade')
+        .eq('des_status', 'A')
+        .order('nom_entidade');
+
+      if (error) throw error;
+      setEntidades(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar entidades:', error);
+    }
+  };
+
+  const filteredColetas = coletas.filter(coleta => {
+    // Filtro por texto
+    const matchesSearch = !searchTerm ||
+      coleta.cod_coleta?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      coleta.entidade?.nom_entidade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      coleta.entidade?.num_cpf_cnpj?.includes(searchTerm) ||
+      coleta.ponto_coleta?.nom_ponto_coleta?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Filtro por data inicial
+    const matchesDataInicio = !dataInicio || 
+      new Date(coleta.dat_coleta) >= new Date(dataInicio.setHours(0, 0, 0, 0));
+
+    // Filtro por data final
+    const matchesDataFim = !dataFim || 
+      new Date(coleta.dat_coleta) <= new Date(dataFim.setHours(23, 59, 59, 999));
+
+    // Filtro por entidade
+    const matchesEntidade = !entidadeId || 
+      coleta.id_entidade_geradora?.toString() === entidadeId;
+
+    return matchesSearch && matchesDataInicio && matchesDataFim && matchesEntidade;
+  });
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -197,13 +238,118 @@ export function GerarCertificado() {
       <Card>
         <CardHeader>
           <CardTitle>Selecione as Coletas</CardTitle>
-          <div className="flex gap-4 mt-4">
+          <div className="flex flex-col gap-4 mt-4">
             <Input
               placeholder="Buscar por código, entidade ou CPF/CNPJ"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-md"
             />
+            <div className="flex flex-wrap gap-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium">Data Inicial</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-[200px] justify-start text-left font-normal",
+                        !dataInicio && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dataInicio ? format(dataInicio, "dd/MM/yyyy") : "Selecionar data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dataInicio}
+                      onSelect={setDataInicio}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+                {dataInicio && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDataInicio(undefined)}
+                    className="w-[200px]"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Limpar
+                  </Button>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium">Data Final</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-[200px] justify-start text-left font-normal",
+                        !dataFim && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dataFim ? format(dataFim, "dd/MM/yyyy") : "Selecionar data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dataFim}
+                      onSelect={setDataFim}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+                {dataFim && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDataFim(undefined)}
+                    className="w-[200px]"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Limpar
+                  </Button>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium">Entidade Geradora</label>
+                <Select value={entidadeId} onValueChange={setEntidadeId}>
+                  <SelectTrigger className="w-[250px]">
+                    <SelectValue placeholder="Todas as entidades" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todas as entidades</SelectItem>
+                    {entidades.map((entidade) => (
+                      <SelectItem key={entidade.id_entidade} value={entidade.id_entidade.toString()}>
+                        {entidade.nom_entidade}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {entidadeId && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEntidadeId('')}
+                    className="w-[250px]"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Limpar
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
