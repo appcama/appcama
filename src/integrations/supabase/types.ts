@@ -19,28 +19,52 @@ export type Database = {
           cod_validador: string
           dat_atualizacao: string | null
           dat_criacao: string
+          dat_periodo_fim: string
+          dat_periodo_inicio: string
+          des_locked: string
+          des_status: string
           id_certificado: number
           id_entidade: number
           id_usuario_atualizador: number | null
           id_usuario_criador: number
+          num_cpf_cnpj_gerador: string
+          observacoes: string | null
+          qtd_total_certificado: number | null
+          vlr_total_certificado: number | null
         }
         Insert: {
           cod_validador: string
           dat_atualizacao?: string | null
           dat_criacao: string
+          dat_periodo_fim?: string
+          dat_periodo_inicio?: string
+          des_locked?: string
+          des_status?: string
           id_certificado?: number
           id_entidade: number
           id_usuario_atualizador?: number | null
           id_usuario_criador: number
+          num_cpf_cnpj_gerador?: string
+          observacoes?: string | null
+          qtd_total_certificado?: number | null
+          vlr_total_certificado?: number | null
         }
         Update: {
           cod_validador?: string
           dat_atualizacao?: string | null
           dat_criacao?: string
+          dat_periodo_fim?: string
+          dat_periodo_inicio?: string
+          des_locked?: string
+          des_status?: string
           id_certificado?: number
           id_entidade?: number
           id_usuario_atualizador?: number | null
           id_usuario_criador?: number
+          num_cpf_cnpj_gerador?: string
+          observacoes?: string | null
+          qtd_total_certificado?: number | null
+          vlr_total_certificado?: number | null
         }
         Relationships: [
           {
@@ -66,6 +90,79 @@ export type Database = {
           },
         ]
       }
+      certificado_log: {
+        Row: {
+          dat_log: string
+          des_acao: string
+          des_observacao: string | null
+          id_certificado: number
+          id_log: number
+          id_usuario: number
+        }
+        Insert: {
+          dat_log?: string
+          des_acao: string
+          des_observacao?: string | null
+          id_certificado: number
+          id_log?: number
+          id_usuario: number
+        }
+        Update: {
+          dat_log?: string
+          des_acao?: string
+          des_observacao?: string | null
+          id_certificado?: number
+          id_log?: number
+          id_usuario?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_certificado_log_certificado"
+            columns: ["id_certificado"]
+            isOneToOne: false
+            referencedRelation: "certificado"
+            referencedColumns: ["id_certificado"]
+          },
+        ]
+      }
+      certificado_residuo: {
+        Row: {
+          dat_criacao: string
+          id_certificado: number
+          id_certificado_residuo: number
+          id_tipo_residuo: number
+          nom_residuo: string
+          qtd_total: number
+          vlr_total: number
+        }
+        Insert: {
+          dat_criacao?: string
+          id_certificado: number
+          id_certificado_residuo?: number
+          id_tipo_residuo: number
+          nom_residuo: string
+          qtd_total?: number
+          vlr_total?: number
+        }
+        Update: {
+          dat_criacao?: string
+          id_certificado?: number
+          id_certificado_residuo?: number
+          id_tipo_residuo?: number
+          nom_residuo?: string
+          qtd_total?: number
+          vlr_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_certificado_residuo_certificado"
+            columns: ["id_certificado"]
+            isOneToOne: false
+            referencedRelation: "certificado"
+            referencedColumns: ["id_certificado"]
+          },
+        ]
+      }
       coleta: {
         Row: {
           cod_coleta: string
@@ -74,6 +171,7 @@ export type Database = {
           dat_criacao: string
           des_locked: string
           des_status: string
+          id_certificado: number | null
           id_coleta: number
           id_entidade_geradora: number | null
           id_evento: number | null
@@ -90,6 +188,7 @@ export type Database = {
           dat_criacao: string
           des_locked?: string
           des_status?: string
+          id_certificado?: number | null
           id_coleta?: number
           id_entidade_geradora?: number | null
           id_evento?: number | null
@@ -106,6 +205,7 @@ export type Database = {
           dat_criacao?: string
           des_locked?: string
           des_status?: string
+          id_certificado?: number | null
           id_coleta?: number
           id_entidade_geradora?: number | null
           id_evento?: number | null
@@ -116,6 +216,13 @@ export type Database = {
           vlr_total?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "coleta_id_certificado_fkey"
+            columns: ["id_certificado"]
+            isOneToOne: false
+            referencedRelation: "certificado"
+            referencedColumns: ["id_certificado"]
+          },
           {
             foreignKeyName: "coleta_id_entidade_geradora_fkey"
             columns: ["id_entidade_geradora"]

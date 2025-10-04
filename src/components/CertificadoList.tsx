@@ -30,7 +30,11 @@ interface Certificado {
   id_usuario_criador: number;
   entidade?: {
     nom_entidade: string;
+    num_cpf_cnpj: string;
   };
+  coletas?: Array<{
+    cod_coleta: string;
+  }>;
 }
 
 interface CertificadoListProps {
@@ -60,7 +64,7 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
         return;
       }
 
-      // Query básica
+      // Query com relacionamentos
       let queryText = `
         id_certificado,
         cod_validador,
@@ -70,7 +74,13 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
         vlr_total_certificado,
         num_cpf_cnpj_gerador,
         id_entidade,
-        id_usuario_criador
+        id_usuario_criador,
+        observacoes,
+        dat_criacao,
+        entidade:id_entidade (
+          nom_entidade,
+          num_cpf_cnpj
+        )
       `;
 
       let query = (supabase as any)
@@ -111,29 +121,52 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
 
       console.log('[CertificadoList] Raw data from query:', data);
 
-      // Buscar informações das entidades separadamente
+      // Buscar informações das entidades e coletas separadamente
       const processedData: Certificado[] = [];
       if (data && data.length > 0) {
+        const certificadoIds = data.map((cert: any) => cert.id_certificado);
         const entidadeIds = [...new Set(data.map((cert: any) => cert.id_entidade).filter(Boolean))];
         
+        // Buscar entidades
         let entidadesMap = new Map();
         if (entidadeIds.length > 0) {
           const { data: entidadesData } = await (supabase as any)
             .from('entidade')
-            .select('id_entidade, nom_entidade')
+            .select('id_entidade, nom_entidade, num_cpf_cnpj')
             .in('id_entidade', entidadeIds);
 
           if (entidadesData) {
             entidadesData.forEach((ent: any) => {
-              entidadesMap.set(ent.id_entidade, { nom_entidade: ent.nom_entidade });
+              entidadesMap.set(ent.id_entidade, { 
+                nom_entidade: ent.nom_entidade,
+                num_cpf_cnpj: ent.num_cpf_cnpj 
+              });
             });
           }
+        }
+
+        // Buscar coletas vinculadas
+        let coletasMap = new Map<number, Array<{cod_coleta: string}>>();
+        const { data: coletasData } = await (supabase as any)
+          .from('coleta')
+          .select('id_certificado, cod_coleta')
+          .in('id_certificado', certificadoIds)
+          .eq('des_status', 'A');
+
+        if (coletasData) {
+          coletasData.forEach((coleta: any) => {
+            if (!coletasMap.has(coleta.id_certificado)) {
+              coletasMap.set(coleta.id_certificado, []);
+            }
+            coletasMap.get(coleta.id_certificado)?.push({ cod_coleta: coleta.cod_coleta });
+          });
         }
 
         data.forEach((cert: any) => {
           processedData.push({
             ...cert,
-            entidade: cert.id_entidade ? entidadesMap.get(cert.id_entidade) : undefined
+            entidade: cert.id_entidade ? entidadesMap.get(cert.id_entidade) : cert.entidade,
+            coletas: coletasMap.get(cert.id_certificado) || []
           });
         });
       }
@@ -229,11 +262,7 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Certificados</h1>
-        <Button onClick={onAddNew} className="bg-green-600 hover:bg-green-700">
-          <Plus className="w-4 h-4 mr-2" />
-          Novo
-        </Button>
+        <h1 className="text-3xl font-bold text-gray-900">Certificados Gerados</h1>
       </div>
 
       <Card>
@@ -261,7 +290,7 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
                     <th className="text-left p-4 font-semibold">Código</th>
                     <th className="text-left p-4 font-semibold">Período</th>
                     <th className="text-left p-4 font-semibold">Entidade</th>
-                    <th className="text-left p-4 font-semibold">CPF/CNPJ Gerador</th>
+                    <th className="text-left p-4 font-semibold">Coletas</th>
                     <th className="text-right p-4 font-semibold">Quantidade Total</th>
                     <th className="text-right p-4 font-semibold">Valor Total</th>
                     <th className="text-center p-4 font-semibold">Ações</th>
@@ -274,8 +303,26 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
                       <td className="p-4">
                         {formatDate(certificado.dat_periodo_inicio)} - {formatDate(certificado.dat_periodo_fim)}
                       </td>
-                      <td className="p-4">{certificado.entidade?.nom_entidade || '-'}</td>
-                      <td className="p-4">{certificado.num_cpf_cnpj_gerador || '-'}</td>
+                      <td className="p-4">
+                        <div>{certificado.entidade?.nom_entidade || '-'}</div>
+                        <div className="text-xs text-gray-500">{certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'}</div>
+                      </td>
+                      <td className="p-4">
+                        {certificado.coletas && certificado.coletas.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {certificado.coletas.slice(0, 3).map((coleta, idx) => (
+                              <span key={idx} className="text-xs bg-gray-100 px-2 py-1 rounded">
+                                {coleta.cod_coleta}
+                              </span>
+                            ))}
+                            {certificado.coletas.length > 3 && (
+                              <span className="text-xs text-gray-500">+{certificado.coletas.length - 3}</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
                       <td className="p-4 text-right">
                         {new Intl.NumberFormat('pt-BR', {
                           minimumFractionDigits: 2,
