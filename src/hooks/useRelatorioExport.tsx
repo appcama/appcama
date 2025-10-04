@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import QRCode from 'qrcode';
 
 export function useRelatorioExport() {
   const [isExporting, setIsExporting] = useState(false);
@@ -340,16 +341,63 @@ export function useRelatorioExport() {
         yPosition += splitObs.length * 5 + 10;
       }
 
-      // Rodapé com código validador
-      const footerY = doc.internal.pageSize.height - 30;
-      doc.setDrawColor(200, 200, 200);
-      doc.line(14, footerY - 5, pageWidth - 14, footerY - 5);
+      // QR Code e Link de Validação
+      const footerY = doc.internal.pageSize.height - 50;
+      const validationUrl = `${window.location.origin}/validar-certificado/${certificado.cod_validador}`;
       
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(100, 100, 100);
-      doc.text('Este certificado comprova que os resíduos listados foram coletados e destinados adequadamente.', pageWidth / 2, footerY, { align: 'center' });
-      doc.text(`Código de Validação: ${certificado.cod_validador}`, pageWidth / 2, footerY + 6, { align: 'center' });
+      try {
+        // Gerar QR Code
+        const qrCodeDataUrl = await QRCode.toDataURL(validationUrl, {
+          width: 200,
+          margin: 1,
+        });
+        
+        // Adicionar QR Code no canto inferior direito
+        const qrSize = 35;
+        doc.addImage(qrCodeDataUrl, 'PNG', pageWidth - 50, footerY, qrSize, qrSize);
+        
+        // Texto de validação ao lado do QR Code
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(40, 40, 40);
+        doc.text('VALIDAÇÃO PÚBLICA', 14, footerY + 5);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Escaneie o QR Code ou acesse:', 14, footerY + 11);
+        
+        // Link clicável
+        doc.setFontSize(7);
+        doc.setTextColor(0, 0, 255);
+        doc.textWithLink(validationUrl, 14, footerY + 17, { url: validationUrl });
+        
+        // Linha separadora
+        doc.setDrawColor(200, 200, 200);
+        doc.line(14, footerY + 22, pageWidth - 14, footerY + 22);
+        
+        // Informações finais
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Este certificado comprova que os resíduos listados foram coletados e destinados adequadamente.', pageWidth / 2, footerY + 27, { align: 'center' });
+        doc.text(`Código de Validação: ${certificado.cod_validador}`, pageWidth / 2, footerY + 32, { align: 'center' });
+        doc.setFontSize(7);
+        doc.text('Este documento possui validade jurídica e pode ser verificado através do link ou QR Code acima.', pageWidth / 2, footerY + 37, { align: 'center' });
+        
+      } catch (qrError) {
+        console.error('Erro ao gerar QR Code:', qrError);
+        
+        // Fallback sem QR Code
+        doc.setDrawColor(200, 200, 200);
+        doc.line(14, footerY, pageWidth - 14, footerY);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Este certificado comprova que os resíduos listados foram coletados e destinados adequadamente.', pageWidth / 2, footerY + 5, { align: 'center' });
+        doc.text(`Código de Validação: ${certificado.cod_validador}`, pageWidth / 2, footerY + 11, { align: 'center' });
+      }
 
       // Download
       const fileName = `Certificado_${certificado.cod_validador}.pdf`;

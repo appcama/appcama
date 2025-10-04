@@ -11,6 +11,7 @@ import { PWAPrompt } from "@/components/PWAPrompt";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import ValidatePassword from "./pages/ValidatePassword";
+import ValidarCertificado from "./pages/ValidarCertificado";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/validate-password" element={<ValidatePassword />} />
+              <Route path="/validar-certificado/:codigo" element={<ValidarCertificado />} />
               <Route path="/" element={
                 <ProtectedRoute>
                   <Index />
