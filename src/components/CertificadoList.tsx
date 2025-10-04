@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useRelatorioExport } from '@/hooks/useRelatorioExport';
+import { CertificadoResiduosDialog } from './CertificadoResiduosDialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,8 +48,10 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
   const [certificados, setCertificados] = useState<Certificado[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCertificadoId, setSelectedCertificadoId] = useState<number | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { exportCertificadoPDF, isExporting } = useRelatorioExport();
 
   const loadCertificados = async () => {
     try {
@@ -214,6 +218,27 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
     return false;
   };
 
+  const handleViewResiduos = (certificadoId: number) => {
+    setSelectedCertificadoId(certificadoId);
+  };
+
+  const handleExportPDF = async (certificado: Certificado) => {
+    try {
+      await exportCertificadoPDF(certificado);
+      toast({
+        title: 'Sucesso',
+        description: 'PDF exportado com sucesso',
+      });
+    } catch (error: any) {
+      console.error('Erro ao exportar PDF:', error);
+      toast({
+        title: 'Erro',
+        description: error.message || 'Erro ao exportar PDF',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleDeleteCertificado = async (certificado: Certificado) => {
     try {
       const { error } = await (supabase as any)
@@ -337,10 +362,19 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => onEdit(certificado)}
-                            title="Editar"
+                            onClick={() => handleViewResiduos(certificado.id_certificado)}
+                            title="Ver Resíduos"
                           >
-                            <Edit className="w-4 h-4" />
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleExportPDF(certificado)}
+                            title="Exportar PDF"
+                            disabled={isExporting}
+                          >
+                            <Download className="w-4 h-4" />
                           </Button>
                           {canDeleteCertificado(certificado) && (
                             <AlertDialog>
@@ -384,6 +418,11 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
           )}
         </CardContent>
       </Card>
+
+      <CertificadoResiduosDialog 
+        certificadoId={selectedCertificadoId}
+        onClose={() => setSelectedCertificadoId(null)}
+      />
     </div>
   );
 }

@@ -203,11 +203,172 @@ export function useRelatorioExport() {
     }
   };
 
+  const exportCertificadoPDF = async (certificado: any) => {
+    setIsExporting(true);
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.width;
+      let yPosition = 20;
+
+      // Cabeçalho
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(18);
+      doc.setTextColor(40, 40, 40);
+      doc.text('CERTIFICADO DE COLETA DE RESÍDUOS RECICLÁVEIS', pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 15;
+
+      // Código Validador em destaque
+      doc.setFontSize(14);
+      doc.setTextColor(46, 204, 113);
+      doc.text(`Código: ${certificado.cod_validador}`, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 15;
+
+      // Data de emissão
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Emitido em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 20;
+
+      // Dados da Entidade
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(40, 40, 40);
+      doc.text('DADOS DA ENTIDADE GERADORA', 14, yPosition);
+      yPosition += 10;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      const entidadeData = [
+        ['Entidade:', certificado.entidade?.nom_entidade || '-'],
+        ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
+        ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+      ];
+
+      entidadeData.forEach(([label, value]) => {
+        doc.setFont('helvetica', 'bold');
+        doc.text(label, 14, yPosition);
+        doc.setFont('helvetica', 'normal');
+        doc.text(value, 50, yPosition);
+        yPosition += 7;
+      });
+
+      yPosition += 10;
+
+      // Buscar resíduos do certificado
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: residuos } = await supabase
+        .from('certificado_residuo')
+        .select('nom_residuo, qtd_total, vlr_total')
+        .eq('id_certificado', certificado.id_certificado)
+        .order('qtd_total', { ascending: false });
+
+      // Tabela de Resíduos
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text('RESÍDUOS COLETADOS', 14, yPosition);
+      yPosition += 8;
+
+      const residuosData = (residuos || []).map((r: any) => [
+        r.nom_residuo,
+        `${r.qtd_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} kg`,
+        `R$ ${r.vlr_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+      ]);
+
+      residuosData.push([
+        'TOTAL',
+        `${certificado.qtd_total_certificado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} kg`,
+        `R$ ${certificado.vlr_total_certificado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+      ]);
+
+      autoTable(doc, {
+        head: [['Tipo de Resíduo', 'Quantidade', 'Valor']],
+        body: residuosData,
+        startY: yPosition,
+        theme: 'striped',
+        headStyles: { 
+          fillColor: [46, 204, 113],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold'
+        },
+        footStyles: {
+          fillColor: [240, 240, 240],
+          textColor: [40, 40, 40],
+          fontStyle: 'bold'
+        },
+        margin: { left: 14, right: 14 }
+      });
+
+      yPosition = (doc as any).lastAutoTable.finalY + 15;
+
+      // Coletas incluídas
+      if (certificado.coletas && certificado.coletas.length > 0) {
+        if (yPosition > 220) {
+          doc.addPage();
+          yPosition = 20;
+        }
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.text('COLETAS INCLUÍDAS', 14, yPosition);
+        yPosition += 8;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        const coletasCodes = certificado.coletas.map((c: any) => c.cod_coleta).join(', ');
+        const splitText = doc.splitTextToSize(coletasCodes, pageWidth - 28);
+        doc.text(splitText, 14, yPosition);
+        yPosition += splitText.length * 5 + 10;
+      }
+
+      // Observações
+      if (certificado.observacoes) {
+        if (yPosition > 220) {
+          doc.addPage();
+          yPosition = 20;
+        }
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.text('OBSERVAÇÕES', 14, yPosition);
+        yPosition += 8;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        const splitObs = doc.splitTextToSize(certificado.observacoes, pageWidth - 28);
+        doc.text(splitObs, 14, yPosition);
+        yPosition += splitObs.length * 5 + 10;
+      }
+
+      // Rodapé com código validador
+      const footerY = doc.internal.pageSize.height - 30;
+      doc.setDrawColor(200, 200, 200);
+      doc.line(14, footerY - 5, pageWidth - 14, footerY - 5);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      doc.text('Este certificado comprova que os resíduos listados foram coletados e destinados adequadamente.', pageWidth / 2, footerY, { align: 'center' });
+      doc.text(`Código de Validação: ${certificado.cod_validador}`, pageWidth / 2, footerY + 6, { align: 'center' });
+
+      // Download
+      const fileName = `Certificado_${certificado.cod_validador}.pdf`;
+      doc.save(fileName);
+      
+    } catch (error) {
+      console.error('Erro ao exportar certificado PDF:', error);
+      throw error;
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return {
     exportToPDF,
     printPDF,
     exportToExcel, 
     exportToCSV,
+    exportCertificadoPDF,
     isExporting
   };
 }
