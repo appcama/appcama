@@ -94,8 +94,18 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
 
       const { data, error } = await query.order('id_certificado', { ascending: false });
 
+      console.log('[CertificadoList] Query completed');
+      console.log('[CertificadoList] Error:', error);
+      console.log('[CertificadoList] Data:', data);
+      console.log('[CertificadoList] Data length:', data?.length);
+
       if (error) {
         console.error('[CertificadoList] Error loading certificados:', error);
+        toast({
+          title: 'Erro ao carregar',
+          description: `Erro: ${error.message}`,
+          variant: 'destructive',
+        });
         throw error;
       }
 
