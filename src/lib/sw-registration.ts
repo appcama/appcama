@@ -1,4 +1,4 @@
-// Service Worker Registration
+// Service Worker Registration with Auto-Update
 export function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -6,17 +6,38 @@ export function registerServiceWorker() {
         .then((registration) => {
           console.log('[SW] Service Worker registered successfully:', registration.scope);
           
-          // Check for updates
+          // Check for updates every 30 minutes
+          setInterval(() => {
+            console.log('[SW] Verificando atualizações...');
+            registration.update();
+          }, 30 * 60 * 1000);
+
+          // Check for updates on registration
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
+            console.log('[SW] Nova versão encontrada, instalando...');
+            
             if (newWorker) {
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('[SW] New service worker available');
-                  // Optionally notify user about update
+                  console.log('[SW] Nova versão instalada, aplicando atualização...');
+                  
+                  // Notificar o novo service worker para assumir controle
+                  newWorker.postMessage({ type: 'SKIP_WAITING' });
+                  
+                  // Mostrar mensagem ao usuário (opcional)
+                  if (window.confirm('Nova versão disponível! Recarregar página para atualizar?')) {
+                    window.location.reload();
+                  }
                 }
               });
             }
+          });
+
+          // Recarregar quando novo SW assumir controle
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            console.log('[SW] Novo Service Worker assumiu controle, recarregando...');
+            window.location.reload();
           });
         })
         .catch((error) => {

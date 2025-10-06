@@ -1,6 +1,8 @@
 // Service Worker for ReciclaE Offline Functionality
 
-const CACHE_NAME = 'recicla-e-pwa-v1.2';
+const CACHE_NAME = 'recicla-e-pwa-v1.3';
+const CACHE_TIMEOUT = 3000; // 3 segundos de timeout para tentar rede
+
 const urlsToCache = [
   '/',
   '/manifest.json',
@@ -15,6 +17,8 @@ const urlsToCache = [
   '/logo-original.png',
   // Dynamic assets will be cached as they're requested
 ];
+
+console.log('[SW v1.3] Service Worker carregado');
 
 // Install event - cache resources
 self.addEventListener('install', (event) => {
@@ -48,7 +52,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event - Network First strategy for app files, Cache First for assets
 self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') {
@@ -60,41 +64,67 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Return cached version or fetch from network
-        if (response) {
-          console.log('[SW] Serving from cache:', event.request.url);
-          return response;
-        }
-
-        console.log('[SW] Fetching from network:', event.request.url);
-        return fetch(event.request).then((response) => {
-          // Don't cache if not a valid response
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
-
-          // Clone the response
-          const responseToCache = response.clone();
-
-          caches.open(CACHE_NAME)
-            .then((cache) => {
+  const url = new URL(event.request.url);
+  const isAppFile = url.pathname.endsWith('.html') || 
+                    url.pathname.endsWith('.js') || 
+                    url.pathname.endsWith('.css') ||
+                    url.pathname === '/';
+  
+  // Para arquivos da aplicação (HTML/JS/CSS), usar Network First
+  if (isAppFile) {
+    event.respondWith(
+      // Tentar rede primeiro com timeout
+      Promise.race([
+        fetch(event.request).then((response) => {
+          // Cachear a nova versão
+          if (response && response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
               cache.put(event.request, responseToCache);
             });
-
+          }
+          console.log('[SW] Serving from network (fresh):', event.request.url);
           return response;
-        }).catch((error) => {
-          console.error('[SW] Fetch failed:', error);
-          // Return a fallback response for HTML requests
-          if (event.request.headers.get('accept').includes('text/html')) {
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('timeout')), CACHE_TIMEOUT)
+        )
+      ]).catch((error) => {
+        // Se rede falhar ou timeout, usar cache como fallback
+        console.log('[SW] Network failed, using cache fallback:', event.request.url);
+        return caches.match(event.request).then((response) => {
+          if (response) {
+            return response;
+          }
+          // Se não tiver em cache e for HTML, retornar index
+          if (event.request.headers.get('accept')?.includes('text/html')) {
             return caches.match('/');
           }
           throw error;
         });
       })
-  );
+    );
+  } else {
+    // Para assets (imagens, ícones), usar Cache First
+    event.respondWith(
+      caches.match(event.request).then((response) => {
+        if (response) {
+          console.log('[SW] Serving asset from cache:', event.request.url);
+          return response;
+        }
+        
+        return fetch(event.request).then((response) => {
+          if (response && response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return response;
+        });
+      })
+    );
+  }
 });
 
 // Background sync for when connection returns
