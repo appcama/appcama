@@ -54,23 +54,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // Verificar sessão existente ao iniciar
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('[Auth] Verificando sessão existente:', !!session);
-      setSession(session);
-      setSupabaseUser(session?.user ?? null);
-      
-      // Recuperar dados do usuário se houver sessão
-      if (session?.user) {
+    // Função para verificar e carregar a sessão
+    const loadSession = async () => {
+      try {
+        // Verificar sessão existente ao iniciar
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('[Auth] Verificando sessão existente:', !!session);
+        setSession(session);
+        setSupabaseUser(session?.user ?? null);
+        
+        // Primeiro, tentar recuperar dados do usuário do localStorage
         const storedUser = localStorage.getItem('recicla_e_user');
+        
         if (storedUser) {
-          console.log('[Auth] Sessão existente encontrada, carregando usuário');
+          console.log('[Auth] Dados do usuário encontrados no localStorage');
           setUser(JSON.parse(storedUser));
+        } else if (session?.user) {
+          // Se não tiver no localStorage mas tiver sessão, tentar recuperar do Supabase
+          console.log('[Auth] Tentando recuperar dados do usuário do Supabase');
+          
+          // Recuperar metadados do usuário da sessão
+          const userData = session.user.user_metadata;
+          
+          if (userData && userData.user_id) {
+            // Tentar buscar dados completos do usuário
+            const { data } = await supabase
+              .from('usuario')
+              .select('id_usuario, id_entidade, id_perfil, flg_senha_validada, flg_status, email')
+              .eq('id_usuario', userData.user_id)
+              .single();
+              
+            if (data) {
+              const isAdmin = await checkIsAdmin(data.id_perfil);
+              
+              const authUser: AuthUser = {
+                id: data.id_usuario,
+                entityId: data.id_entidade,
+                profileId: data.id_perfil,
+                passwordValidated: data.flg_senha_validada,
+                status: data.flg_status,
+                email: data.email,
+                isAdmin
+              };
+              
+              // Salvar no localStorage para futuras recuperações
+              localStorage.setItem('recicla_e_user', JSON.stringify(authUser));
+              setUser(authUser);
+              console.log('[Auth] Dados do usuário recuperados do Supabase');
+            }
+          }
         }
+      } catch (error) {
+        console.error('[Auth] Erro ao carregar sessão:', error);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
-    });
+    };
+    
+    loadSession();
 
     return () => subscription.unsubscribe();
   }, []);
@@ -144,7 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         console.log('[Auth] Criando sessão Supabase...');
         // Tentar fazer login com Supabase Auth
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email: emailForAuth,
           password: password
         });
@@ -152,7 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Se o usuário não existe no Supabase Auth, criar
         if (signInError?.message?.includes('Invalid login credentials')) {
           console.log('[Auth] Usuário não existe no Supabase Auth, criando...');
-          const { error: signUpError } = await supabase.auth.signUp({
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
             email: emailForAuth,
             password: password,
             options: {
@@ -169,12 +210,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Continuar mesmo com erro - a autenticação customizada já funcionou
           } else {
             console.log('[Auth] Usuário criado no Supabase Auth com sucesso');
+            
+            // Atualizar metadados do usuário para facilitar recuperação após F5
+            if (signUpData?.user) {
+              await supabase.auth.updateUser({
+                data: {
+                  user_id: userData.user_id,
+                  entity_id: userData.entity_id,
+                  profile_id: userData.profile_id,
+                  email: userData.email,
+                  status: userData.user_status,
+                  password_validated: userData.password_validated
+                }
+              });
+            }
           }
         } else if (signInError) {
           console.warn('[Auth] Erro ao fazer login no Supabase Auth:', signInError);
           // Continuar mesmo com erro - a autenticação customizada já funcionou
         } else {
           console.log('[Auth] Sessão Supabase criada com sucesso');
+          
+          // Atualizar metadados do usuário para facilitar recuperação após F5
+          if (signInData?.user) {
+            await supabase.auth.updateUser({
+              data: {
+                user_id: userData.user_id,
+                entity_id: userData.entity_id,
+                profile_id: userData.profile_id,
+                email: userData.email,
+                status: userData.user_status,
+                password_validated: userData.password_validated
+              }
+            });
+          }
         }
       } catch (authError) {
         console.warn('[Auth] Erro ao gerenciar sessão Supabase:', authError);
