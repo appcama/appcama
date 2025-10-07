@@ -37,20 +37,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('[Auth] Estado mudou:', event, 'Sessão:', !!session);
         setSession(session);
         setSupabaseUser(session?.user ?? null);
-        
-        // Recuperar dados do usuário do localStorage quando tiver sessão
+
+        // Não derrubar sessão customizada em reload (INITIAL_SESSION sem sessão)
+        // Apenas limpar no SIGNED_OUT explícito
+        if (event === 'SIGNED_OUT') {
+          console.log('[Auth] Usuário saiu, limpando sessão local');
+          setUser(null);
+          localStorage.removeItem('recicla_e_user');
+          return;
+        }
+
+        // Se houver usuário Supabase, sincroniza com dados do localStorage
         if (session?.user) {
           const storedUser = localStorage.getItem('recicla_e_user');
           if (storedUser) {
             console.log('[Auth] Recuperando dados do usuário do localStorage');
             setUser(JSON.parse(storedUser));
           }
-        } else {
-          // Limpar usuário quando não houver sessão
-          console.log('[Auth] Sessão removida, limpando usuário');
-          setUser(null);
-          localStorage.removeItem('recicla_e_user');
+          return;
         }
+
+        // Sem sessão Supabase: manter usuário custom-auth se existir no localStorage
+        const storedUser = localStorage.getItem('recicla_e_user');
+        if (storedUser) {
+          console.log('[Auth] Mantendo usuário custom-auth do localStorage');
+          setUser(JSON.parse(storedUser));
+        }
+        // Caso não exista, loadSession fará a tentativa de recuperar depois
       }
     );
 
