@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Mail, CheckCircle, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useOfflineForm } from "@/hooks/useOfflineForm";
+import { validateCpfOrCnpj } from "@/lib/cpf-cnpj-utils";
 
 interface Usuario {
   id_usuario: number;
@@ -40,6 +41,7 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  const [errors, setErrors] = useState<{ email?: string; idEntidade?: string; idPerfil?: string; senha?: string }>({});
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [idEntidade, setIdEntidade] = useState<number | null>(null);
@@ -144,8 +146,9 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      const normalizedEmail = email.trim().toLowerCase();
       const userData = {
-        des_email: email,
+        des_email: normalizedEmail,
         id_entidade: idEntidade,
         id_perfil: idPerfil,
         des_status: status,
@@ -197,7 +200,7 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
           .from('usuario')
           .insert({
             ...userData,
-            des_senha: senha || '123456789',
+            des_senha: (senha && senha.trim()) ? senha.trim() : '123456789',
             des_senha_validada: 'D',
             dat_criacao: new Date().toISOString(),
             id_usuario_criador: 1 // TODO: Use actual logged user id
@@ -206,7 +209,7 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
           .single();
 
         if (error) throw error;
-        return { isNew: true, userId: data.id_usuario };
+        return { isNew: true, userId: data.id_usuario, emailToSend: normalizedEmail };
       }
     },
     onSuccess: async (result) => {
@@ -214,7 +217,7 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
       
       if (result.isNew) {
         try {
-          const emailResult = await sendValidationEmail(result.userId, email);
+          const emailResult = await sendValidationEmail(result.userId, result.emailToSend || email.trim().toLowerCase());
           setEmailResponse(emailResult);
           setEmailSent(true);
           
@@ -222,7 +225,7 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
             title: "Usuário criado com sucesso!",
             description: emailResult.isTestMode 
               ? `Email enviado para ${emailResult.sentTo} (modo teste)`
-              : `Email de validação enviado para ${email}`,
+              : `Email de validação enviado para ${result.emailToSend || email.trim().toLowerCase()}`,
           });
         } catch (emailError: any) {
           console.error('Email error details:', emailError);
@@ -254,6 +257,11 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
         ? "Erro ao atualizar usuário" 
         : "Erro ao criar usuário");
       
+      if (typeof errorMessage === "string" && errorMessage.toLowerCase().includes("entidade")) {
+        setErrors((prev) => ({ ...prev, idEntidade: errorMessage }));
+        return;
+      }
+
       toast({
         title: "Erro",
         description: errorMessage,
@@ -266,41 +274,33 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email.trim()) {
-      toast({
-        title: "Erro",
-        description: "Email é obrigatório",
-        variant: "destructive",
-      });
-      return;
+    const normalizedEmail = email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const newErrors: { email?: string; idEntidade?: string; idPerfil?: string; senha?: string } = {};
+
+    if (!normalizedEmail) {
+      newErrors.email = "Email é obrigatório";
+    } else {
+      // Bloqueio explícito: não permitir CPF/CNPJ como email
+      const onlyDigits = normalizedEmail.replace(/\D/g, "");
+      if ((onlyDigits.length === 11 || onlyDigits.length === 14) && validateCpfOrCnpj(onlyDigits)) {
+        newErrors.email = "Email não pode ser CPF/CNPJ";
+      } else if (!emailRegex.test(normalizedEmail)) {
+        newErrors.email = "Email inválido";
+      }
     }
 
-    if (!editingUsuario && !senha.trim()) {
-      toast({
-        title: "Erro",
-        description: "Senha é obrigatória para novos usuários",
-        variant: "destructive",
-      });
-      return;
+    if (!idEntidade) newErrors.idEntidade = "Entidade é obrigatória";
+    if (!idPerfil) newErrors.idPerfil = "Perfil é obrigatório";
+
+    // Senha temporária: opcional. Se informada, validar comprimento mínimo.
+    const trimmedSenha = (senha || "").trim();
+    if (trimmedSenha && trimmedSenha.length < 6) {
+      newErrors.senha = "Senha deve ter pelo menos 6 caracteres";
     }
 
-    if (!idEntidade) {
-      toast({
-        title: "Erro",
-        description: "Entidade é obrigatória",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!idPerfil) {
-      toast({
-        title: "Erro",
-        description: "Perfil é obrigatório",
-        variant: "destructive",
-      });
-      return;
-    }
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
 
     saveMutation.mutate();
   };
@@ -454,10 +454,14 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
                   id="email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Digite o email"
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }));
+                  }}
+                  placeholder="Digite um e-mail válido (ex: nome@dominio.com)"
                   required
                 />
+                {errors.email && <p className="text-sm text-red-600 mt-1">{errors.email}</p>}
               </div>
 
               {!editingUsuario && (
@@ -467,18 +471,27 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
                     id="senha"
                     type="password"
                     value={senha}
-                    onChange={(e) => setSenha(e.target.value)}
+                    onChange={(e) => {
+                      setSenha(e.target.value);
+                      if (errors.senha) setErrors((prev) => ({ ...prev, senha: undefined }));
+                    }}
                     placeholder="Deixe em branco para usar padrão (123456789)"
                   />
                   <p className="text-xs text-gray-500">
                     Se não informada, será usada a senha padrão: 123456789
                   </p>
+                  {errors.senha && <p className="text-sm text-red-600 mt-1">{errors.senha}</p>}
                 </div>
               )}
 
               <div className="space-y-2">
                 <Label htmlFor="entidade">Entidade *</Label>
-                <Select value={idEntidade?.toString()} onValueChange={(value) => setIdEntidade(parseInt(value))}>
+                <Select
+                  value={idEntidade?.toString()}
+                  onValueChange={(value) => {
+                    setIdEntidade(parseInt(value));
+                    if (errors.idEntidade) setErrors((prev) => ({ ...prev, idEntidade: undefined }));
+                  }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione uma entidade" />
                   </SelectTrigger>
@@ -490,11 +503,17 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
                     ))}
                   </SelectContent>
                 </Select>
+                {errors.idEntidade && <p className="text-sm text-red-600 mt-1">{errors.idEntidade}</p>}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="perfil">Perfil *</Label>
-                <Select value={idPerfil?.toString()} onValueChange={(value) => setIdPerfil(parseInt(value))}>
+                <Select
+                  value={idPerfil?.toString()}
+                  onValueChange={(value) => {
+                    setIdPerfil(parseInt(value));
+                    if (errors.idPerfil) setErrors((prev) => ({ ...prev, idPerfil: undefined }));
+                  }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um perfil" />
                   </SelectTrigger>
@@ -506,6 +525,7 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
                     ))}
                   </SelectContent>
                 </Select>
+                {errors.idPerfil && <p className="text-sm text-red-600 mt-1">{errors.idPerfil}</p>}
               </div>
 
               <div className="space-y-2">

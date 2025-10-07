@@ -33,6 +33,7 @@ interface Usuario {
   entidade?: {
     nom_entidade: string;
     num_cpf_cnpj: string;
+    des_status?: string;
   };
   perfil?: {
     nom_perfil: string;
@@ -75,7 +76,7 @@ export function UsuariosList({ onAddNew, onEdit, perfilFilter }: UsuariosListPro
         .from('usuario')
         .select(`
           *,
-          entidade:id_entidade(nom_entidade, num_cpf_cnpj),
+          entidade:id_entidade(nom_entidade, num_cpf_cnpj, des_status),
           perfil:id_perfil(nom_perfil)
         `)
         .order('id_usuario', { ascending: true });
@@ -170,6 +171,15 @@ export function UsuariosList({ onAddNew, onEdit, perfilFilter }: UsuariosListPro
 
   const handleToggleStatus = (usuario: Usuario) => {
     const newStatus = usuario.des_status === 'A' ? 'D' : 'A';
+    // Ao ativar um usuário, somente permitir se a entidade estiver ativa
+    if (newStatus === 'A' && usuario.entidade?.des_status !== 'A') {
+      toast({
+        title: 'Entidade inativa',
+        description: 'Não é possível ativar o usuário enquanto a entidade está inativa.',
+        variant: 'destructive',
+      });
+      return;
+    }
     toggleStatusMutation.mutate({ id: usuario.id_usuario, newStatus });
   };
 
@@ -319,7 +329,13 @@ export function UsuariosList({ onAddNew, onEdit, perfilFilter }: UsuariosListPro
                           size="sm"
                           onClick={() => handleToggleStatus(usuario)}
                           className="h-8 w-8 p-0"
-                          title={usuario.des_status === 'A' ? 'Desativar usuário' : 'Ativar usuário'}
+                          title={
+                            usuario.des_status === 'A'
+                              ? 'Desativar usuário'
+                              : usuario.entidade?.des_status !== 'A'
+                                ? 'Entidade inativa: não é possível ativar'
+                                : 'Ativar usuário'
+                          }
                         >
                           {usuario.des_status === 'A' ? (
                             <PowerOff className="h-4 w-4" />

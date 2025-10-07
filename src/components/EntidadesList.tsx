@@ -39,6 +39,9 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [entidadeToDelete, setEntidadeToDelete] = useState<Entidade | null>(null);
+  const [linkedUsersDialogOpen, setLinkedUsersDialogOpen] = useState(false);
+  const [linkedUsers, setLinkedUsers] = useState<Array<{ id_usuario: number; des_email: string | null; des_status: string; des_senha_validada: string }>>([]);
+  const [entidadeToToggle, setEntidadeToToggle] = useState<Entidade | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -95,9 +98,31 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
     try {
       const newStatus = entidade.des_status === 'A' ? 'D' : 'A';
       
+      // Antes de desativar, verificar se existem usuários vinculados ativos
+      if (newStatus === 'D') {
+        const { data: users, error: usersError } = await supabase
+          .from('usuario')
+          .select('id_usuario, des_email, des_status, des_senha_validada')
+          .eq('id_entidade', entidade.id_entidade)
+          .eq('des_status', 'A');
+
+        if (usersError) throw usersError;
+
+        if (users && users.length > 0) {
+          setEntidadeToToggle(entidade);
+          setLinkedUsers(users);
+          setLinkedUsersDialogOpen(true);
+          return; // Não prosseguir com a desativação automática sem confirmação
+        }
+      }
+      
       const { error } = await supabase
         .from('entidade')
-        .update({ des_status: newStatus })
+        .update({ 
+          des_status: newStatus,
+          dat_atualizacao: new Date().toISOString(),
+          id_usuario_atualizador: user?.id || 1
+        })
         .eq('id_entidade', entidade.id_entidade);
 
       if (error) throw error;
@@ -354,6 +379,94 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
               className="bg-red-600 hover:bg-red-700"
             >
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* AlertDialog para usuários vinculados ao desativar entidade */}
+      <AlertDialog open={linkedUsersDialogOpen} onOpenChange={setLinkedUsersDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Usuários vinculados à entidade</AlertDialogTitle>
+            <AlertDialogDescription>
+              Encontramos {linkedUsers.length} usuário(s) ativo(s) vinculado(s) à entidade "{entidadeToToggle?.nom_entidade}".
+              <br />
+              Deseja desativar esses usuário(s) também?
+              <br />
+              <br />
+              {linkedUsers.length > 0 && (
+                <div className="rounded-md border p-3 bg-muted">
+                  <div className="text-sm font-medium mb-2">Usuários:</div>
+                  <ul className="text-sm list-disc pl-5">
+                    {linkedUsers.map((u) => (
+                      <li key={u.id_usuario}>
+                        {u.des_email || `Usuário ${u.id_usuario}`} — Status: {u.des_status === 'A' ? 'Ativo' : 'Inativo'}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setLinkedUsersDialogOpen(false);
+                setEntidadeToToggle(null);
+                setLinkedUsers([]);
+              }}
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!entidadeToToggle) return;
+                try {
+                  const userIds = linkedUsers.map(u => u.id_usuario);
+                  if (userIds.length > 0) {
+                    const { error: userUpdateError } = await supabase
+                      .from('usuario')
+                      .update({ 
+                        des_status: 'D',
+                        dat_atualizacao: new Date().toISOString(),
+                        id_usuario_atualizador: user?.id || 1
+                      })
+                      .in('id_usuario', userIds);
+                    if (userUpdateError) throw userUpdateError;
+                  }
+
+                  const { error: entUpdateError } = await supabase
+                    .from('entidade')
+                    .update({ 
+                      des_status: 'D',
+                      dat_atualizacao: new Date().toISOString(),
+                      id_usuario_atualizador: user?.id || 1
+                    })
+                    .eq('id_entidade', entidadeToToggle.id_entidade);
+                  if (entUpdateError) throw entUpdateError;
+
+                  toast({
+                    title: 'Sucesso',
+                    description: 'Usuários e entidade desativados com sucesso',
+                  });
+
+                  setLinkedUsersDialogOpen(false);
+                  setEntidadeToToggle(null);
+                  setLinkedUsers([]);
+                  fetchEntidades();
+                } catch (err) {
+                  console.error('Erro ao desativar usuários/entidade:', err);
+                  toast({
+                    title: 'Erro',
+                    description: 'Erro ao desativar usuários vinculados/entidade',
+                    variant: 'destructive',
+                  });
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Desativar usuários e entidade
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
