@@ -234,10 +234,10 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
+      if (file.size > 2 * 1024 * 1024) {
         toast({
           title: "Arquivo muito grande",
-          description: "A logomarca deve ter no máximo 5MB",
+          description: "A logomarca deve ter no máximo 2MB. Dimensões recomendadas: 500x500px.",
           variant: "destructive",
         });
         return;
@@ -547,13 +547,13 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                           Clique para selecionar ou arraste uma imagem
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          PNG, JPG ou WEBP (máx. 5MB)
+                          PNG, JPG, WEBP ou SVG (máx. 2MB)
                         </p>
                       </div>
                     )}
                     <Input
                       type="file"
-                      accept="image/png,image/jpeg,image/jpg,image/webp"
+                      accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
                       onChange={handleLogoChange}
                       className="cursor-pointer"
                     />

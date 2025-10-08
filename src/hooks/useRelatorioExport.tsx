@@ -9,10 +9,10 @@ import QRCode from 'qrcode';
 export function useRelatorioExport() {
   const [isExporting, setIsExporting] = useState(false);
 
-  const exportToPDF = async (data: any, title: string, filters: RelatorioFiltersType, reportType?: string) => {
+  const exportToPDF = async (data: any, title: string, filters: RelatorioFiltersType, reportType?: string, logoUrl?: string) => {
     setIsExporting(true);
     try {
-      const doc = await generatePDF(data, title, filters, reportType);
+      const doc = await generatePDF(data, title, filters, reportType, logoUrl);
       
       // Fazer download
       const fileName = `${title.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd_HHmmss')}.pdf`;
@@ -26,10 +26,10 @@ export function useRelatorioExport() {
     }
   };
 
-  const printPDF = async (data: any, title: string, filters: RelatorioFiltersType, reportType?: string) => {
+  const printPDF = async (data: any, title: string, filters: RelatorioFiltersType, reportType?: string, logoUrl?: string) => {
     setIsExporting(true);
     try {
-      const doc = await generatePDF(data, title, filters, reportType);
+      const doc = await generatePDF(data, title, filters, reportType, logoUrl);
       
       // Abrir PDF em nova janela para impressão
       const pdfBlob = doc.output('blob');
@@ -55,7 +55,7 @@ export function useRelatorioExport() {
     }
   };
 
-  const generatePDF = async (data: any, title: string, filters: RelatorioFiltersType, reportType?: string) => {
+  const generatePDF = async (data: any, title: string, filters: RelatorioFiltersType, reportType?: string, logoUrl?: string) => {
     // Criar novo documento PDF
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
@@ -63,6 +63,27 @@ export function useRelatorioExport() {
 
     // Configurar fonte
     doc.setFont('helvetica');
+    
+    // Adicionar logo da entidade se disponível
+    if (logoUrl) {
+      try {
+        doc.addImage(logoUrl, 'PNG', 14, yPosition, 25, 25);
+      } catch (error) {
+        console.warn('Erro ao carregar logo da entidade, usando logo padrão');
+        try {
+          doc.addImage('/logo-original.png', 'PNG', 14, yPosition, 25, 25);
+        } catch {
+          // Continuar sem logo se ambos falharem
+        }
+      }
+    } else {
+      // Logo padrão
+      try {
+        doc.addImage('/logo-original.png', 'PNG', 14, yPosition, 25, 25);
+      } catch (error) {
+        // Continuar sem logo se falhar
+      }
+    }
     
     // Título principal
     doc.setFontSize(16);
@@ -211,12 +232,34 @@ export function useRelatorioExport() {
       const pageWidth = doc.internal.pageSize.width;
       let yPosition = 20;
 
+      // Adicionar logo da entidade no canto superior esquerdo
+      const logoUrl = certificado.entidade?.des_logo_url;
+      if (logoUrl) {
+        try {
+          doc.addImage(logoUrl, 'PNG', 14, yPosition, 30, 30);
+        } catch (error) {
+          console.warn('Erro ao carregar logo da entidade, usando logo padrão');
+          try {
+            doc.addImage('/logo-original.png', 'PNG', 14, yPosition, 30, 30);
+          } catch {
+            // Continuar sem logo se ambos falharem
+          }
+        }
+      } else {
+        // Logo padrão
+        try {
+          doc.addImage('/logo-original.png', 'PNG', 14, yPosition, 30, 30);
+        } catch (error) {
+          // Continuar sem logo se falhar
+        }
+      }
+
       // Cabeçalho
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(18);
       doc.setTextColor(40, 40, 40);
-      doc.text('CERTIFICADO DE COLETA DE RESÍDUOS RECICLÁVEIS', pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 15;
+      doc.text('CERTIFICADO DE COLETA DE RESÍDUOS RECICLÁVEIS', pageWidth / 2, yPosition + 10, { align: 'center' });
+      yPosition += 40;
 
       // Código Validador em destaque
       doc.setFontSize(14);

@@ -12,6 +12,7 @@ import { RelatorioVisualizacao } from "./RelatorioVisualizacao";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface RelatorioViewerProps {
   reportType: string;
@@ -49,10 +50,31 @@ export function RelatorioViewer({ reportType, category, filters }: RelatorioView
   const handleExport = async (format: 'pdf' | 'excel' | 'csv') => {
     const reportTitle = reportTitles[reportType] || "Relatório";
     
+    // Buscar logo da entidade do usuário logado
+    let logoUrl: string | undefined = undefined;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const storedUser = localStorage.getItem('recicla_e_user');
+        if (storedUser) {
+          const userData = JSON.parse(storedUser);
+          const { data: entidadeData } = await supabase
+            .from('entidade')
+            .select('des_logo_url')
+            .eq('id_entidade', userData.entityId)
+            .single();
+          
+          logoUrl = entidadeData?.des_logo_url || undefined;
+        }
+      }
+    } catch (error) {
+      console.warn('Erro ao buscar logo da entidade:', error);
+    }
+    
     try {
       switch (format) {
         case 'pdf':
-          await exportToPDF(data, reportTitle, filters, reportType);
+          await exportToPDF(data, reportTitle, filters, reportType, logoUrl);
           toast.success('PDF gerado com sucesso!', {
             description: 'O arquivo foi baixado para seu dispositivo.'
           });
@@ -81,8 +103,29 @@ export function RelatorioViewer({ reportType, category, filters }: RelatorioView
   const handlePrint = async () => {
     const reportTitle = reportTitles[reportType] || "Relatório";
     
+    // Buscar logo da entidade do usuário logado
+    let logoUrl: string | undefined = undefined;
     try {
-      await printPDF(data, reportTitle, filters, reportType);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const storedUser = localStorage.getItem('recicla_e_user');
+        if (storedUser) {
+          const userData = JSON.parse(storedUser);
+          const { data: entidadeData } = await supabase
+            .from('entidade')
+            .select('des_logo_url')
+            .eq('id_entidade', userData.entityId)
+            .single();
+          
+          logoUrl = entidadeData?.des_logo_url || undefined;
+        }
+      }
+    } catch (error) {
+      console.warn('Erro ao buscar logo da entidade:', error);
+    }
+    
+    try {
+      await printPDF(data, reportTitle, filters, reportType, logoUrl);
       toast.success('Relatório aberto para impressão!', {
         description: 'Uma nova janela foi aberta com o PDF do relatório.'
       });

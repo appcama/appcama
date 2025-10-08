@@ -93,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Tentar buscar dados completos do usuário
             const { data } = await supabase
               .from('usuario')
-              .select('id_usuario, id_entidade, id_perfil, flg_senha_validada, flg_status, email')
+              .select('id_usuario, id_entidade, id_perfil, des_senha_validada, des_status, des_email')
               .eq('id_usuario', userData.user_id)
               .single();
               
@@ -104,9 +104,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 id: data.id_usuario,
                 entityId: data.id_entidade,
                 profileId: data.id_perfil,
-                passwordValidated: data.flg_senha_validada,
-                status: data.flg_status,
-                email: data.email,
+                passwordValidated: data.des_senha_validada,
+                status: data.des_status,
+                email: data.des_email,
                 isAdmin
               };
               

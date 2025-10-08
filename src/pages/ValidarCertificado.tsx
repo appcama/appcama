@@ -20,6 +20,7 @@ interface CertificadoData {
     nom_entidade: string;
     num_cpf_cnpj: string;
     des_email: string;
+    des_logo_url: string | null;
   };
   residuos: Array<{
     nom_residuo: string;
@@ -66,7 +67,8 @@ export default function ValidarCertificado() {
           entidade:id_entidade (
             nom_entidade,
             num_cpf_cnpj,
-            des_email
+            des_email,
+            des_logo_url
           )
         `)
         .eq("cod_validador", codigo)
@@ -189,6 +191,18 @@ export default function ValidarCertificado() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            {certificado.entidade.des_logo_url && (
+              <div className="flex justify-center mb-4">
+                <img 
+                  src={certificado.entidade.des_logo_url} 
+                  alt={certificado.entidade.nom_entidade}
+                  className="h-20 w-20 object-contain"
+                  onError={(e) => {
+                    e.currentTarget.src = '/logo-original.png';
+                  }}
+                />
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Nome/Razão Social</p>
