@@ -8,12 +8,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ArrowLeft, Save, Search, Upload, X } from "lucide-react";
+import { ArrowLeft, Save, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useOfflineForm } from "@/hooks/useOfflineForm";
 import { applyCpfCnpjMask, validateCpfOrCnpj, applyPhoneMask, formatCep } from "@/lib/cpf-cnpj-utils";
+import { LogoUploadArea } from "@/components/LogoUploadArea";
+import { ImageResizeDialog } from "@/components/ImageResizeDialog";
+import { resizeImage, compressImage, getImageDimensions, formatFileSize } from "@/lib/image-utils";
 
 const formSchema = z.object({
   nom_entidade: z.string().min(2, "Nome é obrigatório").max(60, "Nome deve ter no máximo 60 caracteres"),
@@ -65,6 +68,8 @@ interface EntidadeFormProps {
     id_tipo_entidade: number;
     id_tipo_situacao: number;
     id_municipio: number;
+    des_logo_url?: string | null;
+    dat_atualizacao?: string | null;
   };
 }
 
@@ -75,7 +80,11 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
   const [loadingCep, setLoadingCep] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [existingLogoUrl, setExistingLogoUrl] = useState<string | null>(null);
+  const [existingLogoDate, setExistingLogoDate] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [showResizeDialog, setShowResizeDialog] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -199,7 +208,13 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
 
   useEffect(() => {
     fetchSelectData();
-  }, []);
+    
+    // Carregar logo existente se houver
+    if (editingEntidade?.des_logo_url) {
+      setExistingLogoUrl(editingEntidade.des_logo_url);
+      setExistingLogoDate(editingEntidade.dat_atualizacao || null);
+    }
+  }, [editingEntidade]);
 
   const fetchSelectData = async () => {
     try {
@@ -231,30 +246,75 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
     }
   };
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        toast({
-          title: "Arquivo muito grande",
-          description: "A logomarca deve ter no máximo 2MB. Dimensões recomendadas: 500x500px.",
-          variant: "destructive",
-        });
-        return;
+    if (!file) return;
+
+    // Verificar se é maior que 2MB
+    if (file.size > 2 * 1024 * 1024) {
+      setPendingFile(file);
+      setShowResizeDialog(true);
+      return;
+    }
+
+    // Processar diretamente
+    processLogoFile(file);
+  };
+
+  const processLogoFile = (file: File) => {
+    setLogoFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setLogoPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    
+    // Limpar logo existente ao selecionar nova
+    setExistingLogoUrl(null);
+    setExistingLogoDate(null);
+  };
+
+  const handleResizeImage = async () => {
+    if (!pendingFile) return;
+
+    try {
+      toast({
+        title: "Processando imagem...",
+        description: "Aguarde enquanto otimizamos sua imagem",
+      });
+
+      // Redimensionar para máximo 1000x1000px
+      const resizedFile = await resizeImage(pendingFile, 1000, 1000);
+
+      // Comprimir se ainda estiver grande
+      let finalFile = resizedFile;
+      if (resizedFile.size > 2 * 1024 * 1024) {
+        finalFile = await compressImage(resizedFile, 0.8);
       }
-      
-      setLogoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+
+      processLogoFile(finalFile);
+      setShowResizeDialog(false);
+      setPendingFile(null);
+
+      toast({
+        title: "Imagem otimizada",
+        description: `Tamanho reduzido de ${formatFileSize(pendingFile.size)} para ${formatFileSize(finalFile.size)}`,
+      });
+    } catch (error) {
+      console.error('Erro ao processar imagem:', error);
+      toast({
+        title: "Erro ao processar imagem",
+        description: "Tente selecionar outra imagem",
+        variant: "destructive",
+      });
     }
   };
 
   const handleRemoveLogo = () => {
     setLogoFile(null);
     setLogoPreview(null);
+    setExistingLogoUrl(null);
+    setExistingLogoDate(null);
   };
 
   const handleCepLookup = async (cep: string) => {
@@ -522,40 +582,14 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
 
                 <div className="md:col-span-2">
                   <FormLabel>Logomarca da Entidade</FormLabel>
-                  <div className="mt-2 space-y-4">
-                    {logoPreview ? (
-                      <div className="relative inline-block">
-                        <img 
-                          src={logoPreview} 
-                          alt="Preview da logomarca" 
-                          className="h-32 w-auto object-contain border rounded"
-                        />
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="icon"
-                          className="absolute -top-2 -right-2"
-                          onClick={handleRemoveLogo}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                        <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Clique para selecionar ou arraste uma imagem
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          PNG, JPG, WEBP ou SVG (máx. 2MB)
-                        </p>
-                      </div>
-                    )}
-                    <Input
-                      type="file"
-                      accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
-                      onChange={handleLogoChange}
-                      className="cursor-pointer"
+                  <div className="mt-2">
+                    <LogoUploadArea
+                      existingLogoUrl={existingLogoUrl}
+                      existingLogoDate={existingLogoDate}
+                      newLogoPreview={logoPreview}
+                      newLogoFile={logoFile}
+                      onLogoChange={handleLogoChange}
+                      onLogoRemove={handleRemoveLogo}
                     />
                   </div>
                 </div>
@@ -597,6 +631,18 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
           </Form>
         </CardContent>
       </Card>
+
+      {/* Dialog de redimensionamento de imagem */}
+      <ImageResizeDialog
+        open={showResizeDialog}
+        onOpenChange={setShowResizeDialog}
+        file={pendingFile}
+        onResize={handleResizeImage}
+        onChooseAnother={() => {
+          setShowResizeDialog(false);
+          setPendingFile(null);
+        }}
+      />
     </div>
   );
 }
