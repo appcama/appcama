@@ -580,20 +580,6 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                   )}
                 />
 
-                <div className="md:col-span-2">
-                  <FormLabel>Logomarca da Entidade</FormLabel>
-                  <div className="mt-2">
-                    <LogoUploadArea
-                      existingLogoUrl={existingLogoUrl}
-                      existingLogoDate={existingLogoDate}
-                      newLogoPreview={logoPreview}
-                      newLogoFile={logoFile}
-                      onLogoChange={handleLogoChange}
-                      onLogoRemove={handleRemoveLogo}
-                    />
-                  </div>
-                </div>
-
                 <FormField
                   control={form.control}
                   name="num_telefone"
@@ -615,6 +601,20 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                     </FormItem>
                   )}
                 />
+
+                <div className="md:col-span-2">
+                  <FormLabel>Logomarca da Entidade</FormLabel>
+                  <div className="mt-2">
+                    <LogoUploadArea
+                      existingLogoUrl={existingLogoUrl}
+                      existingLogoDate={existingLogoDate}
+                      newLogoPreview={logoPreview}
+                      newLogoFile={logoFile}
+                      onLogoChange={handleLogoChange}
+                      onLogoRemove={handleRemoveLogo}
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="flex justify-end space-x-4 pt-4">
