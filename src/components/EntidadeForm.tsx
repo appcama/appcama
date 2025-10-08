@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ArrowLeft, Save, Search } from "lucide-react";
+import { ArrowLeft, Save, Search, Upload, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -73,6 +73,9 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
   const [tiposSituacao, setTiposSituacao] = useState<TipoSituacao[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -98,6 +101,36 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
     
     const telefoneLimpo = data.num_telefone?.replace(/\D/g, '') || null;
     
+    // Upload da logo se houver
+    let logoUrl = null;
+    if (logoFile) {
+      setUploadingLogo(true);
+      const fileExt = logoFile.name.split('.').pop();
+      const fileName = `${cpfCnpjLimpo}-${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('logos-entidades')
+        .upload(filePath, logoFile, {
+          upsert: true
+        });
+
+      if (uploadError) {
+        console.error('Erro ao fazer upload da logo:', uploadError);
+        toast({
+          title: "Erro no upload",
+          description: "Não foi possível fazer upload da logomarca",
+          variant: "destructive",
+        });
+      } else {
+        const { data: { publicUrl } } = supabase.storage
+          .from('logos-entidades')
+          .getPublicUrl(filePath);
+        logoUrl = publicUrl;
+      }
+      setUploadingLogo(false);
+    }
+    
     const insertData: any = {
       nom_entidade: data.nom_entidade,
       num_cpf_cnpj: cpfCnpjLimpo,
@@ -113,6 +146,7 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
       num_telefone: telefoneLimpo,
       id_usuario_criador: user.id,
       dat_criacao: new Date().toISOString(),
+      des_logo_url: logoUrl,
     };
 
     let result;
@@ -195,6 +229,32 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
         variant: "destructive",
       });
     }
+  };
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "Arquivo muito grande",
+          description: "A logomarca deve ter no máximo 5MB",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setLogoFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoFile(null);
+    setLogoPreview(null);
   };
 
   const handleCepLookup = async (cep: string) => {
@@ -459,6 +519,46 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                     </FormItem>
                   )}
                 />
+
+                <div className="md:col-span-2">
+                  <FormLabel>Logomarca da Entidade</FormLabel>
+                  <div className="mt-2 space-y-4">
+                    {logoPreview ? (
+                      <div className="relative inline-block">
+                        <img 
+                          src={logoPreview} 
+                          alt="Preview da logomarca" 
+                          className="h-32 w-auto object-contain border rounded"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute -top-2 -right-2"
+                          onClick={handleRemoveLogo}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                        <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                        <p className="text-sm text-muted-foreground mb-2">
+                          Clique para selecionar ou arraste uma imagem
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          PNG, JPG ou WEBP (máx. 5MB)
+                        </p>
+                      </div>
+                    )}
+                    <Input
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/webp"
+                      onChange={handleLogoChange}
+                      className="cursor-pointer"
+                    />
+                  </div>
+                </div>
 
                 <FormField
                   control={form.control}

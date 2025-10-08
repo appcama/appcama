@@ -391,6 +391,7 @@ export type Database = {
           des_bairro: string
           des_email: string | null
           des_locked: string
+          des_logo_url: string | null
           des_logradouro: string
           des_status: string
           id_entidade: number
@@ -413,6 +414,7 @@ export type Database = {
           des_bairro: string
           des_email?: string | null
           des_locked?: string
+          des_logo_url?: string | null
           des_logradouro: string
           des_status?: string
           id_entidade?: number
@@ -435,6 +437,7 @@ export type Database = {
           des_bairro?: string
           des_email?: string | null
           des_locked?: string
+          des_logo_url?: string | null
           des_logradouro?: string
           des_status?: string
           id_entidade?: number
