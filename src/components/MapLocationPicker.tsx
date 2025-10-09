@@ -25,7 +25,7 @@ export function MapLocationPicker({
 
   // Carregar Google Maps API
   useEffect(() => {
-    const apiKey = 'AIzaSyAWzObMjkTXGDfqTHEf5T_-0XbgS4r0ZfY';
+    const apiKey = 'AIzaSyC-SMESmT8ScecSuCz1oTcMFSp7Gg-Leag';
     
     // Verificar se já foi carregado
     if ((window as any).google && (window as any).google.maps) {
