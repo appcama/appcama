@@ -25,7 +25,8 @@ export function MapLocationPicker({
 
   // Carregar Google Maps API
   useEffect(() => {
-    const apiKey = 'GOOGLE_MAPS_API_KEY';
+    // IMPORTANTE: Substitua 'SUA_CHAVE_AQUI' pela sua chave real do Google Maps API
+    const apiKey = 'SUA_CHAVE_AQUI';
     
     // Verificar se já foi carregado
     if ((window as any).google && (window as any).google.maps) {
@@ -42,7 +43,7 @@ export function MapLocationPicker({
       setLoading(false);
       toast({
         title: "Erro ao carregar mapa",
-        description: "Não foi possível carregar o Google Maps",
+        description: "Não foi possível carregar o Google Maps. Verifique sua chave de API.",
         variant: "destructive",
       });
     };
@@ -56,10 +57,10 @@ export function MapLocationPicker({
 
   // Inicializar mapa
   useEffect(() => {
-    if (loading || !(window as any).google) return;
+    if (loading || !(window as any).google || map) return;
 
     const mapElement = document.getElementById('map');
-    if (!mapElement || map) return;
+    if (!mapElement) return;
 
     const googleMaps = (window as any).google.maps;
 
@@ -69,42 +70,45 @@ export function MapLocationPicker({
       ? { lat: latitude, lng: longitude }
       : defaultPosition;
 
-    const newMap = new googleMaps.Map(mapElement, {
-      center: initialPosition,
-      zoom: latitude && longitude ? 15 : 12,
-      mapTypeControl: true,
-      streetViewControl: false,
-      fullscreenControl: true,
-    });
+    // Adicionar um pequeno delay para garantir que o elemento está pronto
+    setTimeout(() => {
+      const newMap = new googleMaps.Map(mapElement, {
+        center: initialPosition,
+        zoom: latitude && longitude ? 15 : 12,
+        mapTypeControl: true,
+        streetViewControl: false,
+        fullscreenControl: true,
+      });
 
-    setMap(newMap);
+      setMap(newMap);
 
-    // Criar marcador
-    const newMarker = new googleMaps.Marker({
-      position: initialPosition,
-      map: newMap,
-      draggable: true,
-      title: 'Localização da Entidade',
-    });
+      // Criar marcador
+      const newMarker = new googleMaps.Marker({
+        position: initialPosition,
+        map: newMap,
+        draggable: true,
+        title: 'Localização da Entidade',
+      });
 
-    setMarker(newMarker);
+      setMarker(newMarker);
 
-    // Evento de arrastar marcador
-    newMarker.addListener('dragend', () => {
-      const position = newMarker.getPosition();
-      if (position) {
-        onLocationChange(position.lat(), position.lng());
+      // Evento de arrastar marcador
+      newMarker.addListener('dragend', () => {
+        const position = newMarker.getPosition();
+        if (position) {
+          onLocationChange(position.lat(), position.lng());
+        }
+      });
+
+      // Se já tiver coordenadas, notificar
+      if (latitude && longitude) {
+        onLocationChange(latitude, longitude);
       }
-    });
-
-    // Se já tiver coordenadas, notificar
-    if (latitude && longitude) {
-      onLocationChange(latitude, longitude);
-    }
+    }, 100);
   }, [loading, latitude, longitude, map, onLocationChange]);
 
   // Geocodificar endereço
-  const geocodeAddress = useCallback(async () => {
+  const geocodeAddress = useCallback(() => {
     if (!address || !map || !marker) {
       toast({
         title: "Endereço incompleto",
@@ -116,45 +120,40 @@ export function MapLocationPicker({
 
     setGeocoding(true);
 
-    try {
-      const googleMaps = (window as any).google.maps;
-      const geocoder = new googleMaps.Geocoder();
-      const result = await geocoder.geocode({ address: `${address}, Salvador, Bahia, Brasil` });
+    const googleMaps = (window as any).google.maps;
+    const geocoder = new googleMaps.Geocoder();
+    
+    geocoder.geocode(
+      { address: `${address}, Salvador, Bahia, Brasil` },
+      (results: any, status: any) => {
+        setGeocoding(false);
 
-      if (result.results && result.results[0]) {
-        const location = result.results[0].geometry.location;
-        const lat = location.lat();
-        const lng = location.lng();
+        if (status === 'OK' && results && results[0]) {
+          const location = results[0].geometry.location;
+          const lat = location.lat();
+          const lng = location.lng();
 
-        // Atualizar mapa e marcador
-        map.setCenter(location);
-        map.setZoom(15);
-        marker.setPosition(location);
+          // Atualizar mapa e marcador
+          map.setCenter(location);
+          map.setZoom(15);
+          marker.setPosition(location);
 
-        // Notificar mudança
-        onLocationChange(lat, lng);
+          // Notificar mudança
+          onLocationChange(lat, lng);
 
-        toast({
-          title: "Localização encontrada",
-          description: "O marcador foi posicionado no endereço. Você pode ajustá-lo arrastando.",
-        });
-      } else {
-        toast({
-          title: "Endereço não encontrado",
-          description: "Não foi possível localizar o endereço. Posicione o marcador manualmente.",
-          variant: "destructive",
-        });
+          toast({
+            title: "Localização encontrada",
+            description: "O marcador foi posicionado no endereço. Você pode ajustá-lo arrastando.",
+          });
+        } else {
+          toast({
+            title: "Endereço não encontrado",
+            description: "Não foi possível localizar o endereço. Posicione o marcador manualmente.",
+            variant: "destructive",
+          });
+        }
       }
-    } catch (error) {
-      console.error('Erro ao geocodificar:', error);
-      toast({
-        title: "Erro na geocodificação",
-        description: "Erro ao buscar localização. Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setGeocoding(false);
-    }
+    );
   }, [address, map, marker, onLocationChange, toast]);
 
   if (loading) {
