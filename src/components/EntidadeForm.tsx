@@ -16,6 +16,7 @@ import { useOfflineForm } from "@/hooks/useOfflineForm";
 import { applyCpfCnpjMask, validateCpfOrCnpj, applyPhoneMask, formatCep } from "@/lib/cpf-cnpj-utils";
 import { LogoUploadArea } from "@/components/LogoUploadArea";
 import { ImageResizeDialog } from "@/components/ImageResizeDialog";
+import { MapLocationPicker } from "@/components/MapLocationPicker";
 import { resizeImage, compressImage, getImageDimensions, formatFileSize } from "@/lib/image-utils";
 
 const formSchema = z.object({
@@ -38,6 +39,8 @@ const formSchema = z.object({
       const numbers = val.replace(/\D/g, '');
       return numbers.length === 10 || numbers.length === 11; // 10 dígitos (fixo) ou 11 dígitos (celular)
     }, "Telefone deve ter 10 dígitos (fixo) ou 11 dígitos (celular)"),
+  num_latitude: z.number().optional(),
+  num_longitude: z.number().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -70,6 +73,8 @@ interface EntidadeFormProps {
     id_municipio: number;
     des_logo_url?: string | null;
     dat_atualizacao?: string | null;
+    num_latitude?: number | null;
+    num_longitude?: number | null;
   };
 }
 
@@ -85,6 +90,8 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [showResizeDialog, setShowResizeDialog] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [latitude, setLatitude] = useState<number | null>(editingEntidade?.num_latitude || null);
+  const [longitude, setLongitude] = useState<number | null>(editingEntidade?.num_longitude || null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -153,6 +160,8 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
       id_municipio: parseInt(data.id_municipio),
       id_unidade_federativa: 29, // Bahia
       num_telefone: telefoneLimpo,
+      num_latitude: latitude,
+      num_longitude: longitude,
       id_usuario_criador: user.id,
       dat_criacao: new Date().toISOString(),
       des_logo_url: logoUrl,
@@ -203,6 +212,8 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
       num_cep: editingEntidade?.num_cep ? formatCep(editingEntidade.num_cep) : "",
       id_municipio: editingEntidade?.id_municipio?.toString() || "2927408",
       num_telefone: editingEntidade?.num_telefone ? applyPhoneMask(editingEntidade.num_telefone) : "",
+      num_latitude: editingEntidade?.num_latitude || undefined,
+      num_longitude: editingEntidade?.num_longitude || undefined,
     },
   });
 
@@ -614,6 +625,18 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                       onLogoRemove={handleRemoveLogo}
                     />
                   </div>
+                </div>
+
+                <div className="md:col-span-2">
+                  <MapLocationPicker
+                    address={`${form.watch('des_logradouro')}, ${form.watch('des_bairro')}, CEP ${form.watch('num_cep')}`}
+                    latitude={latitude}
+                    longitude={longitude}
+                    onLocationChange={(lat, lng) => {
+                      setLatitude(lat);
+                      setLongitude(lng);
+                    }}
+                  />
                 </div>
               </div>
 
