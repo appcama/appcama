@@ -406,6 +406,8 @@ export type Database = {
           nom_razao_social: string | null
           num_cep: string
           num_cpf_cnpj: string
+          num_latitude: number | null
+          num_longitude: number | null
           num_telefone: string | null
         }
         Insert: {
@@ -429,6 +431,8 @@ export type Database = {
           nom_razao_social?: string | null
           num_cep: string
           num_cpf_cnpj: string
+          num_latitude?: number | null
+          num_longitude?: number | null
           num_telefone?: string | null
         }
         Update: {
@@ -452,6 +456,8 @@ export type Database = {
           nom_razao_social?: string | null
           num_cep?: string
           num_cpf_cnpj?: string
+          num_latitude?: number | null
+          num_longitude?: number | null
           num_telefone?: string | null
         }
         Relationships: [
