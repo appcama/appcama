@@ -445,7 +445,7 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
                   </Button>
                   <Button 
                     type="submit"
-                    className="bg-black hover:bg-gray-800 text-white"
+                    className="bg-green-600 hover:bg-green-700 text-white"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? 'Processando...' : `${editingResiduo ? 'Atualizar' : 'Adicionar'} Resíduo`}

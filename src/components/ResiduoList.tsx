@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Edit2, Power, Trash2, Plus } from "lucide-react";
+import { Edit, Power, Trash2, Plus, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -157,7 +157,7 @@ export function ResiduoList({ onAddNew, onEdit }: ResiduoListProps) {
         <CardHeader>
           <div className="flex flex-row items-center justify-between space-y-0 pb-6">
             <CardTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5" />
+              <Package className="h-5 w-5 text-black" />
               Resíduos
             </CardTitle>
             <Button onClick={onAddNew} className="flex items-center gap-2 bg-green-600 hover:bg-green-700">
@@ -212,23 +212,15 @@ export function ResiduoList({ onAddNew, onEdit }: ResiduoListProps) {
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex justify-center gap-2">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => onEdit(residuo)}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Editar</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onEdit(residuo)}
+                            className="h-8 w-8 p-0"
+                            title="Editar resíduo"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>

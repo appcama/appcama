@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { ptBR } from 'date-fns/locale';
 
 interface Coleta {
   id_coleta: number;
@@ -288,6 +289,7 @@ export function GerarCertificado() {
                     selected={dataInicio}
                     onSelect={setDataInicio}
                     initialFocus
+                    locale={ptBR}
                     className="pointer-events-auto"
                   />
                 </PopoverContent>
@@ -316,6 +318,7 @@ export function GerarCertificado() {
                     selected={dataFim}
                     onSelect={setDataFim}
                     initialFocus
+                    locale={ptBR}
                     className="pointer-events-auto"
                   />
                 </PopoverContent>

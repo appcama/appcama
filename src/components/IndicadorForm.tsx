@@ -144,6 +144,16 @@ export function IndicadorForm({ editingIndicador, onBack, onSave }: IndicadorFor
       return;
     }
 
+    // Validação de comprimento máximo (20 caracteres)
+    if (formData.nom_indicador.trim().length > 20) {
+      toast({
+        title: "Erro",
+        description: "Nome do indicador deve ter no máximo 20 caracteres",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const dataToSubmit = {
       nom_indicador: formData.nom_indicador.trim(),
       id_unidade_medida: formData.id_unidade_medida,
@@ -190,6 +200,7 @@ export function IndicadorForm({ editingIndicador, onBack, onSave }: IndicadorFor
                 value={formData.nom_indicador}
                 onChange={(e) => handleInputChange('nom_indicador', e.target.value)}
                 placeholder="Digite o nome do indicador"
+                maxLength={20}
               />
             </div>
 

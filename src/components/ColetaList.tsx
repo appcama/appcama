@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Eye, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -149,7 +149,7 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
   const filteredColetas = coletas.filter(coleta =>
     coleta.cod_coleta?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     coleta.ponto_coleta?.nom_ponto_coleta?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    coleta.entidade?.nom_entidade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    coleta.entidade_coletora?.nom_entidade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     coleta.evento?.nom_evento?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -225,20 +225,23 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Coletas</h1>
-        <Button onClick={onAddNew} className="bg-green-600 hover:bg-green-700">
-          <Plus className="w-4 h-4 mr-2" />
-          Novo
-        </Button>
-      </div>
-
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Coletas</CardTitle>
+          <div className="flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              <CardTitle>Coletas</CardTitle>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button onClick={onAddNew} className="flex items-center gap-2 bg-green-600 hover:bg-green-700">
+                <Plus className="h-4 w-4" />
+                Novo
+              </Button>
+            </div>
+          </div>
           <div className="flex gap-4 mt-4">
             <Input
-              placeholder="Buscar por código, ponto de coleta, entidade ou evento"
+              placeholder="Buscar por código, ponto de coleta, entidade coletora ou evento"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-md"

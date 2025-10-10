@@ -10,8 +10,12 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Calendar } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const eventoSchema = z.object({
   nom_evento: z.string().min(1, "Nome do evento é obrigatório").max(60, "Nome deve ter no máximo 60 caracteres"),
@@ -19,11 +23,15 @@ const eventoSchema = z.object({
   dat_inicio: z.string().min(1, "Data de início é obrigatória"),
   dat_termino: z.string().min(1, "Data de término é obrigatória"),
 }).refine((data) => {
-  const inicio = new Date(data.dat_inicio);
-  const termino = new Date(data.dat_termino);
-  return termino > inicio;
+  // Comparar datas como locais YYYY-MM-DD para evitar offset de timezone
+  const [yi, mi, di] = data.dat_inicio.split('-').map(Number);
+  const [yt, mt, dt] = data.dat_termino.split('-').map(Number);
+  const inicio = new Date(yi, mi - 1, di);
+  const termino = new Date(yt, mt - 1, dt);
+  // Permitir mesmo dia: término >= início
+  return termino >= inicio;
 }, {
-  message: "Data de término deve ser posterior à data de início",
+  message: "Data de término não pode ser anterior à data de início",
   path: ["dat_termino"],
 });
 
@@ -181,17 +189,11 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex items-center space-x-2">
-          <Calendar className="h-5 w-5 text-recycle-green" />
+          <CalendarIcon className="h-5 w-5" />
           <div>
             <h2 className="text-xl font-semibold">
               {isEditing ? "Editar Evento" : "Novo Evento"}
             </h2>
-            <p className="text-sm text-muted-foreground">
-              {isEditing 
-                ? "Altere as informações do evento conforme necessário" 
-                : "Preencha as informações do novo evento"
-              }
-            </p>
           </div>
         </div>
       </CardHeader>
@@ -240,35 +242,110 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
               <FormField
                 control={form.control}
                 name="dat_inicio"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Data de Início *</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="date"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  // Converter valor do campo (YYYY-MM-DD) em Date local para seleção
+                  const selectedDate = field.value
+                    ? (() => {
+                        const [y, m, d] = field.value.split('-').map(Number);
+                        return new Date(y, m - 1, d);
+                      })()
+                    : undefined;
+
+                  const handleSelect = (date?: Date) => {
+                    if (!date) return;
+                    // Formatar para YYYY-MM-DD sem depender de timezone
+                    const isoDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                    field.onChange(isoDate);
+                  };
+
+                  return (
+                    <FormItem>
+                      <FormLabel>Data de Início *</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            {selectedDate
+                              ? format(selectedDate, "dd/MM/yyyy", { locale: ptBR })
+                              : "Selecionar data"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={handleSelect}
+                            initialFocus
+                            locale={ptBR}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
 
               <FormField
                 control={form.control}
                 name="dat_termino"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Data de Término *</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="date"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const selectedDate = field.value
+                    ? (() => {
+                        const [y, m, d] = field.value.split('-').map(Number);
+                        return new Date(y, m - 1, d);
+                      })()
+                    : undefined;
+
+                  const handleSelect = (date?: Date) => {
+                    if (!date) return;
+                    const isoDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                    // Se já há data de início, impedir seleção anterior a ela, mas permitir igual
+                    const inicioStr = form.getValues('dat_inicio');
+                    if (inicioStr) {
+                      const [yi, mi, di] = inicioStr.split('-').map(Number);
+                      const inicio = new Date(yi, mi - 1, di);
+                      const termino = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                      if (termino < inicio) {
+                        form.setError('dat_termino', { message: 'Data de término não pode ser anterior à data de início' });
+                        return;
+                      } else {
+                        form.clearErrors('dat_termino');
+                      }
+                    }
+                    field.onChange(isoDate);
+                  };
+
+                  return (
+                    <FormItem>
+                      <FormLabel>Data de Término *</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            {selectedDate
+                              ? format(selectedDate, "dd/MM/yyyy", { locale: ptBR })
+                              : "Selecionar data"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={handleSelect}
+                            initialFocus
+                            locale={ptBR}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
             </div>
 

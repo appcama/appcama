@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Plus, TrendingUp, Edit, Power, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { offlineDB } from "@/lib/offline-db";
 import { useToast } from "@/hooks/use-toast";
 
 interface Indicador {
@@ -18,6 +19,7 @@ interface Indicador {
     des_unidade_medida: string;
     cod_unidade_medida: string;
   };
+  _offline?: boolean;
 }
 
 interface IndicadorListProps {
@@ -57,9 +59,28 @@ export function IndicadorList({ onEdit, onNew }: IndicadorListProps) {
         console.error("[IndicadorList] Supabase error:", error);
         throw error;
       }
-      
-      console.log("[IndicadorList] Successfully fetched indicadores:", data?.length || 0);
-      setIndicadores(data || []);
+
+      // Carregar itens criados offline (pendentes) e mesclar na listagem
+      let mergedIndicadores: Indicador[] = data || [];
+      try {
+        const pendingOps = await offlineDB.getPendingOperations();
+        const offlineCreates = pendingOps.filter(op => op.table === 'indicador' && op.type === 'CREATE' && op.status !== 'COMPLETED');
+        const offlineItems: Indicador[] = offlineCreates.map(op => ({
+          id_indicador: -(op.id || Date.now()),
+          nom_indicador: op.data?.nom_indicador || '(sem nome)',
+          id_unidade_medida: op.data?.id_unidade_medida ?? 0,
+          des_status: op.data?.des_status ?? 'A',
+          unidade_medida: undefined,
+          _offline: true,
+        }));
+        mergedIndicadores = [...mergedIndicadores, ...offlineItems];
+        console.log('[IndicadorList] Offline pendentes adicionados:', offlineItems.length);
+      } catch (offErr) {
+        console.warn('[IndicadorList] Falha ao carregar itens offline pendentes:', offErr);
+      }
+
+      console.log("[IndicadorList] Total itens na listagem:", mergedIndicadores.length);
+      setIndicadores(mergedIndicadores);
     } catch (error) {
       console.error('[IndicadorList] Error fetching indicadores:', error);
       toast({
@@ -109,7 +130,8 @@ export function IndicadorList({ onEdit, onNew }: IndicadorListProps) {
 
   const filteredIndicadores = indicadores.filter(indicador =>
     indicador.nom_indicador?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    indicador.unidade_medida?.des_unidade_medida?.toLowerCase().includes(searchTerm.toLowerCase())
+    indicador.unidade_medida?.des_unidade_medida?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (indicador._offline && 'pendente'.includes(searchTerm.toLowerCase()))
   );
 
   if (loading) {
@@ -175,11 +197,13 @@ export function IndicadorList({ onEdit, onNew }: IndicadorListProps) {
                     </TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        indicador.des_status === 'A' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
+                        indicador._offline
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : indicador.des_status === 'A' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
                       }`}>
-                        {indicador.des_status === 'A' ? 'Ativo' : 'Inativo'}
+                        {indicador._offline ? 'Pendente' : (indicador.des_status === 'A' ? 'Ativo' : 'Inativo')}
                       </span>
                     </TableCell>
                     <TableCell>

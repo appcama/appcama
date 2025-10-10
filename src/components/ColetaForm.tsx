@@ -1,16 +1,19 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Trash2, Edit } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Edit, Package, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useOfflineForm } from '@/hooks/useOfflineForm';
 import { ColetaResiduoForm } from './ColetaResiduoForm';
 import { useAuth } from '@/hooks/useAuth';
+import { ptBR } from 'date-fns/locale';
 
 interface PontoColeta {
   id_ponto_coleta: number;
@@ -87,6 +90,56 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
     cod_coleta: '',
   });
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+
+  // Estados e utilitários para máscara/validação de data (DD/MM/AAAA)
+  const today = new Date();
+  const pad2 = (n: number) => String(n).padStart(2, '0');
+  const [displayDate, setDisplayDate] = useState(
+    `${pad2(today.getDate())}/${pad2(today.getMonth() + 1)}/${today.getFullYear()}`
+  );
+  const [dateError, setDateError] = useState<string | null>(null);
+
+  const maskBRDate = (input: string) => {
+    const digits = input.replace(/\D/g, '').slice(0, 8);
+    const dd = digits.slice(0, 2);
+    const mm = digits.slice(2, 4);
+    const yyyy = digits.slice(4, 8);
+    let out = dd;
+    if (mm) out += `/${mm}`;
+    if (yyyy) out += `/${yyyy}`;
+    return out;
+  };
+
+  const parseBRDate = (str: string): Date | null => {
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(str);
+    if (!m) return null;
+    const d = Number(m[1]);
+    const mo = Number(m[2]) - 1;
+    const y = Number(m[3]);
+    const date = new Date(y, mo, d);
+    if (date.getFullYear() !== y || date.getMonth() !== mo || date.getDate() !== d) return null;
+    return date;
+  };
+
+  const toISO = (date: Date) => {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const validateBRDate = (str: string): string | null => {
+    if (!str) return 'Informe a data';
+    const date = parseBRDate(str);
+    if (!date) return 'Formato inválido (DD/MM/AAAA)';
+    const today0 = new Date();
+    today0.setHours(0, 0, 0, 0);
+    const min = new Date(today0);
+    min.setDate(min.getDate() - 2);
+    if (date > today0) return 'Data não pode ser futura';
+    if (date < min) return 'Data deve estar nos últimos 2 dias';
+    return null;
+  };
 
   useEffect(() => {
     console.log('[ColetaForm] useEffect triggered with editingColeta:', editingColeta);
@@ -314,6 +367,13 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
 
       // Setar dados do form APÓS carregar os dados dos selects
       setFormData(newFormData);
+
+      // Atualizar exibição da data no formato brasileiro
+      if (newFormData.dat_coleta) {
+        const [yyyy, mm, dd] = newFormData.dat_coleta.split('-');
+        setDisplayDate(`${dd}/${mm}/${yyyy}`);
+        setDateError(null);
+      }
     } catch (error) {
       console.error('[ColetaForm] Error loading coleta editing data:', error);
     }
@@ -386,13 +446,19 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.dat_coleta || coletaResiduos.length === 0) {
+
+    // Validação específica da regra: DD/MM/AAAA e último 10 dias, sem futuro
+    const validationErr = validateBRDate(displayDate);
+    if (validationErr || !formData.dat_coleta || coletaResiduos.length === 0) {
+      const msg = validationErr
+        ? validationErr
+        : 'Preencha a data da coleta e adicione pelo menos um resíduo';
       toast({
         title: 'Erro',
-        description: 'Preencha a data da coleta e adicione pelo menos um resíduo',
+        description: msg,
         variant: 'destructive',
       });
+      setDateError(validationErr || 'Informe a data');
       return;
     }
 
@@ -518,22 +584,28 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={onBack}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Voltar
-        </Button>
-        <h1 className="text-3xl font-bold text-gray-900">
-          {editingColeta ? 'Editar Coleta' : 'Nova Coleta'}
-        </h1>
-      </div>
-
+      
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
-          <CardHeader>
-            <CardTitle>Dados da Coleta</CardTitle>
+          <CardHeader className="flex flex-row items-center space-y-0 pb-4">
+            <Button
+              variant="ghost"
+              onClick={onBack}
+              className="mr-4 h-8 w-8 p-0"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex items-center space-x-2">
+              <Package className="h-5 w-5" />
+              <div>
+                <h2 className="text-xl font-semibold">
+                  {editingColeta ? 'Editar Coleta' : 'Nova Coleta'}
+                </h2>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            <h3 className="text-lg font-semibold">Dados da Coleta</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="cod_coleta">Código da Coleta *</Label>
@@ -547,13 +619,74 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
               </div>
               <div>
                 <Label htmlFor="dat_coleta">Data da Coleta *</Label>
-                <Input
-                  id="dat_coleta"
-                  type="date"
-                  value={formData.dat_coleta}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dat_coleta: e.target.value }))}
-                  required
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Input
+                      id="dat_coleta"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="DD/MM/AAAA"
+                      maxLength={10}
+                      value={displayDate}
+                      onChange={(e) => {
+                        const formatted = maskBRDate(e.target.value);
+                        setDisplayDate(formatted);
+                        const err = validateBRDate(formatted);
+                        setDateError(err);
+                        if (!err) {
+                          const d = parseBRDate(formatted)!;
+                          setFormData(prev => ({ ...prev, dat_coleta: toISO(d) }));
+                        } else {
+                          setFormData(prev => ({ ...prev, dat_coleta: '' }));
+                        }
+                      }}
+                      required
+                    />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <div className="p-3">
+                      <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
+                        <CalendarIcon className="h-4 w-4" />
+                        <span>Selecione a data da coleta</span>
+                      </div>
+                      <Calendar
+                        mode="single"
+                        selected={(() => {
+                          if (!formData.dat_coleta) return undefined;
+                          const [y, m, d] = formData.dat_coleta.split('-').map(Number);
+                          return new Date(y, m - 1, d);
+                        })()}
+                        onSelect={(date) => {
+                          if (!date) return;
+                          const dd = String(date.getDate()).padStart(2, '0');
+                          const mm = String(date.getMonth() + 1).padStart(2, '0');
+                          const yyyy = date.getFullYear();
+                          const br = `${dd}/${mm}/${yyyy}`;
+                          const err = validateBRDate(br);
+                          setDisplayDate(br);
+                          setDateError(err);
+                          if (!err) {
+                            setFormData(prev => ({ ...prev, dat_coleta: toISO(date) }));
+                          } else {
+                            setFormData(prev => ({ ...prev, dat_coleta: '' }));
+                          }
+                        }}
+                        initialFocus
+                        locale={ptBR}
+                        disabled={(date) => {
+                          const today0 = new Date();
+                          today0.setHours(0, 0, 0, 0);
+                          const min = new Date(today0);
+                          min.setDate(min.getDate() - 2);
+                          return date > today0 || date < min;
+                        }}
+                      />
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                {dateError && (
+                  <p className="text-red-600 text-sm mt-1">{dateError}</p>
+                )}
               </div>
             </div>
 
@@ -735,7 +868,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
           </Button>
           <Button 
             type="submit" 
-            disabled={loading || coletaResiduos.length === 0}
+            disabled={loading || coletaResiduos.length === 0 || !!dateError || !formData.dat_coleta}
             className="bg-green-600 hover:bg-green-700 text-white"
           >
             {loading ? 'Salvando...' : (editingColeta ? 'Atualizar' : 'Salvar')}

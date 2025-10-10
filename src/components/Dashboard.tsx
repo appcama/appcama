@@ -56,7 +56,13 @@ const formatPercentage = (percentage: number) => {
 export function Dashboard() {
   const [filters, setFilters] = useState<DashboardFilters>({
     dataInicial: new Date().getFullYear() + "-01-01",
-    dataFinal: new Date().getFullYear() + "-12-31",
+    dataFinal: (() => {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    })(),
   });
 
   const { data, isLoading, error } = useDashboardData(filters);
@@ -72,7 +78,14 @@ export function Dashboard() {
   return (
     <div className="p-4 sm:p-6 space-y-6">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Reciclômetro e Ecoindicadores do RcyclaÊ</h1>
+        <div className="flex items-center gap-3 sm:gap-4 flex-nowrap">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">Reciclômetro e Ecoindicadores do RcyclaÊ</h1>
+          <img
+            src="/rodapecama.png"
+            alt="Marca institucional - Ministério e Governo"
+            className="h-16 sm:h-20 md:h-24 w-auto object-contain shrink-0"
+          />
+        </div>
         <p className="text-muted-foreground">
           Visão geral do sistema de controle de reciclagem
         </p>

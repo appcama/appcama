@@ -14,7 +14,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOfflineForm } from "@/hooks/useOfflineForm";
 
 const residuoSchema = z.object({
-  nom_residuo: z.string().min(1, "Nome do resíduo é obrigatório"),
+  nom_residuo: z
+    .string()
+    .min(1, "Nome do resíduo é obrigatório")
+    .max(30, "Nome do resíduo deve ter no máximo 30 caracteres"),
   id_tipo_residuo: z.number({ required_error: "Tipo de resíduo é obrigatório" }),
 });
 
@@ -190,6 +193,7 @@ export function ResiduoForm({ onBack, onSuccess, editingResiduo }: ResiduoFormPr
                       <FormControl>
                         <Input 
                           placeholder="Digite o nome do resíduo" 
+                          maxLength={25}
                           {...field} 
                         />
                       </FormControl>

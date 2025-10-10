@@ -118,7 +118,13 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
 
   const getCurrentYearDates = () => ({
     dataInicial: `${new Date().getFullYear()}-01-01`,
-    dataFinal: `${new Date().getFullYear()}-12-31`,
+    dataFinal: (() => {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    })(),
   });
 
   const validateDates = (inicial: Date | undefined, final: Date | undefined): boolean => {
@@ -287,6 +293,7 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
                   mode="single"
                   selected={dataInicial}
                   onSelect={handleDataInicialChange}
+                  locale={ptBR}
                   initialFocus
                   className="p-3 pointer-events-auto"
                 />
@@ -316,6 +323,7 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
                   selected={dataFinal}
                   onSelect={handleDataFinalChange}
                   disabled={(date) => dataInicial ? date < dataInicial : false}
+                  locale={ptBR}
                   initialFocus
                   className="p-3 pointer-events-auto"
                 />
@@ -334,7 +342,7 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-2 mt-4">
-          <Button onClick={handleApplyFilters} disabled={!!dateError} className="flex items-center gap-2">
+          <Button onClick={handleApplyFilters} disabled={!!dateError} className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white">
             <Filter className="h-4 w-4" />
             Aplicar Filtros
           </Button>
