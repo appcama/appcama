@@ -1,4 +1,4 @@
-// Service Worker Registration with Auto-Update
+// Service Worker Registration with Auto-Update (Hybrid Approach)
 export function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -6,11 +6,19 @@ export function registerServiceWorker() {
         .then((registration) => {
           console.log('[SW] Service Worker registered successfully:', registration.scope);
           
-          // Check for updates every 30 minutes
+          // Check for updates every 5 minutes (more aggressive)
           setInterval(() => {
-            console.log('[SW] Verificando atualizações...');
+            console.log('[SW] Verificando atualizações (5min)...');
             registration.update();
-          }, 30 * 60 * 1000);
+          }, 5 * 60 * 1000);
+
+          // Check for updates when user returns to tab
+          document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && registration) {
+              console.log('[SW] Tab visível, verificando atualizações...');
+              registration.update();
+            }
+          });
 
           // Check for updates on registration
           registration.addEventListener('updatefound', () => {
@@ -20,15 +28,15 @@ export function registerServiceWorker() {
             if (newWorker) {
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('[SW] Nova versão instalada, aplicando atualização...');
+                  console.log('[SW] Nova versão instalada, notificando usuário...');
                   
-                  // Notificar o novo service worker para assumir controle
+                  // Dispatch custom event for update banner
+                  window.dispatchEvent(new CustomEvent('sw-update-available', {
+                    detail: { registration, newWorker }
+                  }));
+                  
+                  // Force skip waiting
                   newWorker.postMessage({ type: 'SKIP_WAITING' });
-                  
-                  // Mostrar mensagem ao usuário (opcional)
-                  if (window.confirm('Nova versão disponível! Recarregar página para atualizar?')) {
-                    window.location.reload();
-                  }
                 }
               });
             }

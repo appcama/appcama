@@ -8,6 +8,7 @@ import { PermissionsProvider } from "@/hooks/usePermissions";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { PWAPrompt } from "@/components/PWAPrompt";
+import { PWAUpdateBanner } from "@/components/PWAUpdateBanner";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import ValidatePassword from "./pages/ValidatePassword";
@@ -31,6 +32,7 @@ const App = () => (
           <div className="relative">
             <OfflineIndicator className="fixed top-4 right-4 z-50" />
             <PWAPrompt />
+            <PWAUpdateBanner />
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/validate-password" element={<ValidatePassword />} />

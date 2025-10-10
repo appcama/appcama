@@ -1,7 +1,8 @@
 // Service Worker for ReciclaE Offline Functionality
 
-const CACHE_NAME = 'recicla-e-pwa-v1.3';
-const CACHE_TIMEOUT = 3000; // 3 segundos de timeout para tentar rede
+const CACHE_VERSION = Date.now();
+const CACHE_NAME = `recicla-e-pwa-v${CACHE_VERSION}`;
+const CACHE_TIMEOUT = 5000; // 5 segundos de timeout para tentar rede
 
 const urlsToCache = [
   '/',
@@ -18,9 +19,9 @@ const urlsToCache = [
   // Dynamic assets will be cached as they're requested
 ];
 
-console.log('[SW v1.3] Service Worker carregado');
+console.log(`[SW v${CACHE_VERSION}] Service Worker carregado`);
 
-// Install event - cache resources
+// Install event - cache resources and skip waiting
 self.addEventListener('install', (event) => {
   console.log('[SW] Installing service worker...');
   event.waitUntil(
@@ -29,13 +30,17 @@ self.addEventListener('install', (event) => {
         console.log('[SW] Caching app shell');
         return cache.addAll(urlsToCache);
       })
+      .then(() => {
+        console.log('[SW] Cache criado, forçando skipWaiting');
+        return self.skipWaiting(); // Force immediate activation
+      })
       .catch((error) => {
         console.error('[SW] Error caching resources:', error);
       })
   );
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches and claim clients
 self.addEventListener('activate', (event) => {
   console.log('[SW] Activating service worker...');
   event.waitUntil(
@@ -48,6 +53,9 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
+    }).then(() => {
+      console.log('[SW] Claiming clients');
+      return self.clients.claim(); // Take control immediately
     })
   );
 });
