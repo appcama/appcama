@@ -12,6 +12,7 @@ import { useViaCep } from "@/hooks/useViaCep";
 import { applyCepMask } from "@/lib/cpf-cnpj-utils";
 import { useOfflineForm } from "@/hooks/useOfflineForm";
 import { useAuth } from "@/hooks/useAuth";
+import { MapLocationPicker } from "@/components/MapLocationPicker";
 
 interface PontoColeta {
   id_ponto_coleta: number;
@@ -340,6 +341,14 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
     }));
   };
 
+  const handleLocationChange = (lat: number, lng: number) => {
+    setFormData(prev => ({
+      ...prev,
+      num_latitude: lat,
+      num_longitude: lng
+    }));
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center gap-4">
@@ -471,33 +480,12 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
             </div>
           </div>
 
-
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="num_latitude">Latitude</Label>
-              <Input
-                id="num_latitude"
-                type="number"
-                step="any"
-                value={formData.num_latitude || ''}
-                onChange={(e) => handleInputChange('num_latitude', e.target.value ? parseFloat(e.target.value) : null)}
-                placeholder="Ex: -23.5505"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="num_longitude">Longitude</Label>
-              <Input
-                id="num_longitude"
-                type="number"
-                step="any"
-                value={formData.num_longitude || ''}
-                onChange={(e) => handleInputChange('num_longitude', e.target.value ? parseFloat(e.target.value) : null)}
-                placeholder="Ex: -46.6333"
-              />
-            </div>
-          </div>
+          <MapLocationPicker
+            address={`${formData.des_logradouro}, ${formData.des_bairro}, CEP ${formData.num_cep}`}
+            latitude={formData.num_latitude}
+            longitude={formData.num_longitude}
+            onLocationChange={handleLocationChange}
+          />
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onBack}>
