@@ -17,6 +17,20 @@ interface Coleta {
   entidade?: {
     nom_entidade: string;
     num_cpf_cnpj: string;
+    num_cep?: string;
+    des_logradouro?: string;
+    des_bairro?: string;
+    id_municipio?: number;
+    municipio?: { nom_municipio: string } | null;
+  };
+  entidade_coletora?: {
+    nom_entidade: string;
+    num_cpf_cnpj?: string;
+    num_cep?: string;
+    des_logradouro?: string;
+    des_bairro?: string;
+    id_municipio?: number;
+    municipio?: { nom_municipio: string } | null;
   };
 }
 
@@ -44,6 +58,8 @@ export function CertificadoPreviewDialog({
   const [residuosConsolidados, setResiduosConsolidados] = useState<ResiduoConsolidado[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [nomMunicipioGeradora, setNomMunicipioGeradora] = useState<string | null>(null);
+  const [nomMunicipioColetora, setNomMunicipioColetora] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -60,9 +76,31 @@ export function CertificadoPreviewDialog({
 
   // Dados da entidade
   const entidade = selectedColetas[0]?.entidade;
+  const entidadeColetora = (selectedColetas[0] as any)?.entidade_coletora;
 
   useEffect(() => {
     loadResiduos();
+    // Carregar nomes de municípios quando IDs estiverem disponíveis
+    const ids: number[] = [];
+    const geradoraIdMunicipio = selectedColetas[0]?.entidade?.id_municipio;
+    const coletoraIdMunicipio = (selectedColetas[0] as any)?.entidade_coletora?.id_municipio;
+    if (geradoraIdMunicipio) ids.push(geradoraIdMunicipio);
+    if (coletoraIdMunicipio) ids.push(coletoraIdMunicipio);
+
+    if (ids.length > 0) {
+      supabase
+        .from('municipio')
+        .select('id_municipio, nom_municipio')
+        .in('id_municipio', ids)
+        .then(({ data, error }) => {
+          if (!error && data) {
+            const map = new Map(data.map((m: any) => [m.id_municipio, m.nom_municipio]));
+            if (geradoraIdMunicipio) setNomMunicipioGeradora(map.get(geradoraIdMunicipio) || null);
+            if (coletoraIdMunicipio) setNomMunicipioColetora(map.get(coletoraIdMunicipio) || null);
+          }
+        })
+        .catch(() => {});
+    }
   }, [selectedColetaIds]);
 
   const loadResiduos = async () => {
@@ -227,16 +265,41 @@ export function CertificadoPreviewDialog({
         <div className="space-y-6">
           {/* Informações Gerais */}
           <div className="grid grid-cols-2 gap-4">
+            {/* Entidade Coletora (à esquerda) */}
             <div>
-              <Label className="text-sm font-semibold text-gray-600">Período</Label>
-              <p className="text-sm">{formatDate(datPeriodoInicio)} até {formatDate(datPeriodoFim)}</p>
+              <Label className="text-sm font-semibold text-gray-600">Entidade Coletora</Label>
+              <p className="text-sm">{entidadeColetora?.nom_entidade || '-'}</p>
+              <p className="text-xs text-gray-500">{entidadeColetora?.num_cpf_cnpj || '-'}</p>
+              <div className="mt-1 space-y-0.5 text-xs text-gray-600">
+                <div>CEP: {entidadeColetora?.num_cep || '-'}</div>
+                <div>Logradouro: {entidadeColetora?.des_logradouro || '-'}</div>
+                <div>Bairro: {entidadeColetora?.des_bairro || '-'}</div>
+                <div>Município: {nomMunicipioColetora || entidadeColetora?.municipio?.nom_municipio || '-'}</div>
+              </div>
             </div>
+            {/* Entidade Geradora (à direita) */}
             <div>
               <Label className="text-sm font-semibold text-gray-600">Entidade Geradora</Label>
               <p className="text-sm">{entidade?.nom_entidade}</p>
               <p className="text-xs text-gray-500">{entidade?.num_cpf_cnpj}</p>
+              <div className="mt-1 space-y-0.5 text-xs text-gray-600">
+                <div>CEP: {entidade?.num_cep || '-'}</div>
+                <div>Logradouro: {entidade?.des_logradouro || '-'}</div>
+                <div>Bairro: {entidade?.des_bairro || '-'}</div>
+                <div>Município: {nomMunicipioGeradora || entidade?.municipio?.nom_municipio || '-'}</div>
+              </div>
+            </div>
+            {/* Período abaixo, ocupando largura total */}
+            <div className="col-span-2">
+              <Label className="text-sm font-semibold text-gray-600">Período</Label>
+              <p className="text-sm">{formatDate(datPeriodoInicio)} até {formatDate(datPeriodoFim)}</p>
             </div>
           </div>
+
+          {/* Texto explicativo entre entidades e resíduos */}
+          <p className="text-sm text-gray-600">
+            A Entidade Coletora acima certifica que recebeu e/ou coletou, do Gerador, no período especificado, os resíduos sólidos listados abaixo, destinados ao tratamento por meio de reciclagem.
+          </p>
 
           {/* Coletas Incluídas */}
           <div>

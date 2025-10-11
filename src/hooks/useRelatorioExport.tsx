@@ -229,78 +229,200 @@ export function useRelatorioExport() {
     setIsExporting(true);
     try {
       const doc = new jsPDF();
+      doc.setLineHeightFactor(1.15);
       const pageWidth = doc.internal.pageSize.width;
-      let yPosition = 20;
+      const pageHeight = doc.internal.pageSize.height;
+      const leftMargin = 14;
+      const topMargin = 20;
+      const logoSize = 30;
+      const headerSpacing = 35; // espaço vertical adicional abaixo do logo para títulos
+      const contentTop = topMargin + logoSize + headerSpacing; // início do conteúdo abaixo do cabeçalho
+      const bottomReserved = 60; // área reservada para QR/validação
+      const safeContentBottom = pageHeight - bottomReserved - 10; // limite seguro para conteúdo
+      let yPosition = contentTop;
+
+      // Metadados do documento
+      doc.setProperties({
+        title: `Certificado ${certificado.cod_validador}`,
+        subject: 'Certificado de coleta de resíduos recicláveis',
+        author: 'ReciclaE',
+        keywords: 'Reciclagem, Certificado, Coleta, Resíduos, ReciclaE',
+        creator: 'ReciclaE'
+      });
 
       // Adicionar logo da entidade no canto superior esquerdo
       const logoUrl = certificado.entidade?.des_logo_url;
-      if (logoUrl) {
-        try {
-          doc.addImage(logoUrl, 'PNG', 14, yPosition, 30, 30);
-        } catch (error) {
-          console.warn('Erro ao carregar logo da entidade, usando logo padrão');
-          try {
-            doc.addImage('/logo-original.png', 'PNG', 14, yPosition, 30, 30);
-          } catch {
-            // Continuar sem logo se ambos falharem
-          }
+      let logoForHeader: string | null = null;
+      try {
+        logoForHeader = logoUrl || '/logo-original.png';
+      } catch {
+        logoForHeader = null;
+      }
+
+      // QR Code e Link de Validação (gerar antes para reutilizar)
+      const validationUrl = `${window.location.origin}/validar-certificado/${certificado.cod_validador}`;
+      let qrCodeDataUrl: string | null = null;
+      const qrSize = Math.round(Math.max(28, Math.min(42, pageWidth * 0.09)));
+      try {
+        qrCodeDataUrl = await QRCode.toDataURL(validationUrl, {
+          width: 200,
+          margin: 1,
+          errorCorrectionLevel: 'M',
+        });
+      } catch (qrError) {
+        console.error('Erro ao gerar QR Code, usando rodapé sem QR:', qrError);
+        qrCodeDataUrl = null;
+      }
+
+      // Desenhar cabeçalho/rodapé em todas as páginas
+      const drawHeaderFooter = () => {
+        // Cabeçalho
+        if (logoForHeader) {
+          try { doc.addImage(logoForHeader, 'PNG', leftMargin, topMargin, logoSize, logoSize); } catch {}
         }
-      } else {
-        // Logo padrão
-        try {
-          doc.addImage('/logo-original.png', 'PNG', 14, yPosition, 30, 30);
-        } catch (error) {
-          // Continuar sem logo se falhar
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(18);
+        doc.setTextColor(40, 40, 40);
+        doc.text('CERTIFICADO DE COLETA DE RESÍDUOS RECICLÁVEIS', pageWidth / 2, topMargin + logoSize + 8, { align: 'center' });
+        doc.setFontSize(14);
+        doc.setTextColor(46, 204, 113);
+        doc.text(`Código: ${certificado.cod_validador}`, pageWidth / 2, topMargin + logoSize + 20, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        // Removido: "Emitido em" no cabeçalho. Será exibido abaixo do link de validação no rodapé.
+
+        // Rodapé (área de validação)
+        const footerY = pageHeight - bottomReserved + 10;
+        if (qrCodeDataUrl) {
+          try { doc.addImage(qrCodeDataUrl, 'PNG', pageWidth - (leftMargin + qrSize + 1), footerY, qrSize, qrSize); } catch {}
+        }
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(40, 40, 40);
+        doc.text('VALIDAÇÃO PÚBLICA', leftMargin, footerY + 5);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Escaneie o QR Code ou acesse:', leftMargin, footerY + 11);
+        doc.setFontSize(7);
+        doc.setTextColor(0, 0, 255);
+        doc.textWithLink(validationUrl, leftMargin, footerY + 17, { url: validationUrl });
+        // "Emitido em" abaixo do link de validação pública
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Emitido em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, leftMargin, footerY + 24);
+        // Linha separadora reposicionada para não sobrepor o QR Code
+        const lineY = footerY + qrSize + 6;
+        doc.setDrawColor(200, 200, 200);
+        doc.line(leftMargin, lineY, pageWidth - leftMargin, lineY);
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Este certificado comprova que os resíduos listados foram coletados e destinados adequadamente.', pageWidth / 2, lineY + 5, { align: 'center' });
+        doc.text(`Código de Validação: ${certificado.cod_validador}`, pageWidth / 2, lineY + 10, { align: 'center' });
+      };
+
+      // Cabeçalho/rodapé da primeira página
+      drawHeaderFooter();
+      // Buscar entidade coletora (usuário criador do certificado)
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: usuarioCriador } = await supabase
+        .from('usuario')
+        .select('id_usuario, entidade:id_entidade(nom_entidade, num_cpf_cnpj, num_cep, des_logradouro, des_bairro, id_municipio)')
+        .eq('id_usuario', certificado.id_usuario_criador)
+        .single();
+      const entidadeColetora = usuarioCriador?.entidade;
+      const entidadeColetoraIdMunicipio = entidadeColetora?.id_municipio || null;
+
+      // Buscar dados da entidade geradora a partir de uma coleta do certificado
+      const { data: coletaGeradora } = await supabase
+        .from('coleta')
+        .select('id_coleta, entidade:id_entidade_geradora(nom_entidade, num_cpf_cnpj, num_cep, des_logradouro, des_bairro, id_municipio)')
+        .eq('id_certificado', certificado.id_certificado)
+        .eq('des_status', 'A')
+        .limit(1)
+        .single();
+      const entidadeGeradora = coletaGeradora?.entidade;
+      const entidadeGeradoraIdMunicipio = entidadeGeradora?.id_municipio || null;
+
+      // Buscar nomes de municípios para coletora e geradora
+      let nomMunicipioColetora: string | null = null;
+      let nomMunicipioGeradora: string | null = null;
+      const municipioIds = [entidadeColetoraIdMunicipio, entidadeGeradoraIdMunicipio].filter(Boolean) as number[];
+      if (municipioIds.length > 0) {
+        const { data: municipios } = await supabase
+          .from('municipio')
+          .select('id_municipio, nom_municipio')
+          .in('id_municipio', municipioIds);
+        if (municipios) {
+          const map = new Map(municipios.map((m: any) => [m.id_municipio, m.nom_municipio]));
+          if (entidadeColetoraIdMunicipio) nomMunicipioColetora = map.get(entidadeColetoraIdMunicipio) || null;
+          if (entidadeGeradoraIdMunicipio) nomMunicipioGeradora = map.get(entidadeGeradoraIdMunicipio) || null;
         }
       }
 
-      // Cabeçalho
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(18);
-      doc.setTextColor(40, 40, 40);
-      doc.text('CERTIFICADO DE COLETA DE RESÍDUOS RECICLÁVEIS', pageWidth / 2, yPosition + 10, { align: 'center' });
-      yPosition += 40;
+      // Blocos lado a lado: Coletora (esquerda) e Geradora (direita)
+      const colGap = 6;
+      const colWidth = (pageWidth - (leftMargin * 2) - colGap) / 2;
+      let yLeft = yPosition;
+      let yRight = yPosition;
 
-      // Código Validador em destaque
-      doc.setFontSize(14);
-      doc.setTextColor(46, 204, 113);
-      doc.text(`Código: ${certificado.cod_validador}`, pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 15;
-
-      // Data de emissão
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.text(`Emitido em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 20;
-
-      // Dados da Entidade
+      // Coluna Esquerda — Entidade Coletora
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(12);
       doc.setTextColor(40, 40, 40);
-      doc.text('DADOS DA ENTIDADE GERADORA', 14, yPosition);
-      yPosition += 10;
+      doc.text('DADOS DA ENTIDADE COLETORA', leftMargin, yLeft);
+      yLeft += 10;
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
-      const entidadeData = [
-        ['Entidade:', certificado.entidade?.nom_entidade || '-'],
-        ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
-        ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+      const coletoraData = [
+        ['Entidade:', entidadeColetora?.nom_entidade || '-'],
+        ['CPF/CNPJ:', entidadeColetora?.num_cpf_cnpj || '-'],
+        ['CEP:', entidadeColetora?.num_cep || '-'],
+        ['Logradouro:', entidadeColetora?.des_logradouro || '-'],
+        ['Bairro:', entidadeColetora?.des_bairro || '-'],
+        ['Município:', nomMunicipioColetora || '-'],
       ];
-
-      entidadeData.forEach(([label, value]) => {
+      coletoraData.forEach(([label, value]) => {
         doc.setFont('helvetica', 'bold');
-        doc.text(label, 14, yPosition);
+        doc.text(label, leftMargin, yLeft);
         doc.setFont('helvetica', 'normal');
-        doc.text(value, 50, yPosition);
-        yPosition += 7;
+        doc.text(value, leftMargin + 36, yLeft);
+        yLeft += 7;
       });
 
-      yPosition += 10;
+      // Coluna Direita — Entidade Geradora
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(40, 40, 40);
+      doc.text('DADOS DA ENTIDADE GERADORA', leftMargin + colWidth + colGap, yRight);
+      yRight += 10;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      const geradoraData = [
+        ['Entidade:', (entidadeGeradora?.nom_entidade || certificado.entidade?.nom_entidade) || '-'],
+        ['CPF/CNPJ:', (entidadeGeradora?.num_cpf_cnpj || certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador) || '-'],
+        ['CEP:', entidadeGeradora?.num_cep || '-'],
+        ['Logradouro:', entidadeGeradora?.des_logradouro || '-'],
+        ['Bairro:', entidadeGeradora?.des_bairro || '-'],
+        ['Município:', nomMunicipioGeradora || '-'],
+      ];
+      geradoraData.forEach(([label, value]) => {
+        doc.setFont('helvetica', 'bold');
+        doc.text(label, leftMargin + colWidth + colGap, yRight);
+        doc.setFont('helvetica', 'normal');
+        doc.text(value, leftMargin + colWidth + colGap + 36, yRight);
+        yRight += 7;
+      });
+
+      // Atualizar yPosition abaixo do bloco mais alto
+      yPosition = Math.max(yLeft, yRight) + 10;
 
       // Buscar resíduos do certificado
-      const { supabase } = await import('@/integrations/supabase/client');
       const { data: residuos } = await supabase
         .from('certificado_residuo')
         .select('nom_residuo, qtd_total, vlr_total')
@@ -308,9 +430,27 @@ export function useRelatorioExport() {
         .order('qtd_total', { ascending: false });
 
       // Tabela de Resíduos
+      // Texto explicativo entre o bloco das entidades e a tabela
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(80, 80, 80);
+      const textoExplicativo = 'A Entidade Coletora acima certifica que recebeu e/ou coletou, do Gerador, no período especificado, os resíduos sólidos listados abaixo, destinados ao tratamento por meio de reciclagem.';
+      const textoQuebrado = doc.splitTextToSize(textoExplicativo, pageWidth - (leftMargin * 2));
+      doc.text(textoQuebrado, leftMargin, yPosition);
+      yPosition += (textoQuebrado.length * 5) + 8;
+
+      // Tabela de Resíduos
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(12);
-      doc.text('RESÍDUOS COLETADOS', 14, yPosition);
+      // Antes de iniciar a tabela, garantir que estamos longe do rodapé reservado
+      if (yPosition > safeContentBottom) {
+        doc.addPage();
+        drawHeaderFooter();
+        yPosition = contentTop;
+      }
+
+      const periodoLabel = `Período: ${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`;
+      doc.text(`RESÍDUOS COLETADOS - ${periodoLabel}`, leftMargin, yPosition);
       yPosition += 8;
 
       const residuosData = (residuos || []).map((r: any) => [
@@ -340,122 +480,63 @@ export function useRelatorioExport() {
           textColor: [40, 40, 40],
           fontStyle: 'bold'
         },
-        margin: { left: 14, right: 14 }
+        margin: { left: leftMargin, right: leftMargin, top: contentTop - 4, bottom: bottomReserved },
+        didDrawPage: () => {
+          drawHeaderFooter();
+        }
       });
 
       yPosition = (doc as any).lastAutoTable.finalY + 15;
 
+      // Se após a tabela estamos próximos do rodapé reservado, avançar página
+      if (yPosition > safeContentBottom) {
+        doc.addPage();
+        drawHeaderFooter();
+        yPosition = contentTop;
+      }
+
       // Coletas incluídas
       if (certificado.coletas && certificado.coletas.length > 0) {
-        if (yPosition > 220) {
+        if (yPosition > safeContentBottom) {
           doc.addPage();
-          yPosition = 20;
+          drawHeaderFooter();
+          yPosition = contentTop;
         }
 
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
-        doc.text('COLETAS INCLUÍDAS', 14, yPosition);
+        doc.text('COLETAS INCLUÍDAS', leftMargin, yPosition);
         yPosition += 8;
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
         const coletasCodes = certificado.coletas.map((c: any) => c.cod_coleta).join(', ');
-        const splitText = doc.splitTextToSize(coletasCodes, pageWidth - 28);
-        doc.text(splitText, 14, yPosition);
+        const splitText = doc.splitTextToSize(coletasCodes, pageWidth - (leftMargin * 2));
+        doc.text(splitText, leftMargin, yPosition);
         yPosition += splitText.length * 5 + 10;
       }
 
       // Observações
       if (certificado.observacoes) {
-        if (yPosition > 220) {
+        if (yPosition > safeContentBottom) {
           doc.addPage();
-          yPosition = 20;
+          drawHeaderFooter();
+          yPosition = contentTop;
         }
 
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
-        doc.text('OBSERVAÇÕES', 14, yPosition);
+        doc.text('OBSERVAÇÕES', leftMargin, yPosition);
         yPosition += 8;
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
-        const splitObs = doc.splitTextToSize(certificado.observacoes, pageWidth - 28);
-        doc.text(splitObs, 14, yPosition);
+        const splitObs = doc.splitTextToSize(certificado.observacoes, pageWidth - (leftMargin * 2));
+        doc.text(splitObs, leftMargin, yPosition);
         yPosition += splitObs.length * 5 + 10;
       }
 
-      // QR Code e Link de Validação
-      const footerY = doc.internal.pageSize.height - 50;
-      const validationUrl = `${window.location.origin}/validar-certificado/${certificado.cod_validador}`;
-      
-      console.log('🔍 Iniciando geração de QR Code para:', validationUrl);
-      
-      try {
-        // Gerar QR Code
-        console.log('📱 Gerando QR Code...');
-        const qrCodeDataUrl = await QRCode.toDataURL(validationUrl, {
-          width: 200,
-          margin: 1,
-          errorCorrectionLevel: 'M',
-        });
-        
-        console.log('✅ QR Code gerado com sucesso');
-        
-        // Adicionar QR Code no canto inferior direito
-        const qrSize = 35;
-        doc.addImage(qrCodeDataUrl, 'PNG', pageWidth - 50, footerY, qrSize, qrSize);
-        
-        console.log('✅ QR Code adicionado ao PDF');
-        
-        // Texto de validação ao lado do QR Code
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.setTextColor(40, 40, 40);
-        doc.text('VALIDAÇÃO PÚBLICA', 14, footerY + 5);
-        
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        doc.setTextColor(100, 100, 100);
-        doc.text('Escaneie o QR Code ou acesse:', 14, footerY + 11);
-        
-        // Link clicável
-        doc.setFontSize(7);
-        doc.setTextColor(0, 0, 255);
-        doc.textWithLink(validationUrl, 14, footerY + 17, { url: validationUrl });
-        
-        // Linha separadora
-        doc.setDrawColor(200, 200, 200);
-        doc.line(14, footerY + 22, pageWidth - 14, footerY + 22);
-        
-        // Informações finais
-        doc.setFont('helvetica', 'italic');
-        doc.setFontSize(8);
-        doc.setTextColor(100, 100, 100);
-        doc.text('Este certificado comprova que os resíduos listados foram coletados e destinados adequadamente.', pageWidth / 2, footerY + 27, { align: 'center' });
-        doc.text(`Código de Validação: ${certificado.cod_validador}`, pageWidth / 2, footerY + 32, { align: 'center' });
-        doc.setFontSize(7);
-        doc.text('Este documento possui validade jurídica e pode ser verificado através do link ou QR Code acima.', pageWidth / 2, footerY + 37, { align: 'center' });
-        
-      } catch (qrError) {
-        console.error('❌ ERRO ao gerar QR Code:', qrError);
-        console.error('❌ Tipo do erro:', typeof qrError);
-        console.error('❌ Detalhes:', qrError);
-        
-        // Fallback sem QR Code
-        doc.setDrawColor(200, 200, 200);
-        doc.line(14, footerY, pageWidth - 14, footerY);
-        
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(100, 100, 100);
-        doc.text('Este certificado comprova que os resíduos listados foram coletados e destinados adequadamente.', pageWidth / 2, footerY + 5, { align: 'center' });
-        doc.text(`Código de Validação: ${certificado.cod_validador}`, pageWidth / 2, footerY + 11, { align: 'center' });
-        
-        // Adicionar mensagem de erro no PDF para debug
-        doc.setFontSize(7);
-        doc.setTextColor(255, 0, 0);
-        doc.text('(QR Code não pôde ser gerado - veja o console)', pageWidth / 2, footerY + 17, { align: 'center' });
-      }
+      // Cabeçalho/rodapé já são desenhados por drawHeaderFooter e pelo didDrawPage.
 
       // Download
       const fileName = `Certificado_${certificado.cod_validador}.pdf`;
@@ -802,3 +883,312 @@ function convertToCSV(data: any[][], title: string, filters: RelatorioFiltersTyp
 
   return '\uFEFF' + csvRows.join('\n'); // BOM para UTF-8
 }
+/*
+doc.setFont('helvetica', 'normal');
+ doc.setFontSize(10);
+      // Buscar dados da entidade geradora a partir de uma coleta do certificado
+      const { data: coletaGeradora } = await supabase
+        .from('coleta')
+        .select('id_coleta, entidade:id_entidade_geradora(nom_entidade, num_cpf_cnpj, num_cep, des_logradouro, des_bairro, id_municipio)')
+        .eq('id_certificado', certificado.id_certificado)
+        .eq('des_status', 'A')
+        .limit(1)
+        .single();
+      const entidadeGeradora = coletaGeradora?.entidade;
+      const entidadeGeradoraIdMunicipio = entidadeGeradora?.id_municipio || null;
+      const geradoraData = [
+        ['Entidade:', entidadeGeradora?.nom_entidade || certificado.entidade?.nom_entidade || '-'],
+        ['CPF/CNPJ:', entidadeGeradora?.num_cpf_cnpj || certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
+        ['CEP:', entidadeGeradora?.num_cep || '-'],
+        ['Logradouro:', entidadeGeradora?.des_logradouro || '-'],
+        ['Bairro:', entidadeGeradora?.des_bairro || '-'],
+        ['Município:', ''],
+      ];
+
+      // Buscar nomes de municípios para coletora e geradora
+      let nomMunicipioColetora: string | null = null;
+      let nomMunicipioGeradora: string | null = null;
+      const municipioIds = [entidadeColetoraIdMunicipio, entidadeGeradoraIdMunicipio].filter(Boolean) as number[];
+      if (municipioIds.length > 0) {
+        const { data: municipios } = await supabase
+          .from('municipio')
+          .select('id_municipio, nom_municipio')
+          .in('id_municipio', municipioIds);
+        if (municipios) {
+          const map = new Map(municipios.map((m: any) => [m.id_municipio, m.nom_municipio]));
+          if (entidadeColetoraIdMunicipio) nomMunicipioColetora = map.get(entidadeColetoraIdMunicipio) || null;
+          if (entidadeGeradoraIdMunicipio) nomMunicipioGeradora = map.get(entidadeGeradoraIdMunicipio) || null;
+        }
+      }
+
+      // Preencher Município nas listas
+      coletoraData[5][1] = nomMunicipioColetora || '-';
+      geradoraData[5][1] = nomMunicipioGeradora || '-';
+geradoraData.forEach(([label, value]) => {
+  doc.setFont('helvetica', 'bold');
+  doc.text(label, leftMargin + colWidth + colGap, yRight);
+  doc.setFont('helvetica', 'normal');
+  doc.text(value, leftMargin + colWidth + colGap + 36, yRight);
+  yRight += 7;
+});
+
+// Atualizar yPosition abaixo do bloco mais alto
+ yPosition = Math.max(yLeft, yRight) + 10;
+
+doc.setFont('helvetica', 'normal');
+ doc.setFontSize(10);
+const geradoraData = [
+  ['Entidade:', certificado.entidade?.nom_entidade || '-'],
+  ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
+  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+];
+geradoraData.forEach(([label, value]) => {
+  doc.setFont('helvetica', 'bold');
+  doc.text(label, leftMargin + colWidth + colGap, yRight);
+  doc.setFont('helvetica', 'normal');
+  doc.text(value, leftMargin + colWidth + colGap + 36, yRight);
+  yRight += 7;
+});
+
+// Atualizar yPosition abaixo do bloco mais alto
+ yPosition = Math.max(yLeft, yRight) + 10;
+
+doc.setFont('helvetica', 'normal');
+ doc.setFontSize(10);
+const geradoraData = [
+  ['Entidade:', certificado.entidade?.nom_entidade || '-'],
+  ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
+  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+];
+geradoraData.forEach(([label, value]) => {
+  doc.setFont('helvetica', 'bold');
+  doc.text(label, leftMargin + colWidth + colGap, yRight);
+  doc.setFont('helvetica', 'normal');
+  doc.text(value, leftMargin + colWidth + colGap + 36, yRight);
+  yRight += 7;
+});
+
+// Atualizar yPosition abaixo do bloco mais alto
+ yPosition = Math.max(yLeft, yRight) + 10;
+
+doc.setFont('helvetica', 'normal');
+ doc.setFontSize(10);
+const geradoraData = [
+  ['Entidade:', certificado.entidade?.nom_entidade || '-'],
+  ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
+  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+];
+geradoraData.forEach(([label, value]) => {
+  doc.setFont('helvetica', 'bold');
+  doc.text(label, leftMargin + colWidth + colGap, yRight);
+  doc.setFont('helvetica', 'normal');
+  doc.text(value, leftMargin + colWidth + colGap + 36, yRight);
+  yRight += 7;
+});
+
+// Atualizar yPosition abaixo do bloco mais alto
+ yPosition = Math.max(yLeft, yRight) + 10;
+
+doc.setFont('helvetica', 'normal');
+ doc.setFontSize(10);
+const geradoraData = [
+  ['Entidade:', certificado.entidade?.nom_entidade || '-'],
+  ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
+  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+];
+geradoraData.forEach(([label, value]) => {
+  doc.setFont('helvetica', 'bold');
+  doc.text(label, leftMargin + colWidth + colGap, yRight);
+  doc.setFont('helvetica', 'normal');
+  doc.text(value, leftMargin + colWidth + colGap + 36, yRight);
+  yRight += 7;
+});
+
+// Atualizar yPosition abaixo do bloco mais alto
+ yPosition = Math.max(yLeft, yRight) + 10;
+
+doc.setFont('helvetica', 'normal');
+ doc.setFontSize(10);
+const geradoraData = [
+  ['Entidade:', certificado.entidade?.nom_entidade || '-'],
+  ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
+  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+];
+geradoraData.forEach(([label, value]) => {
+  doc.setFont('helvetica', 'bold');
+  doc.text(label, leftMargin + colWidth + colGap, yRight);
+  doc.setFont('helvetica', 'normal');
+  doc.text(value, leftMargin + colWidth + colGap + 36, yRight);
+  yRight += 7;
+});
+
+// Atualizar yPosition abaixo do bloco mais alto
+ yPosition = Math.max(yLeft, yRight) + 10;
+
+doc.setFont('helvetica', 'normal');
+ doc.setFontSize(10);
+const geradoraData = [
+  ['Entidade:', certificado.entidade?.nom_entidade || '-'],
+  ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
+  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+];
+geradoraData.forEach(([label, value]) => {
+  doc.setFont('helvetica', 'bold');
+  doc.text(label, leftMargin + colWidth + colGap, yRight);
+  doc.setFont('helvetica', 'normal');
+  doc.text(value, leftMargin + colWidth + colGap + 36, yRight);
+  yRight += 7;
+});
+
+// Atualizar yPosition abaixo do bloco mais alto
+ yPosition = Math.max(yLeft, yRight) + 10;
+
+doc.setFont('helvetica', 'normal');
+ doc.setFontSize(10);
+const geradoraData = [
+  ['Entidade:', certificado.entidade?.nom_entidade || '-'],
+  ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
+  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+];
+geradoraData.forEach(([label, value]) => {
+  doc.setFont('helvetica', 'bold');
+  doc.text(label, leftMargin + colWidth + colGap, yRight);
+  doc.setFont('helvetica', 'normal');
+  doc.text(value, leftMargin + colWidth + colGap + 36, yRight);
+  yRight += 7;
+});
+
+// Atualizar yPosition abaixo do bloco mais alto
+ yPosition = Math.max(yLeft, yRight) + 10;
+
+doc.setFont('helvetica', 'normal');
+ doc.setFontSize(10);
+const geradoraData = [
+  ['Entidade:', certificado.entidade?.nom_entidade || '-'],
+  ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
+  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+];
+geradoraData.forEach(([label, value]) => {
+  doc.setFont('helvetica', 'bold');
+  doc.text(label, leftMargin + colWidth + colGap, yRight);
+  doc.setFont('helvetica', 'normal');
+  doc.text(value, leftMargin + colWidth + colGap + 36, yRight);
+  yRight += 7;
+});
+
+// Atualizar yPosition abaixo do bloco mais alto
+ yPosition = Math.max(yLeft, yRight) + 10;
+
+doc.setFont('helvetica', 'normal');
+ doc.setFontSize(10);
+const geradoraData = [
+  ['Entidade:', certificado.entidade?.nom_entidade || '-'],
+  ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
+  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+];
+geradoraData.forEach(([label, value]) => {
+  doc.setFont('helvetica', 'bold');
+  doc.text(label, leftMargin + colWidth + colGap, yRight);
+  doc.setFont('helvetica', 'normal');
+  doc.text(value, leftMargin + colWidth + colGap + 36, yRight);
+  yRight += 7;
+});
+
+// Atualizar yPosition abaixo do bloco mais alto
+ yPosition = Math.max(yLeft, yRight) + 10;
+
+doc.setFont('helvetica', 'normal');
+ doc.setFontSize(10);
+const geradoraData = [
+  ['Entidade:', certificado.entidade?.nom_entidade || '-'],
+  ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
+  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+];
+geradoraData.forEach(([label, value]) => {
+  doc.setFont('helvetica', 'bold');
+  doc.text(label, leftMargin + colWidth + colGap, yRight);
+  doc.setFont('helvetica', 'normal');
+  doc.text(value, leftMargin + colWidth + colGap + 36, yRight);
+  yRight += 7;
+});
+
+// Atualizar yPosition abaixo do bloco mais alto
+ yPosition = Math.max(yLeft, yRight) + 10;
+
+doc.setFont('helvetica', 'normal');
+ doc.setFontSize(10);
+const geradoraData = [
+  ['Entidade:', certificado.entidade?.nom_entidade || '-'],
+  ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
+  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+];
+geradoraData.forEach(([label, value]) => {
+  doc.setFont('helvetica', 'bold');
+  doc.text(label, leftMargin + colWidth + colGap, yRight);
+  doc.setFont('helvetica', 'normal');
+  doc.text(value, leftMargin + colWidth + colGap + 36, yRight);
+  yRight += 7;
+});
+
+// Atualizar yPosition abaixo do bloco mais alto
+ yPosition = Math.max(yLeft, yRight) + 10;
+
+doc.setFont('helvetica', 'normal');
+ doc.setFontSize(10);
+const geradoraData = [
+  ['Entidade:', certificado.entidade?.nom_entidade || '-'],
+  ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
+  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+];
+geradoraData.forEach(([label, value]) => {
+  doc.setFont('helvetica', 'bold');
+  doc.text(label, leftMargin + colWidth + colGap, yRight);
+  doc.setFont('helvetica', 'normal');
+  doc.text(value, leftMargin + colWidth + colGap + 36, yRight);
+  yRight += 7;
+});
+
+// Atualizar yPosition abaixo do bloco mais alto
+ yPosition = Math.max(yLeft, yRight) + 10;
+
+doc.setFont('helvetica', 'normal');
+ doc.setFontSize(10);
+const geradoraData = [
+  ['Entidade:', certificado.entidade?.nom_entidade || '-'],
+  ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
+  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+];
+geradoraData.forEach(([label, value]) => {
+  doc.setFont('helvetica', 'bold');
+  doc.text(label, leftMargin + colWidth + colGap, yRight);
+  doc.setFont('helvetica', 'normal');
+  doc.text(value, leftMargin + colWidth + colGap + 36, yRight);
+  yRight += 7;
+});
+
+// Atualizar yPosition abaixo do bloco mais alto
+ yPosition = Math.max(yLeft, yRight) + 10;
+
+doc.setFont('helvetica', 'normal');
+ doc.setFontSize(10);
+const geradoraData = [
+  ['Entidade:', certificado.entidade?.nom_entidade || '-'],
+  ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
+  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+];
+geradoraData.forEach(([label, value]) => {
+  doc.setFont('helvetica', 'bold');
+  doc.text(label, leftMargin + colWidth + colGap, yRight);
+  doc.setFont('helvetica', 'normal');
+  doc.text(value, leftMargin + colWidth + colGap + 36, yRight);
+  yRight += 7;
+});
+
+// Atualizar yPosition abaixo do bloco mais alto
+ yPosition = Math.max(yLeft, yRight) + 10;
+
+doc.setFont('helvetica', 'normal');
+ doc.setFontSize(10);
+const geradoraData = [
+  ['Entidade:'
+*/

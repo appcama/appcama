@@ -22,12 +22,27 @@ interface Coleta {
   vlr_total: number;
   id_entidade_geradora?: number;
   id_certificado?: number;
+  id_usuario_criador?: number;
   entidade?: {
     nom_entidade: string;
     num_cpf_cnpj: string;
+    num_cep?: string;
+    des_logradouro?: string;
+    des_bairro?: string;
+    id_municipio?: number;
+    municipio?: { nom_municipio: string } | null;
   };
   ponto_coleta?: {
     nom_ponto_coleta: string;
+  };
+  entidade_coletora?: {
+    nom_entidade: string;
+    num_cpf_cnpj?: string;
+    num_cep?: string;
+    des_logradouro?: string;
+    des_bairro?: string;
+    id_municipio?: number;
+    municipio?: { nom_municipio: string } | null;
   };
 }
 
@@ -70,12 +85,27 @@ export function GerarCertificado() {
           vlr_total,
           id_entidade_geradora,
           id_certificado,
+          id_usuario_criador,
           entidade:id_entidade_geradora (
             nom_entidade,
-            num_cpf_cnpj
+            num_cpf_cnpj,
+            num_cep,
+            des_logradouro,
+            des_bairro,
+            id_municipio
           ),
           ponto_coleta:id_ponto_coleta (
             nom_ponto_coleta
+          ),
+          usuario:id_usuario_criador (
+            entidade:id_entidade (
+              nom_entidade,
+              num_cpf_cnpj,
+              num_cep,
+              des_logradouro,
+              des_bairro,
+              id_municipio
+            )
           )
         `)
         .eq('des_status', 'A')
@@ -93,7 +123,23 @@ export function GerarCertificado() {
         throw error;
       }
 
-      setColetas(data || []);
+      // Mapear entidade coletora (a cooperativa vinculada ao usuário criador)
+      const processed = (data || []).map((coleta: any) => ({
+        ...coleta,
+        entidade_coletora: coleta?.usuario?.entidade
+          ? { 
+              nom_entidade: coleta.usuario.entidade.nom_entidade,
+              num_cpf_cnpj: coleta.usuario.entidade.num_cpf_cnpj,
+              num_cep: coleta.usuario.entidade.num_cep,
+              des_logradouro: coleta.usuario.entidade.des_logradouro,
+              des_bairro: coleta.usuario.entidade.des_bairro,
+              id_municipio: coleta.usuario.entidade.id_municipio,
+              municipio: coleta.usuario.entidade.municipio || null,
+            }
+          : null,
+      }));
+
+      setColetas(processed);
     } catch (error) {
       console.error('[GerarCertificado] Unexpected error:', error);
       toast({
@@ -127,11 +173,24 @@ export function GerarCertificado() {
   }, [user]);
 
   const filteredColetas = coletas.filter(coleta => {
-    const matchesSearch = 
-      coleta.cod_coleta?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      coleta.entidade?.nom_entidade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      coleta.entidade?.num_cpf_cnpj?.includes(searchTerm) ||
-      coleta.ponto_coleta?.nom_ponto_coleta?.toLowerCase().includes(searchTerm.toLowerCase());
+    const normalizedTerm = searchTerm.trim().toLowerCase();
+    const termDigits = searchTerm.replace(/\D/g, '');
+    const cpfCnpjDigits = (coleta.entidade?.num_cpf_cnpj || '').replace(/\D/g, '');
+    const dateStr = formatDate(coleta.dat_coleta) || ''; // dd/mm/aaaa
+
+    // Normalizar valores para evitar chamadas em undefined
+    const codeLower = (coleta.cod_coleta || '').toLowerCase();
+    const entidadeNomeLower = (coleta.entidade?.nom_entidade || '').toLowerCase();
+
+    const matchesSearch =
+      // Código
+      codeLower.includes(normalizedTerm) ||
+      // Entidade Geradora (nome)
+      entidadeNomeLower.includes(normalizedTerm) ||
+      // CPF/CNPJ (apenas dígitos)
+      (termDigits.length > 0 && cpfCnpjDigits.includes(termDigits)) ||
+      // Data (DD/MM/AAAA)
+      dateStr.includes(searchTerm);
 
     const matchesDataInicio = !dataInicio || new Date(coleta.dat_coleta) >= dataInicio;
     const matchesDataFim = !dataFim || new Date(coleta.dat_coleta) <= dataFim;
@@ -147,9 +206,13 @@ export function GerarCertificado() {
     }).format(value);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
-  };
+  // Usar declaração de função para garantir hoisting dentro do componente
+  function formatDate(dateString: string) {
+    if (!dateString) return '';
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('pt-BR');
+  }
 
   const handleSelectColeta = (coletaId: number) => {
     setSelectedColetas(prev => {
@@ -344,7 +407,7 @@ export function GerarCertificado() {
 
           <div className="flex gap-4">
             <Input
-              placeholder="Buscar por código, entidade ou CPF/CNPJ"
+              placeholder="Buscar por código, entidade, CPF/CNPJ ou data"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-md"
@@ -374,6 +437,7 @@ export function GerarCertificado() {
                     <th className="text-left p-4 font-semibold">Data</th>
                     <th className="text-left p-4 font-semibold">Entidade Geradora</th>
                     <th className="text-left p-4 font-semibold">CPF/CNPJ</th>
+                    <th className="text-left p-4 font-semibold">Entidade Coletora</th>
                     <th className="text-left p-4 font-semibold">Ponto de Coleta</th>
                     <th className="text-right p-4 font-semibold">Valor Total</th>
                   </tr>
@@ -398,6 +462,7 @@ export function GerarCertificado() {
                       <td className="p-4">{formatDate(coleta.dat_coleta)}</td>
                       <td className="p-4">{coleta.entidade?.nom_entidade || '-'}</td>
                       <td className="p-4">{coleta.entidade?.num_cpf_cnpj || '-'}</td>
+                      <td className="p-4">{coleta.entidade_coletora?.nom_entidade || '-'}</td>
                       <td className="p-4">{coleta.ponto_coleta?.nom_ponto_coleta || '-'}</td>
                       <td className="p-4 text-right font-semibold text-recycle-green">
                         {formatCurrency(coleta.vlr_total)}
