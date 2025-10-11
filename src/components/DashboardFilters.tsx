@@ -50,6 +50,8 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
     return undefined;
   });
   const [dateError, setDateError] = useState<string>("");
+  const [openInicial, setOpenInicial] = useState(false);
+  const [openFinal, setOpenFinal] = useState(false);
 
   useEffect(() => {
     fetchEntidades();
@@ -142,6 +144,8 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
       setDataFinal(date);
     }
     validateDates(date, dataFinal && dataFinal < (date || new Date()) ? date : dataFinal);
+    // Fechar o popover após selecionar
+    setOpenInicial(false);
   };
 
   const handleDataFinalChange = (date: Date | undefined) => {
@@ -151,6 +155,8 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
     }
     setDataFinal(date);
     validateDates(dataInicial, date);
+    // Fechar o popover após selecionar
+    setOpenFinal(false);
   };
 
   const handleApplyFilters = () => {
@@ -275,7 +281,7 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
           {/* Data Inicial */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Data Inicial</label>
-            <Popover>
+            <Popover open={openInicial} onOpenChange={setOpenInicial}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -304,7 +310,7 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
           {/* Data Final */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Data Final</label>
-            <Popover>
+            <Popover open={openFinal} onOpenChange={setOpenFinal}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"

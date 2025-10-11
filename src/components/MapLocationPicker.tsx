@@ -9,13 +9,15 @@ interface MapLocationPickerProps {
   latitude?: number | null;
   longitude?: number | null;
   onLocationChange: (lat: number, lng: number) => void;
+  height?: number; // Altura do mapa em pixels (opcional)
 }
 
 export function MapLocationPicker({ 
   address, 
   latitude, 
   longitude, 
-  onLocationChange 
+  onLocationChange,
+  height = 320,
 }: MapLocationPickerProps) {
   const [map, setMap] = useState<any>(null);
   const [marker, setMarker] = useState<any>(null);
@@ -201,7 +203,7 @@ export function MapLocationPicker({
       <Card className="overflow-hidden">
         <div 
           id="map" 
-          style={{ height: '400px', width: '100%' }}
+          style={{ height: `${height}px`, width: '100%' }}
           className="bg-muted"
         />
       </Card>

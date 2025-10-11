@@ -48,6 +48,8 @@ export function RelatorioFilters({ filters, onFiltersChange, onReset }: Relatori
   };
 
   const activeFiltersCount = Object.keys(filters).length;
+  const [openInicial, setOpenInicial] = useState(false);
+  const [openFinal, setOpenFinal] = useState(false);
 
   const quickDateRanges = [
     { label: "Últimos 7 dias", days: 7 },
@@ -116,7 +118,7 @@ export function RelatorioFilters({ filters, onFiltersChange, onReset }: Relatori
           <div className="grid grid-cols-1 gap-2">
             <div>
               <Label htmlFor="dataInicial" className="text-xs">Data Inicial</Label>
-              <Popover>
+              <Popover open={openInicial} onOpenChange={setOpenInicial}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -137,7 +139,7 @@ export function RelatorioFilters({ filters, onFiltersChange, onReset }: Relatori
                   <Calendar
                     mode="single"
                     selected={filters.dataInicial}
-                    onSelect={(date) => updateFilter('dataInicial', date)}
+                    onSelect={(date) => { updateFilter('dataInicial', date); setOpenInicial(false); }}
                     locale={ptBR}
                     disabled={(date) =>
                       date > new Date() || (filters.dataFinal && date > filters.dataFinal)
@@ -149,7 +151,7 @@ export function RelatorioFilters({ filters, onFiltersChange, onReset }: Relatori
 
             <div>
               <Label htmlFor="dataFinal" className="text-xs">Data Final</Label>
-              <Popover>
+              <Popover open={openFinal} onOpenChange={setOpenFinal}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -170,7 +172,7 @@ export function RelatorioFilters({ filters, onFiltersChange, onReset }: Relatori
                   <Calendar
                     mode="single"
                     selected={filters.dataFinal}
-                    onSelect={(date) => updateFilter('dataFinal', date)}
+                    onSelect={(date) => { updateFilter('dataFinal', date); setOpenFinal(false); }}
                     locale={ptBR}
                     disabled={(date) =>
                       date > new Date() || (filters.dataInicial && date < filters.dataInicial)

@@ -44,6 +44,8 @@ export function GerarCertificado() {
   const [showPreview, setShowPreview] = useState(false);
   const [dataInicio, setDataInicio] = useState<Date | undefined>(undefined);
   const [dataFim, setDataFim] = useState<Date | undefined>(undefined);
+  const [openInicio, setOpenInicio] = useState(false);
+  const [openFim, setOpenFim] = useState(false);
   const [entidadeId, setEntidadeId] = useState<string>('all');
   const [entidades, setEntidades] = useState<Entidade[]>([]);
   const { toast } = useToast();
@@ -270,7 +272,7 @@ export function GerarCertificado() {
             {/* Data Inicial */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Data Inicial</label>
-              <Popover>
+              <Popover open={openInicio} onOpenChange={setOpenInicio}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -287,7 +289,7 @@ export function GerarCertificado() {
                   <Calendar
                     mode="single"
                     selected={dataInicio}
-                    onSelect={setDataInicio}
+                    onSelect={(date) => { setDataInicio(date); setOpenInicio(false); }}
                     initialFocus
                     locale={ptBR}
                     className="pointer-events-auto"
@@ -299,7 +301,7 @@ export function GerarCertificado() {
             {/* Data Final */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Data Final</label>
-              <Popover>
+              <Popover open={openFim} onOpenChange={setOpenFim}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -316,7 +318,7 @@ export function GerarCertificado() {
                   <Calendar
                     mode="single"
                     selected={dataFim}
-                    onSelect={setDataFim}
+                    onSelect={(date) => { setDataFim(date); setOpenFim(false); }}
                     initialFocus
                     locale={ptBR}
                     className="pointer-events-auto"

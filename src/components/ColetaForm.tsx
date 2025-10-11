@@ -90,6 +90,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
     cod_coleta: '',
   });
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [openDatePicker, setOpenDatePicker] = useState(false);
 
   // Estados e utilitários para máscara/validação de data (DD/MM/AAAA)
   const today = new Date();
@@ -619,7 +620,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
               </div>
               <div>
                 <Label htmlFor="dat_coleta">Data da Coleta *</Label>
-                <Popover>
+                <Popover open={openDatePicker} onOpenChange={setOpenDatePicker}>
                   <PopoverTrigger asChild>
                     <Input
                       id="dat_coleta"
@@ -667,6 +668,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
                           setDateError(err);
                           if (!err) {
                             setFormData(prev => ({ ...prev, dat_coleta: toISO(date) }));
+                            setOpenDatePicker(false);
                           } else {
                             setFormData(prev => ({ ...prev, dat_coleta: '' }));
                           }

@@ -613,7 +613,7 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                   )}
                 />
 
-                <div className="md:col-span-2">
+                <div>
                   <FormLabel>Logomarca da Entidade</FormLabel>
                   <div className="mt-2">
                     <LogoUploadArea
@@ -627,11 +627,12 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                   </div>
                 </div>
 
-                <div className="md:col-span-2">
+                <div>
                   <MapLocationPicker
                     address={`${form.watch('des_logradouro')}, ${form.watch('des_bairro')}, CEP ${form.watch('num_cep')}`}
                     latitude={latitude}
                     longitude={longitude}
+                    height={300}
                     onLocationChange={(lat, lng) => {
                       setLatitude(lat);
                       setLongitude(lng);

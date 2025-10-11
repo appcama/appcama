@@ -55,6 +55,8 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isEditing = !!evento;
+  const [openInicio, setOpenInicio] = useState(false);
+  const [openTermino, setOpenTermino] = useState(false);
 
   const form = useForm<EventoFormData>({
     resolver: zodResolver(eventoSchema),
@@ -256,12 +258,13 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
                     // Formatar para YYYY-MM-DD sem depender de timezone
                     const isoDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                     field.onChange(isoDate);
+                    setOpenInicio(false);
                   };
 
                   return (
                     <FormItem>
                       <FormLabel>Data de Início *</FormLabel>
-                      <Popover>
+                      <Popover open={openInicio} onOpenChange={setOpenInicio}>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
@@ -316,12 +319,13 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
                       }
                     }
                     field.onChange(isoDate);
+                    setOpenTermino(false);
                   };
 
                   return (
                     <FormItem>
                       <FormLabel>Data de Término *</FormLabel>
-                      <Popover>
+                      <Popover open={openTermino} onOpenChange={setOpenTermino}>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
