@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Dashboard } from '@/components/Dashboard';
@@ -42,9 +42,8 @@ export function ReciclaELayout() {
   const { allowedFeatures, loading: permissionsLoading } = usePermissions();
   const { isMobile } = useBreakpoints();
 
-  console.log('[ReciclaELayout] Current user:', user);
-  console.log('[ReciclaELayout] Allowed features:', allowedFeatures);
-  console.log('[ReciclaELayout] Active item:', activeItem);
+  // Memoizar allowedFeatures para evitar re-renderizações desnecessárias
+  const memoizedAllowedFeatures = useMemo(() => allowedFeatures, [allowedFeatures]);
 
   // Listener para limpar filtro de perfil
   useEffect(() => {
@@ -59,7 +58,6 @@ export function ReciclaELayout() {
   }, []);
 
   const handleItemClick = (item: string) => {
-    console.log('[ReciclaELayout] Item clicked:', item);
     setActiveItem(item);
     setCurrentView('list');
     setEditingItem(null);
@@ -70,14 +68,11 @@ export function ReciclaELayout() {
   };
 
   const handleAddNew = () => {
-    console.log('Add new clicked for:', activeItem);
     setCurrentView('form');
     setEditingItem(null);
   };
 
   const handleEdit = (item: any) => {
-    console.log('[ReciclaELayout] Edit clicked for:', activeItem, item);
-    console.log('[ReciclaELayout] Item data:', JSON.stringify(item, null, 2));
     setCurrentView('form');
     setEditingItem(item);
   };
@@ -93,7 +88,6 @@ export function ReciclaELayout() {
   };
 
   const handleViewUsers = (perfilId: number) => {
-    console.log('[ReciclaELayout] View users for perfil:', perfilId);
     setSelectedPerfilId(perfilId);
     setActiveItem('usuarios');
     setCurrentView('list');
@@ -101,7 +95,6 @@ export function ReciclaELayout() {
   };
 
   const handleClearPerfilFilter = () => {
-    console.log('[ReciclaELayout] Clearing perfil filter');
     setSelectedPerfilId(null);
   };
 
@@ -245,7 +238,7 @@ export function ReciclaELayout() {
           <MobileHeader
             activeItem={activeItem}
             onItemClick={handleItemClick}
-            allowedFeatures={allowedFeatures}
+            allowedFeatures={memoizedAllowedFeatures}
             userName={user?.email || 'Usuário'}
           />
           <main className="flex-1 overflow-hidden">
@@ -271,7 +264,7 @@ export function ReciclaELayout() {
           <Sidebar
             activeItem={activeItem}
             onItemClick={handleItemClick}
-            allowedFeatures={allowedFeatures}
+            allowedFeatures={memoizedAllowedFeatures}
           />
           <main className="flex-1 overflow-hidden">
             <div className="h-full overflow-y-auto bg-gray-50">
