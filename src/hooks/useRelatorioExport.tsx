@@ -347,21 +347,21 @@ export function useRelatorioExport() {
       const entidadeGeradora = coletaGeradora?.entidade;
       const entidadeGeradoraIdMunicipio = entidadeGeradora?.id_municipio || null;
 
-      // Buscar nomes de municípios para coletora e geradora
+      // TODO: Descomentar quando a tabela municipio for criada
       let nomMunicipioColetora: string | null = null;
       let nomMunicipioGeradora: string | null = null;
-      const municipioIds = [entidadeColetoraIdMunicipio, entidadeGeradoraIdMunicipio].filter(Boolean) as number[];
-      if (municipioIds.length > 0) {
-        const { data: municipios } = await supabase
-          .from('municipio')
-          .select('id_municipio, nom_municipio')
-          .in('id_municipio', municipioIds);
-        if (municipios) {
-          const map = new Map(municipios.map((m: any) => [m.id_municipio, m.nom_municipio]));
-          if (entidadeColetoraIdMunicipio) nomMunicipioColetora = map.get(entidadeColetoraIdMunicipio) || null;
-          if (entidadeGeradoraIdMunicipio) nomMunicipioGeradora = map.get(entidadeGeradoraIdMunicipio) || null;
-        }
-      }
+      // const municipioIds = [entidadeColetoraIdMunicipio, entidadeGeradoraIdMunicipio].filter(Boolean) as number[];
+      // if (municipioIds.length > 0) {
+      //   const { data: municipios } = await supabase
+      //     .from('municipio')
+      //     .select('id_municipio, nom_municipio')
+      //     .in('id_municipio', municipioIds);
+      //   if (municipios) {
+      //     const map = new Map(municipios.map((m: any) => [m.id_municipio, m.nom_municipio]));
+      //     if (entidadeColetoraIdMunicipio) nomMunicipioColetora = map.get(entidadeColetoraIdMunicipio) || null;
+      //     if (entidadeGeradoraIdMunicipio) nomMunicipioGeradora = map.get(entidadeGeradoraIdMunicipio) || null;
+      //   }
+      // }
 
       // Blocos lado a lado: Coletora (esquerda) e Geradora (direita)
       const colGap = 6;

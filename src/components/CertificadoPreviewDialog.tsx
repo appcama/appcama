@@ -87,20 +87,21 @@ export function CertificadoPreviewDialog({
     if (geradoraIdMunicipio) ids.push(geradoraIdMunicipio);
     if (coletoraIdMunicipio) ids.push(coletoraIdMunicipio);
 
-    if (ids.length > 0) {
-      supabase
-        .from('municipio')
-        .select('id_municipio, nom_municipio')
-        .in('id_municipio', ids)
-        .then(({ data, error }) => {
-          if (!error && data) {
-            const map = new Map(data.map((m: any) => [m.id_municipio, m.nom_municipio]));
-            if (geradoraIdMunicipio) setNomMunicipioGeradora(map.get(geradoraIdMunicipio) || null);
-            if (coletoraIdMunicipio) setNomMunicipioColetora(map.get(coletoraIdMunicipio) || null);
-          }
-        })
-        .catch(() => {});
-    }
+    // TODO: Descomentar quando a tabela municipio for criada
+    // if (ids.length > 0) {
+    //   supabase
+    //     .from('municipio')
+    //     .select('id_municipio, nom_municipio')
+    //     .in('id_municipio', ids)
+    //     .then(({ data, error }) => {
+    //       if (!error && data) {
+    //         const map = new Map(data.map((m: any) => [m.id_municipio, m.nom_municipio]));
+    //         if (geradoraIdMunicipio) setNomMunicipioGeradora(map.get(geradoraIdMunicipio) || null);
+    //         if (coletoraIdMunicipio) setNomMunicipioColetora(map.get(coletoraIdMunicipio) || null);
+    //       }
+    //     })
+    //     .catch(() => {});
+    // }
   }, [selectedColetaIds]);
 
   const loadResiduos = async () => {
