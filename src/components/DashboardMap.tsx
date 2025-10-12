@@ -17,7 +17,7 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
-  const [isMapReady, setIsMapReady] = useState(false);
+  const [isMapInitialized, setIsMapInitialized] = useState(false);
 
   const { data, isLoading, error } = useDashboardMapData({ startDate, endDate, entityId });
 
@@ -46,29 +46,26 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
 
     infoWindowRef.current = new google.maps.InfoWindow();
 
-    // Aguardar o mapa estar completamente carregado com timeout de segurança
-    let timeoutId: NodeJS.Timeout;
-    
-    const onTilesLoaded = () => {
-      clearTimeout(timeoutId);
-      setIsMapReady(true);
-    };
+    // Aguardar tiles carregarem (sem timeout artificial)
+    google.maps.event.addListenerOnce(mapInstance.current, 'tilesloaded', () => {
+      setIsMapInitialized(true);
+    });
 
-    google.maps.event.addListenerOnce(mapInstance.current, 'tilesloaded', onTilesLoaded);
-    
-    // Timeout de segurança: se tiles não carregarem em 3s, considera pronto
-    timeoutId = setTimeout(() => {
-      setIsMapReady(true);
-    }, 3000);
+    // Timeout de SEGURANÇA: 10 segundos (só como fallback)
+    const fallbackTimeout = setTimeout(() => {
+      console.warn('Mapa demorou mais de 10s para carregar tiles, forçando inicialização');
+      setIsMapInitialized(true);
+    }, 10000);
 
     return () => {
-      clearTimeout(timeoutId);
+      clearTimeout(fallbackTimeout);
     };
   }, [isMapLoaded]);
 
   // Atualizar marcadores quando os dados mudarem
   useEffect(() => {
-    if (!mapInstance.current || !data || !isMapReady) return;
+    // Aguardar mapa inicializado E dados prontos
+    if (!isMapInitialized || !data || !mapInstance.current) return;
 
     // Limpar marcadores anteriores
     markersRef.current.forEach(marker => marker.map = null);
@@ -158,17 +155,24 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
         google.maps.event.removeListener(listener);
       });
     }
-  }, [data, isMapReady]);
+  }, [data, isMapInitialized]);
 
-  if (isLoading || !isMapReady) {
+  if (isLoading || !isMapInitialized) {
+    const loadingMessage = !isMapLoaded 
+      ? "Carregando API do Google Maps..." 
+      : !isMapInitialized 
+      ? "Inicializando mapa..." 
+      : "Carregando pontos...";
+
     return (
       <Card className="w-full">
         <CardHeader>
           <CardTitle>Localização dos Pontos</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center h-[400px]">
+          <div className="flex flex-col items-center justify-center h-[400px] gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">{loadingMessage}</p>
           </div>
         </CardContent>
       </Card>
