@@ -18,8 +18,7 @@ export function usePWA() {
 
     // Listen for beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
-      // Não chamar preventDefault aqui para evitar warning
-      // Apenas armazenar o evento para uso posterior
+      e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
       setIsInstallable(true);
     };

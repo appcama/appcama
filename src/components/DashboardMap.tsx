@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDashboardMapData } from "@/hooks/useDashboardMapData";
-import { googleMapsLoader } from "@/lib/google-maps-loader";
-import { createAdvancedMarker } from "@/lib/map-pin-helpers";
 import { Loader2 } from "lucide-react";
 
 interface DashboardMapProps {
@@ -14,22 +12,32 @@ interface DashboardMapProps {
 export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
+  const markersRef = useRef<google.maps.Marker[]>([]);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
-  const [isMapInitialized, setIsMapInitialized] = useState(false);
+  const [isMapReady, setIsMapReady] = useState(false);
 
   const { data, isLoading, error } = useDashboardMapData({ startDate, endDate, entityId });
 
-  // Carregar Google Maps API usando o gerenciador global
+  // Carregar Google Maps API
   useEffect(() => {
-    googleMapsLoader.load({
-      onLoad: () => setIsMapLoaded(true),
-      onError: (error) => {
-        console.error('Erro ao carregar Google Maps:', error);
-        setIsMapLoaded(false);
+    if (window.google?.maps) {
+      setIsMapLoaded(true);
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyC-SMESmT8ScecSuCz1oTcMFSp7Gg-Leag&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => setIsMapLoaded(true);
+    document.head.appendChild(script);
+
+    return () => {
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
       }
-    });
+    };
   }, []);
 
   // Inicializar mapa
@@ -46,29 +54,18 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
 
     infoWindowRef.current = new google.maps.InfoWindow();
 
-    // Aguardar tiles carregarem (sem timeout artificial)
+    // Aguardar o mapa estar completamente carregado
     google.maps.event.addListenerOnce(mapInstance.current, 'tilesloaded', () => {
-      setIsMapInitialized(true);
+      setIsMapReady(true);
     });
-
-    // Timeout de SEGURANÇA: 10 segundos (só como fallback)
-    const fallbackTimeout = setTimeout(() => {
-      console.warn('Mapa demorou mais de 10s para carregar tiles, forçando inicialização');
-      setIsMapInitialized(true);
-    }, 10000);
-
-    return () => {
-      clearTimeout(fallbackTimeout);
-    };
   }, [isMapLoaded]);
 
   // Atualizar marcadores quando os dados mudarem
   useEffect(() => {
-    // Aguardar mapa inicializado E dados prontos
-    if (!isMapInitialized || !data || !mapInstance.current) return;
+    if (!mapInstance.current || !data || !isMapReady) return;
 
     // Limpar marcadores anteriores
-    markersRef.current.forEach(marker => marker.map = null);
+    markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];
 
     const bounds = new google.maps.LatLngBounds();
@@ -78,12 +75,16 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
     data.entidades.forEach((entidade) => {
       const position = { lat: entidade.latitude, lng: entidade.longitude };
       
-      const marker = createAdvancedMarker(
+      const marker = new google.maps.Marker({
         position,
-        mapInstance.current!,
-        entidade.nome,
-        entidade.isColetora ? 'coletora' : 'geradora'
-      );
+        map: mapInstance.current,
+        title: entidade.nome,
+        icon: {
+          url: entidade.isColetora 
+            ? 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+            : 'http://maps.google.com/mapfiles/ms/icons/orange-dot.png'
+        }
+      });
 
       const contentString = `
         <div style="padding: 10px; max-width: 250px;">
@@ -95,12 +96,9 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
       `;
 
       marker.addListener('click', () => {
-        if (infoWindowRef.current && mapInstance.current) {
+        if (infoWindowRef.current) {
           infoWindowRef.current.setContent(contentString);
-          infoWindowRef.current.open({
-            map: mapInstance.current,
-            anchor: marker
-          });
+          infoWindowRef.current.open(mapInstance.current, marker);
         }
       });
 
@@ -113,12 +111,14 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
     data.pontosColeta.forEach((ponto) => {
       const position = { lat: ponto.latitude, lng: ponto.longitude };
       
-      const marker = createAdvancedMarker(
+      const marker = new google.maps.Marker({
         position,
-        mapInstance.current!,
-        ponto.nome,
-        'pontoColeta'
-      );
+        map: mapInstance.current,
+        title: ponto.nome,
+        icon: {
+          url: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png'
+        }
+      });
 
       const contentString = `
         <div style="padding: 10px; max-width: 250px;">
@@ -129,12 +129,9 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
       `;
 
       marker.addListener('click', () => {
-        if (infoWindowRef.current && mapInstance.current) {
+        if (infoWindowRef.current) {
           infoWindowRef.current.setContent(contentString);
-          infoWindowRef.current.open({
-            map: mapInstance.current,
-            anchor: marker
-          });
+          infoWindowRef.current.open(mapInstance.current, marker);
         }
       });
 
@@ -155,24 +152,17 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
         google.maps.event.removeListener(listener);
       });
     }
-  }, [data, isMapInitialized]);
+  }, [data, isMapReady]);
 
-  if (isLoading || !isMapInitialized) {
-    const loadingMessage = !isMapLoaded 
-      ? "Carregando API do Google Maps..." 
-      : !isMapInitialized 
-      ? "Inicializando mapa..." 
-      : "Carregando pontos...";
-
+  if (isLoading || !isMapReady) {
     return (
       <Card className="w-full">
         <CardHeader>
           <CardTitle>Localização dos Pontos</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center h-[400px] gap-3">
+          <div className="flex items-center justify-center h-[400px]">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">{loadingMessage}</p>
           </div>
         </CardContent>
       </Card>

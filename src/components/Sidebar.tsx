@@ -1,5 +1,5 @@
 
-import { useState, useMemo, memo } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Home, 
@@ -175,33 +175,24 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose 
     }
   ];
 
-  // Memoizar a verificação de permissões para evitar re-cálculos
-  const isFeatureAllowed = useMemo(() => {
-    const cache = new Map<string, boolean>();
+  const isFeatureAllowed = (featureId: string) => {
+    if (!allowedFeatures || allowedFeatures.length === 0) {
+      console.log("[Sidebar] No permissions loaded yet, allowing access during loading");
+      return true;
+    }
+
+    const featureName = featureByItemId(featureId);
     
-    return (featureId: string) => {
-      if (cache.has(featureId)) {
-        return cache.get(featureId)!;
-      }
+    if (!featureName) {
+      console.log(`[Sidebar] No feature mapping found for: ${featureId}`);
+      return false;
+    }
 
-      if (!allowedFeatures || allowedFeatures.length === 0) {
-        cache.set(featureId, true);
-        return true;
-      }
-
-      const featureName = featureByItemId(featureId);
-      
-      if (!featureName) {
-        cache.set(featureId, false);
-        return false;
-      }
-
-      const allowed = allowedFeatures.includes(featureName);
-      cache.set(featureId, allowed);
-      
-      return allowed;
-    };
-  }, [allowedFeatures]);
+    const allowed = allowedFeatures.includes(featureName);
+    console.log(`[Sidebar] Feature ${featureName} (${featureId}): ${allowed ? 'ALLOWED' : 'DENIED'}`);
+    
+    return allowed;
+  };
 
   const handleItemClick = (item: string) => {
     onItemClick(item);
@@ -236,17 +227,13 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose 
     );
   };
 
-  // Memoizar grupos visíveis para evitar recálculos
-  const visibleGroups = useMemo(() => {
-    return menuGroups
-      .map(group => ({
-        ...group,
-        visibleItems: group.items.filter((item: MenuItem) => isFeatureAllowed(item.id))
-      }))
-      .filter(group => group.visibleItems.length > 0);
-  }, [menuGroups, isFeatureAllowed]);
-
   const renderGroup = (group: any) => {
+    const visibleItems = group.items.filter((item: MenuItem) => isFeatureAllowed(item.id));
+    
+    if (visibleItems.length === 0) {
+      return null;
+    }
+
     return (
       <div key={group.label} className={cn("mb-6", isMobile && "mb-4")}>
         <div className={cn("px-4 mb-3", isMobile && "mb-2")}>
@@ -255,7 +242,7 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose 
           </h3>
         </div>
         <div className="space-y-1">
-          {group.visibleItems.map(renderMenuItem)}
+          {visibleItems.map(renderMenuItem)}
         </div>
       </div>
     );
@@ -281,7 +268,7 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose 
       )}
       
       <nav className={cn("flex-1 overflow-y-auto", isMobile ? "p-2" : "p-4")}>
-        {visibleGroups.map(renderGroup)}
+        {menuGroups.map(renderGroup)}
       </nav>
       
       {/* Botão de Sair */}

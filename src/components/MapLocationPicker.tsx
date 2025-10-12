@@ -3,8 +3,6 @@ import { MapPin, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { googleMapsLoader } from '@/lib/google-maps-loader';
-import { createColoredPin } from '@/lib/map-pin-helpers';
 
 interface MapLocationPickerProps {
   address?: string;
@@ -21,25 +19,41 @@ export function MapLocationPicker({
   onLocationChange,
   height = 320,
 }: MapLocationPickerProps) {
-  const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [marker, setMarker] = useState<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const [map, setMap] = useState<any>(null);
+  const [marker, setMarker] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [geocoding, setGeocoding] = useState(false);
   const { toast } = useToast();
 
-  // Carregar Google Maps API usando o gerenciador global
+  // Carregar Google Maps API
   useEffect(() => {
-    googleMapsLoader.load({
-      onLoad: () => setLoading(false),
-      onError: (error) => {
-        setLoading(false);
-        toast({
-          title: "Erro ao carregar mapa",
-          description: "Não foi possível carregar o Google Maps.",
-          variant: "destructive",
-        });
-      }
-    });
+    const apiKey = 'AIzaSyC-SMESmT8ScecSuCz1oTcMFSp7Gg-Leag';
+    
+    // Verificar se já foi carregado
+    if ((window as any).google && (window as any).google.maps) {
+      setLoading(false);
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => setLoading(false);
+    script.onerror = () => {
+      setLoading(false);
+      toast({
+        title: "Erro ao carregar mapa",
+        description: "Não foi possível carregar o Google Maps. Verifique sua chave de API.",
+        variant: "destructive",
+      });
+    };
+    
+    document.head.appendChild(script);
+
+    return () => {
+      // Cleanup se necessário
+    };
   }, [toast]);
 
   // Inicializar mapa
@@ -69,24 +83,21 @@ export function MapLocationPicker({
 
       setMap(newMap);
 
-      // Criar marcador arrastável usando AdvancedMarkerElement
-      const pinElement = createColoredPin('pontoColeta');
-      
-      const newMarker = new googleMaps.marker.AdvancedMarkerElement({
+      // Criar marcador
+      const newMarker = new googleMaps.Marker({
         position: initialPosition,
         map: newMap,
-        gmpDraggable: true,
+        draggable: true,
         title: 'Localização da Entidade',
-        content: pinElement.element
       });
 
       setMarker(newMarker);
 
       // Evento de arrastar marcador
       newMarker.addListener('dragend', () => {
-        const position = newMarker.position as google.maps.LatLngLiteral;
+        const position = newMarker.getPosition();
         if (position) {
-          onLocationChange(position.lat, position.lng);
+          onLocationChange(position.lat(), position.lng());
         }
       });
 
@@ -126,7 +137,7 @@ export function MapLocationPicker({
           // Atualizar mapa e marcador
           map.setCenter(location);
           map.setZoom(15);
-          marker.position = location;
+          marker.setPosition(location);
 
           // Notificar mudança
           onLocationChange(lat, lng);

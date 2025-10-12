@@ -30,8 +30,6 @@ interface UseDashboardMapDataProps {
 export const useDashboardMapData = ({ startDate, endDate, entityId }: UseDashboardMapDataProps = {}) => {
   return useQuery({
     queryKey: ['dashboard-map', startDate, endDate, entityId],
-    staleTime: 24 * 60 * 60 * 1000, // Cache de 1 dia
-    gcTime: 24 * 60 * 60 * 1000,     // Manter no cache por 1 dia
     queryFn: async () => {
       // Buscar entidades com coordenadas válidas
       let entidadesQuery = supabase
@@ -59,6 +57,10 @@ export const useDashboardMapData = ({ startDate, endDate, entityId }: UseDashboa
         entidadesQuery = entidadesQuery.eq('id_entidade', entityId);
       }
 
+      const { data: entidadesData, error: entidadesError } = await entidadesQuery;
+
+      if (entidadesError) throw entidadesError;
+
       // Buscar pontos de coleta com coordenadas válidas
       let pontosQuery = supabase
         .from('ponto_coleta')
@@ -79,17 +81,8 @@ export const useDashboardMapData = ({ startDate, endDate, entityId }: UseDashboa
         .not('num_latitude', 'is', null)
         .not('num_longitude', 'is', null);
 
-      // Executar ambas queries em paralelo
-      const [entidadesResult, pontosResult] = await Promise.all([
-        entidadesQuery,
-        pontosQuery
-      ]);
+      const { data: pontosData, error: pontosError } = await pontosQuery;
 
-      const { data: entidadesData, error: entidadesError } = entidadesResult;
-      const { data: pontosData, error: pontosError } = pontosResult;
-
-      // Verificar erros após ambas completarem
-      if (entidadesError) throw entidadesError;
       if (pontosError) throw pontosError;
 
       // Formatar dados de entidades
