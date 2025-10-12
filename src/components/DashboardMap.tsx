@@ -25,7 +25,8 @@ export function DashboardMap({ markers }: DashboardMapProps) {
 
       try {
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBWNR-HLg4Yjf5vUx6-Kc-f2bPKPlrB-go&libraries=places`;
+        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyBWNR-HLg4Yjf5vUx6-Kc-f2bPKPlrB-go';
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
         script.async = true;
         script.defer = true;
         

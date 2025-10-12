@@ -216,10 +216,6 @@ export function Dashboard() {
         </CardContent>
       </Card>
 
-      {!mapLoading && mapData && mapData.length > 0 && (
-        <DashboardMap markers={mapData} />
-      )}
-
       {data?.residuosPorTipo && data.residuosPorTipo.length > 0 && (
         <Card>
           <CardHeader>
@@ -263,6 +259,10 @@ export function Dashboard() {
 
       {data?.residuosPorTipo && (
         <DashboardCharts residuosPorTipo={data.residuosPorTipo} />
+      )}
+
+      {!mapLoading && mapData && mapData.length > 0 && (
+        <DashboardMap markers={mapData} />
       )}
 
       {data?.indicadores && data.indicadores.length > 0 && (
