@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDashboardMapData } from "@/hooks/useDashboardMapData";
+import { googleMapsLoader } from "@/lib/google-maps-loader";
 import { Loader2 } from "lucide-react";
 
 interface DashboardMapProps {
@@ -15,48 +16,51 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
   const markersRef = useRef<google.maps.Marker[]>([]);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [isMapReady, setIsMapReady] = useState(false);
 
   const { data, isLoading, error } = useDashboardMapData({ startDate, endDate, entityId });
 
-  // Carregar Google Maps API
+  // Carregar Google Maps API com loader singleton
   useEffect(() => {
-    if (window.google?.maps) {
-      setIsMapLoaded(true);
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyC-SMESmT8ScecSuCz1oTcMFSp7Gg-Leag&libraries=places`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => setIsMapLoaded(true);
-    document.head.appendChild(script);
-
-    return () => {
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
-      }
-    };
+    googleMapsLoader.load()
+      .then(() => setIsMapLoaded(true))
+      .catch((error) => console.error('Erro ao carregar Google Maps:', error));
   }, []);
 
-  // Inicializar mapa
+  // Inicializar mapa com observer para garantir dimensões
   useEffect(() => {
     if (!isMapLoaded || !mapContainer.current || mapInstance.current) return;
 
-    mapInstance.current = new google.maps.Map(mapContainer.current, {
-      center: { lat: -12.9714, lng: -38.5014 }, // Salvador, BA
-      zoom: 12,
-      mapTypeControl: true,
-      streetViewControl: false,
-      fullscreenControl: true,
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry && entry.contentRect.height > 0) {
+        observer.disconnect();
+        
+        mapInstance.current = new google.maps.Map(mapContainer.current!, {
+          center: { lat: -12.9714, lng: -38.5014 },
+          zoom: 12,
+          mapTypeControl: true,
+          streetViewControl: false,
+          fullscreenControl: true,
+        });
+
+        infoWindowRef.current = new google.maps.InfoWindow();
+
+        // Aguardar tiles carregarem
+        google.maps.event.addListenerOnce(mapInstance.current, 'tilesloaded', () => {
+          setIsMapReady(true);
+        });
+      }
     });
 
-    infoWindowRef.current = new google.maps.InfoWindow();
+    observer.observe(mapContainer.current);
+
+    return () => observer.disconnect();
   }, [isMapLoaded]);
 
   // Atualizar marcadores quando os dados mudarem
   useEffect(() => {
-    if (!mapInstance.current || !data || !isMapLoaded) return;
+    if (!mapInstance.current || !data || !isMapReady) return;
 
     // Limpar marcadores anteriores
     markersRef.current.forEach(marker => marker.setMap(null));
@@ -146,17 +150,20 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
         google.maps.event.removeListener(listener);
       });
     }
-  }, [data, isMapLoaded]);
+  }, [data, isMapReady]);
 
-  if (isLoading || !isMapLoaded) {
+  if (isLoading || !isMapReady) {
     return (
       <Card className="w-full">
         <CardHeader>
           <CardTitle>Localização dos Pontos</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center h-[400px]">
+          <div className="flex flex-col items-center justify-center h-[400px] gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">
+              {!isMapLoaded ? 'Carregando API do Google Maps...' : 'Inicializando mapa...'}
+            </p>
           </div>
         </CardContent>
       </Card>
