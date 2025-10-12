@@ -79,7 +79,45 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
   const [cepError, setCepError] = useState('');
   const { toast } = useToast();
   const { searchCep, loading: cepLoading } = useViaCep();
-  
+  // Estados para dividir o logradouro em nome da rua e número
+  const [logradouroNome, setLogradouroNome] = useState<string>("");
+  const [logradouroNumero, setLogradouroNumero] = useState<string>("");
+
+  // Mapeia siglas de UF para códigos IBGE (ex.: BA -> 29)
+  const mapUfToCode = (uf: string | undefined | null): number | null => {
+    if (!uf) return null;
+    const UF_TO_CODE: Record<string, number> = {
+      AC: 12,
+      AL: 27,
+      AP: 16,
+      AM: 13,
+      BA: 29,
+      CE: 23,
+      DF: 53,
+      ES: 32,
+      GO: 52,
+      MA: 21,
+      MT: 51,
+      MS: 50,
+      MG: 31,
+      PA: 15,
+      PB: 25,
+      PR: 41,
+      PE: 26,
+      PI: 22,
+      RJ: 33,
+      RN: 24,
+      RS: 43,
+      RO: 11,
+      RR: 14,
+      SC: 42,
+      SP: 35,
+      SE: 28,
+      TO: 17,
+    };
+    return UF_TO_CODE[uf as keyof typeof UF_TO_CODE] ?? null;
+  };
+
   const { submitForm, isSubmitting } = useOfflineForm({
     table: 'ponto_coleta',
     onlineSubmit: async (data) => {
@@ -129,6 +167,44 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
       });
     }
   }, [editingPontoColeta]);
+
+  // Funções auxiliares para tratar o logradouro combinado
+  const composeLogradouro = (nome: string, numero: string) => {
+    const nomeTrim = (nome || "").trim();
+    const numeroTrim = (numero || "").trim();
+    if (!nomeTrim && !numeroTrim) return "";
+    if (!numeroTrim) return nomeTrim;
+    return `${nomeTrim}, ${numeroTrim}`;
+  };
+
+  const parseLogradouro = (valor: string | undefined | null) => {
+    const v = (valor || "").trim();
+    if (!v) return { nome: "", numero: "" };
+    const parts = v.split(',');
+    if (parts.length >= 2) {
+      return { nome: parts[0].trim(), numero: parts.slice(1).join(',').trim() };
+    }
+    // Se não tiver vírgula, tentar extrair número no final
+    const match = v.match(/^(.*?)(?:\s*(\d+))$/);
+    if (match) {
+      return { nome: match[1].trim(), numero: match[2]?.trim() || "" };
+    }
+    return { nome: v, numero: "" };
+  };
+
+  // Inicializar estados de nome e número do logradouro a partir do valor atual
+  useEffect(() => {
+    const { nome, numero } = parseLogradouro(formData.des_logradouro);
+    setLogradouroNome(nome);
+    setLogradouroNumero(numero);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingPontoColeta]);
+
+  // Manter des_logradouro sincronizado com os dois campos
+  useEffect(() => {
+    const combinado = composeLogradouro(logradouroNome, logradouroNumero);
+    setFormData(prev => ({ ...prev, des_logradouro: combinado }));
+  }, [logradouroNome, logradouroNumero]);
 
   const fetchEntidadesGestoras = async () => {
     try {
@@ -231,10 +307,14 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
     if (formattedCep.replace(/\D/g, '').length === 8) {
       const cepData = await searchCep(formattedCep);
       if (cepData) {
+        // Atualiza nome da rua; número permanece o digitado pelo usuário
+        setLogradouroNome(cepData.logradouro || "");
         setFormData(prev => ({
           ...prev,
-          des_logradouro: cepData.logradouro,
-          des_bairro: cepData.bairro
+          des_bairro: cepData.bairro || "",
+          // Atualiza município (IBGE) e UF (código) quando disponíveis
+          id_municipio: cepData.ibge ? parseInt(cepData.ibge, 10) : prev.id_municipio,
+          id_unidade_federativa: mapUfToCode(cepData.uf) ?? prev.id_unidade_federativa,
         }));
         setCepValid(true);
         setCepError('');
@@ -242,9 +322,9 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
         // CEP não encontrado
         setCepValid(false);
         setCepError('CEP não encontrado ou inválido');
+        setLogradouroNome("");
         setFormData(prev => ({
           ...prev,
-          des_logradouro: '',
           des_bairro: ''
         }));
       }
@@ -364,128 +444,156 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="nom_ponto_coleta">Nome do Ponto de Coleta *</Label>
-            <Input
-              id="nom_ponto_coleta"
-              value={formData.nom_ponto_coleta}
-              onChange={(e) => handleInputChange('nom_ponto_coleta', e.target.value)}
-              placeholder="Nome do ponto de coleta"
-              maxLength={60}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="id_entidade_gestora">Entidade Gestora *</Label>
-            {loadingEntidades ? (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Carregando entidades...
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Coluna esquerda: campos do formulário */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="nom_ponto_coleta">Nome do Ponto de Coleta *</Label>
+                <Input
+                  id="nom_ponto_coleta"
+                  value={formData.nom_ponto_coleta}
+                  onChange={(e) => handleInputChange('nom_ponto_coleta', e.target.value)}
+                  placeholder="Nome do ponto de coleta"
+                  maxLength={60}
+                  required
+                />
               </div>
-            ) : (
-              <Select 
-                value={formData.id_entidade_gestora?.toString() || ""} 
-                onValueChange={(value) => handleInputChange('id_entidade_gestora', parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma entidade gestora" />
-                </SelectTrigger>
-                <SelectContent>
-                  {entidadesGestoras.map((entidade) => (
-                    <SelectItem key={entidade.id_entidade} value={entidade.id_entidade.toString()}>
-                      {entidade.nom_entidade} 
-                      {entidade.nom_razao_social && ` (${entidade.nom_razao_social})`}
-                      <span className="text-muted-foreground ml-2">
-                        - {entidade.tipo_entidade.des_tipo_entidade}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="id_tipo_ponto_coleta">Tipo de Ponto de Coleta (Opcional)</Label>
-            {loadingTipos ? (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Carregando tipos...
+              <div className="space-y-2">
+                <Label htmlFor="id_entidade_gestora">Entidade Gestora *</Label>
+                {loadingEntidades ? (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Carregando entidades...
+                  </div>
+                ) : (
+                  <Select 
+                    value={formData.id_entidade_gestora?.toString() || ""} 
+                    onValueChange={(value) => handleInputChange('id_entidade_gestora', parseInt(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma entidade gestora" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {entidadesGestoras.map((entidade) => (
+                        <SelectItem key={entidade.id_entidade} value={entidade.id_entidade.toString()}>
+                          {entidade.nom_entidade} 
+                          {entidade.nom_razao_social && ` (${entidade.nom_razao_social})`}
+                          <span className="text-muted-foreground ml-2">
+                            - {entidade.tipo_entidade.des_tipo_entidade}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
-            ) : (
-              <Select 
-                value={formData.id_tipo_ponto_coleta?.toString() || ""} 
-                onValueChange={(value) => handleInputChange('id_tipo_ponto_coleta', parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um tipo de ponto de coleta (opcional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tiposPontoColeta.map((tipo) => (
-                    <SelectItem key={tipo.id_tipo_ponto_coleta} value={tipo.id_tipo_ponto_coleta.toString()}>
-                      {tipo.des_tipo_ponto_coleta}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="num_cep">CEP *</Label>
-            <div className="relative">
-              <Input
-                id="num_cep"
-                value={formData.num_cep}
-                onChange={(e) => handleCepChange(e.target.value)}
-                placeholder="00000-000"
-                maxLength={9}
-                required
-                className={!cepValid && formData.num_cep ? 'border-red-500 focus:border-red-500' : ''}
-              />
-              {cepLoading && (
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
+              <div className="space-y-2">
+                <Label htmlFor="id_tipo_ponto_coleta">Tipo de Ponto de Coleta (Opcional)</Label>
+                {loadingTipos ? (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Carregando tipos...
+                  </div>
+                ) : (
+                  <Select 
+                    value={formData.id_tipo_ponto_coleta?.toString() || ""} 
+                    onValueChange={(value) => handleInputChange('id_tipo_ponto_coleta', parseInt(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um tipo de ponto de coleta (opcional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tiposPontoColeta.map((tipo) => (
+                        <SelectItem key={tipo.id_tipo_ponto_coleta} value={tipo.id_tipo_ponto_coleta.toString()}>
+                          {tipo.des_tipo_ponto_coleta}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="num_cep">CEP *</Label>
+                <div className="relative">
+                  <Input
+                    id="num_cep"
+                    value={formData.num_cep}
+                    onChange={(e) => handleCepChange(e.target.value)}
+                    placeholder="00000-000"
+                    maxLength={9}
+                    required
+                    className={!cepValid && formData.num_cep ? 'border-red-500 focus:border-red-500' : ''}
+                  />
+                  {cepLoading && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            {!cepValid && cepError && (
-              <p className="text-sm text-red-600">{cepError}</p>
-            )}
-          </div>
+                {!cepValid && cepError && (
+                  <p className="text-sm text-red-600">{cepError}</p>
+                )}
+              </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="des_logradouro">Logradouro *</Label>
-              <Input
-                id="des_logradouro"
-                value={formData.des_logradouro}
-                onChange={(e) => handleInputChange('des_logradouro', e.target.value)}
-                placeholder="Rua, Avenida, etc."
-                maxLength={60}
-                required
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 items-start gap-3">
+                  <div className="md:col-span-2 space-y-2">
+                    <Label>Logradouro *</Label>
+                    <Input
+                      placeholder="Rua, Avenida, etc."
+                      maxLength={100}
+                      value={logradouroNome}
+                      className="h-10"
+                      onChange={(e) => {
+                        const nome = e.target.value;
+                        setLogradouroNome(nome);
+                      }}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-semibold">Nº</Label>
+                    <Input
+                      placeholder="Número"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={4}
+                      value={logradouroNumero}
+                      className="h-10"
+                      onChange={(e) => {
+                        const numero = e.target.value.replace(/\D/g, '').slice(0, 4);
+                        setLogradouroNumero(numero);
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="des_bairro">Bairro</Label>
+                  <Input
+                    id="des_bairro"
+                    value={formData.des_bairro}
+                    onChange={(e) => handleInputChange('des_bairro', e.target.value)}
+                    placeholder="Nome do bairro"
+                    maxLength={50}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Coluna direita: mapa */}
+            <div>
+              <MapLocationPicker
+                address={`${formData.des_logradouro}, ${formData.des_bairro}, CEP ${formData.num_cep}`}
+                latitude={formData.num_latitude}
+                longitude={formData.num_longitude}
+                onLocationChange={handleLocationChange}
               />
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="des_bairro">Bairro</Label>
-              <Input
-                id="des_bairro"
-                value={formData.des_bairro}
-                onChange={(e) => handleInputChange('des_bairro', e.target.value)}
-                placeholder="Nome do bairro"
-                maxLength={50}
-              />
-            </div>
           </div>
-
-          <MapLocationPicker
-            address={`${formData.des_logradouro}, ${formData.des_bairro}, CEP ${formData.num_cep}`}
-            latitude={formData.num_latitude}
-            longitude={formData.num_longitude}
-            onLocationChange={handleLocationChange}
-          />
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onBack}>

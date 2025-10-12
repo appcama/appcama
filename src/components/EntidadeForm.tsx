@@ -92,6 +92,9 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [latitude, setLatitude] = useState<number | null>(editingEntidade?.num_latitude || null);
   const [longitude, setLongitude] = useState<number | null>(editingEntidade?.num_longitude || null);
+  // Estados para dividir o logradouro em nome da rua e número
+  const [logradouroNome, setLogradouroNome] = useState<string>("");
+  const [logradouroNumero, setLogradouroNumero] = useState<string>("");
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -217,6 +220,44 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
     },
   });
 
+  // Funções auxiliares para tratar o logradouro combinado
+  const composeLogradouro = (nome: string, numero: string) => {
+    const nomeTrim = (nome || "").trim();
+    const numeroTrim = (numero || "").trim();
+    if (!nomeTrim && !numeroTrim) return "";
+    if (!numeroTrim) return nomeTrim;
+    return `${nomeTrim}, ${numeroTrim}`;
+  };
+
+  const parseLogradouro = (valor: string | undefined | null) => {
+    const v = (valor || "").trim();
+    if (!v) return { nome: "", numero: "" };
+    const parts = v.split(',');
+    if (parts.length >= 2) {
+      return { nome: parts[0].trim(), numero: parts.slice(1).join(',').trim() };
+    }
+    // Se não tiver vírgula, tentar extrair número no final
+    const match = v.match(/^(.*?)(?:\s*(\d+))$/);
+    if (match) {
+      return { nome: match[1].trim(), numero: match[2]?.trim() || "" };
+    }
+    return { nome: v, numero: "" };
+  };
+
+  // Inicializar estados de nome e número do logradouro a partir do valor atual
+  useEffect(() => {
+    const { nome, numero } = parseLogradouro(form.getValues('des_logradouro'));
+    setLogradouroNome(nome);
+    setLogradouroNumero(numero);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Manter des_logradouro sincronizado com os dois campos
+  useEffect(() => {
+    const combinado = composeLogradouro(logradouroNome, logradouroNumero);
+    form.setValue('des_logradouro', combinado, { shouldValidate: true, shouldDirty: true });
+  }, [logradouroNome, logradouroNumero]);
+
   useEffect(() => {
     fetchSelectData();
     
@@ -341,7 +382,9 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
 
       if (data.erro) {
         // Clear the fields if CEP is not found
-        form.setValue("des_logradouro", "");
+        setLogradouroNome("");
+        const combinado = composeLogradouro("", logradouroNumero);
+        form.setValue("des_logradouro", combinado, { shouldValidate: true, shouldDirty: true });
         form.setValue("des_bairro", "");
         
         toast({
@@ -354,9 +397,13 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
 
       // Always overwrite the fields with new data
       if (data.logradouro) {
-        form.setValue("des_logradouro", data.logradouro);
+        setLogradouroNome(data.logradouro);
+        const combinado = composeLogradouro(data.logradouro, logradouroNumero);
+        form.setValue("des_logradouro", combinado, { shouldValidate: true, shouldDirty: true });
       } else {
-        form.setValue("des_logradouro", "");
+        setLogradouroNome("");
+        const combinado = composeLogradouro("", logradouroNumero);
+        form.setValue("des_logradouro", combinado, { shouldValidate: true, shouldDirty: true });
       }
 
       if (data.bairro) {
@@ -568,9 +615,41 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                   name="des_logradouro"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Logradouro *</FormLabel>
                       <FormControl>
-                        <Input placeholder="Rua, Avenida, etc." maxLength={100} {...field} />
+                        <div className="grid grid-cols-1 md:grid-cols-3 items-start gap-3 md:gap-3">
+                          <div className="md:col-span-2 space-y-2">
+                            <FormLabel>Logradouro *</FormLabel>
+                            <Input
+                              placeholder="Rua, Avenida, etc."
+                              maxLength={100}
+                              value={logradouroNome}
+                              className="h-10"
+                              onChange={(e) => {
+                                const nome = e.target.value;
+                                setLogradouroNome(nome);
+                                const combinado = composeLogradouro(nome, logradouroNumero);
+                                field.onChange(combinado);
+                              }}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <FormLabel className="font-semibold">Nº</FormLabel>
+                            <Input
+                              placeholder="Número"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              maxLength={4}
+                              value={logradouroNumero}
+                              className="h-10"
+                              onChange={(e) => {
+                                const numero = e.target.value.replace(/\D/g, '').slice(0, 4);
+                                setLogradouroNumero(numero);
+                                const combinado = composeLogradouro(logradouroNome, numero);
+                                field.onChange(combinado);
+                              }}
+                            />
+                          </div>
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
