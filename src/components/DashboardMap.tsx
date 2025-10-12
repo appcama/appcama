@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDashboardMapData } from "@/hooks/useDashboardMapData";
+import { googleMapsLoader } from "@/lib/google-maps-loader";
 import { Loader2 } from "lucide-react";
 
 interface DashboardMapProps {
@@ -19,25 +20,15 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
 
   const { data, isLoading, error } = useDashboardMapData({ startDate, endDate, entityId });
 
-  // Carregar Google Maps API
+  // Carregar Google Maps API usando o gerenciador global
   useEffect(() => {
-    if (window.google?.maps) {
-      setIsMapLoaded(true);
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyC-SMESmT8ScecSuCz1oTcMFSp7Gg-Leag&libraries=places`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => setIsMapLoaded(true);
-    document.head.appendChild(script);
-
-    return () => {
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
+    googleMapsLoader.load({
+      onLoad: () => setIsMapLoaded(true),
+      onError: (error) => {
+        console.error('Erro ao carregar Google Maps:', error);
+        setIsMapLoaded(false);
       }
-    };
+    });
   }, []);
 
   // Inicializar mapa
@@ -54,10 +45,24 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
 
     infoWindowRef.current = new google.maps.InfoWindow();
 
-    // Aguardar o mapa estar completamente carregado
-    google.maps.event.addListenerOnce(mapInstance.current, 'tilesloaded', () => {
+    // Aguardar o mapa estar completamente carregado com timeout de segurança
+    let timeoutId: NodeJS.Timeout;
+    
+    const onTilesLoaded = () => {
+      clearTimeout(timeoutId);
       setIsMapReady(true);
-    });
+    };
+
+    google.maps.event.addListenerOnce(mapInstance.current, 'tilesloaded', onTilesLoaded);
+    
+    // Timeout de segurança: se tiles não carregarem em 3s, considera pronto
+    timeoutId = setTimeout(() => {
+      setIsMapReady(true);
+    }, 3000);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, [isMapLoaded]);
 
   // Atualizar marcadores quando os dados mudarem

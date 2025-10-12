@@ -3,6 +3,7 @@ import { MapPin, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { googleMapsLoader } from '@/lib/google-maps-loader';
 
 interface MapLocationPickerProps {
   address?: string;
@@ -25,35 +26,19 @@ export function MapLocationPicker({
   const [geocoding, setGeocoding] = useState(false);
   const { toast } = useToast();
 
-  // Carregar Google Maps API
+  // Carregar Google Maps API usando o gerenciador global
   useEffect(() => {
-    const apiKey = 'AIzaSyC-SMESmT8ScecSuCz1oTcMFSp7Gg-Leag';
-    
-    // Verificar se já foi carregado
-    if ((window as any).google && (window as any).google.maps) {
-      setLoading(false);
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => setLoading(false);
-    script.onerror = () => {
-      setLoading(false);
-      toast({
-        title: "Erro ao carregar mapa",
-        description: "Não foi possível carregar o Google Maps. Verifique sua chave de API.",
-        variant: "destructive",
-      });
-    };
-    
-    document.head.appendChild(script);
-
-    return () => {
-      // Cleanup se necessário
-    };
+    googleMapsLoader.load({
+      onLoad: () => setLoading(false),
+      onError: (error) => {
+        setLoading(false);
+        toast({
+          title: "Erro ao carregar mapa",
+          description: "Não foi possível carregar o Google Maps.",
+          variant: "destructive",
+        });
+      }
+    });
   }, [toast]);
 
   // Inicializar mapa
