@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { googleMapsLoader } from '@/lib/google-maps-loader';
+import { createColoredPin } from '@/lib/map-pin-helpers';
 
 interface MapLocationPickerProps {
   address?: string;
@@ -20,8 +21,8 @@ export function MapLocationPicker({
   onLocationChange,
   height = 320,
 }: MapLocationPickerProps) {
-  const [map, setMap] = useState<any>(null);
-  const [marker, setMarker] = useState<any>(null);
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [marker, setMarker] = useState<google.maps.marker.AdvancedMarkerElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [geocoding, setGeocoding] = useState(false);
   const { toast } = useToast();
@@ -68,21 +69,24 @@ export function MapLocationPicker({
 
       setMap(newMap);
 
-      // Criar marcador
-      const newMarker = new googleMaps.Marker({
+      // Criar marcador arrastável usando AdvancedMarkerElement
+      const pinElement = createColoredPin('pontoColeta');
+      
+      const newMarker = new googleMaps.marker.AdvancedMarkerElement({
         position: initialPosition,
         map: newMap,
-        draggable: true,
+        gmpDraggable: true,
         title: 'Localização da Entidade',
+        content: pinElement.element
       });
 
       setMarker(newMarker);
 
       // Evento de arrastar marcador
       newMarker.addListener('dragend', () => {
-        const position = newMarker.getPosition();
+        const position = newMarker.position as google.maps.LatLngLiteral;
         if (position) {
-          onLocationChange(position.lat(), position.lng());
+          onLocationChange(position.lat, position.lng);
         }
       });
 
@@ -122,7 +126,7 @@ export function MapLocationPicker({
           // Atualizar mapa e marcador
           map.setCenter(location);
           map.setZoom(15);
-          marker.setPosition(location);
+          marker.position = location;
 
           // Notificar mudança
           onLocationChange(lat, lng);

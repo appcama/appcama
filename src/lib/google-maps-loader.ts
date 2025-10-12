@@ -4,7 +4,7 @@
  */
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyC-SMESmT8ScecSuCz1oTcMFSp7Gg-Leag';
-const GOOGLE_MAPS_LIBRARIES = 'places';
+const GOOGLE_MAPS_LIBRARIES = 'places,marker';
 
 interface LoadGoogleMapsOptions {
   onLoad?: () => void;

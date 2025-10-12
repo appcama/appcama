@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDashboardMapData } from "@/hooks/useDashboardMapData";
 import { googleMapsLoader } from "@/lib/google-maps-loader";
+import { createAdvancedMarker } from "@/lib/map-pin-helpers";
 import { Loader2 } from "lucide-react";
 
 interface DashboardMapProps {
@@ -13,7 +14,7 @@ interface DashboardMapProps {
 export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<google.maps.Marker[]>([]);
+  const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
@@ -70,7 +71,7 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
     if (!mapInstance.current || !data || !isMapReady) return;
 
     // Limpar marcadores anteriores
-    markersRef.current.forEach(marker => marker.setMap(null));
+    markersRef.current.forEach(marker => marker.map = null);
     markersRef.current = [];
 
     const bounds = new google.maps.LatLngBounds();
@@ -80,16 +81,12 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
     data.entidades.forEach((entidade) => {
       const position = { lat: entidade.latitude, lng: entidade.longitude };
       
-      const marker = new google.maps.Marker({
+      const marker = createAdvancedMarker(
         position,
-        map: mapInstance.current,
-        title: entidade.nome,
-        icon: {
-          url: entidade.isColetora 
-            ? 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-            : 'http://maps.google.com/mapfiles/ms/icons/orange-dot.png'
-        }
-      });
+        mapInstance.current!,
+        entidade.nome,
+        entidade.isColetora ? 'coletora' : 'geradora'
+      );
 
       const contentString = `
         <div style="padding: 10px; max-width: 250px;">
@@ -101,9 +98,12 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
       `;
 
       marker.addListener('click', () => {
-        if (infoWindowRef.current) {
+        if (infoWindowRef.current && mapInstance.current) {
           infoWindowRef.current.setContent(contentString);
-          infoWindowRef.current.open(mapInstance.current, marker);
+          infoWindowRef.current.open({
+            map: mapInstance.current,
+            anchor: marker
+          });
         }
       });
 
@@ -116,14 +116,12 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
     data.pontosColeta.forEach((ponto) => {
       const position = { lat: ponto.latitude, lng: ponto.longitude };
       
-      const marker = new google.maps.Marker({
+      const marker = createAdvancedMarker(
         position,
-        map: mapInstance.current,
-        title: ponto.nome,
-        icon: {
-          url: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png'
-        }
-      });
+        mapInstance.current!,
+        ponto.nome,
+        'pontoColeta'
+      );
 
       const contentString = `
         <div style="padding: 10px; max-width: 250px;">
@@ -134,9 +132,12 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
       `;
 
       marker.addListener('click', () => {
-        if (infoWindowRef.current) {
+        if (infoWindowRef.current && mapInstance.current) {
           infoWindowRef.current.setContent(contentString);
-          infoWindowRef.current.open(mapInstance.current, marker);
+          infoWindowRef.current.open({
+            map: mapInstance.current,
+            anchor: marker
+          });
         }
       });
 
