@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -57,18 +58,34 @@ interface PontosColetaFormProps {
 
 export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: PontosColetaFormProps) {
   const { user } = useAuth();
-  const [formData, setFormData] = useState({
-    nom_ponto_coleta: '',
-    num_cep: '',
-    des_logradouro: '',
-    des_bairro: '',
-    id_entidade_gestora: null as number | null,
-    id_municipio: 1,
-    id_unidade_federativa: 1,
-    id_tipo_ponto_coleta: null as number | null,
-    id_tipo_situacao: 1,
-    num_latitude: null as number | null,
-    num_longitude: null as number | null
+  type PontosColetaFormValues = {
+    nom_ponto_coleta: string;
+    num_cep: string;
+    des_logradouro: string;
+    des_bairro: string;
+    id_entidade_gestora: number | null;
+    id_municipio: number;
+    id_unidade_federativa: number;
+    id_tipo_ponto_coleta: number | null;
+    id_tipo_situacao: number;
+    num_latitude: number | null;
+    num_longitude: number | null;
+  };
+
+  const form = useForm<PontosColetaFormValues>({
+    defaultValues: {
+      nom_ponto_coleta: editingPontoColeta?.nom_ponto_coleta ?? '',
+      num_cep: applyCepMask(editingPontoColeta?.num_cep ?? ''),
+      des_logradouro: editingPontoColeta?.des_logradouro ?? '',
+      des_bairro: editingPontoColeta?.des_bairro ?? '',
+      id_entidade_gestora: editingPontoColeta?.id_entidade_gestora ?? null,
+      id_municipio: editingPontoColeta?.id_municipio ?? 1,
+      id_unidade_federativa: editingPontoColeta?.id_unidade_federativa ?? 1,
+      id_tipo_ponto_coleta: editingPontoColeta?.id_tipo_ponto_coleta ?? null,
+      id_tipo_situacao: editingPontoColeta?.id_tipo_situacao ?? 1,
+      num_latitude: editingPontoColeta?.num_latitude ?? null,
+      num_longitude: editingPontoColeta?.num_longitude ?? null,
+    }
   });
   
   const [entidadesGestoras, setEntidadesGestoras] = useState<Entidade[]>([]);
@@ -152,7 +169,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
 
   useEffect(() => {
     if (editingPontoColeta) {
-      setFormData({
+      form.reset({
         nom_ponto_coleta: editingPontoColeta.nom_ponto_coleta,
         num_cep: applyCepMask(editingPontoColeta.num_cep),
         des_logradouro: editingPontoColeta.des_logradouro,
@@ -165,6 +182,11 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
         num_latitude: editingPontoColeta.num_latitude,
         num_longitude: editingPontoColeta.num_longitude
       });
+
+      // Preencher imediatamente os campos separados de logradouro e número
+      const { nome, numero } = parseLogradouro(editingPontoColeta.des_logradouro);
+      setLogradouroNome(nome);
+      setLogradouroNumero(numero);
     }
   }, [editingPontoColeta]);
 
@@ -182,28 +204,34 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
     if (!v) return { nome: "", numero: "" };
     const parts = v.split(',');
     if (parts.length >= 2) {
-      return { nome: parts[0].trim(), numero: parts.slice(1).join(',').trim() };
+      const nome = parts[0].trim();
+      const resto = parts.slice(1).join(',').trim();
+      const numeroSomenteDigitos = (resto.match(/\d+/)?.[0] || "").trim();
+      return { nome, numero: numeroSomenteDigitos };
     }
-    // Se não tiver vírgula, tentar extrair número no final
+    // Sem vírgula: tentar extrair dígitos do final (ex.: "Rua X 123")
     const match = v.match(/^(.*?)(?:\s*(\d+))$/);
     if (match) {
-      return { nome: match[1].trim(), numero: match[2]?.trim() || "" };
+      return { nome: match[1].trim(), numero: (match[2] || "").trim() };
     }
     return { nome: v, numero: "" };
   };
 
-  // Inicializar estados de nome e número do logradouro a partir do valor atual
+  // Inicializar estados de nome e número do logradouro quando o valor carregado mudar
+  const watchDesLogradouro = form.watch('des_logradouro');
   useEffect(() => {
-    const { nome, numero } = parseLogradouro(formData.des_logradouro);
+    const { nome, numero } = parseLogradouro(watchDesLogradouro);
     setLogradouroNome(nome);
     setLogradouroNumero(numero);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingPontoColeta]);
+  }, [watchDesLogradouro]);
 
-  // Manter des_logradouro sincronizado com os dois campos
+  // Manter des_logradouro sincronizado com os dois campos, evitando re-render desnecessário
   useEffect(() => {
     const combinado = composeLogradouro(logradouroNome, logradouroNumero);
-    setFormData(prev => ({ ...prev, des_logradouro: combinado }));
+    const current = form.getValues('des_logradouro');
+    if (current !== combinado) {
+      form.setValue('des_logradouro', combinado, { shouldDirty: true });
+    }
   }, [logradouroNome, logradouroNumero]);
 
   const fetchEntidadesGestoras = async () => {
@@ -253,10 +281,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
       
       // Se estamos criando um novo ponto de coleta e não é admin, definir automaticamente a entidade
       if (!editingPontoColeta && data && data.length > 0 && !user.isAdmin) {
-        setFormData(prev => ({
-          ...prev,
-          id_entidade_gestora: data[0].id_entidade
-        }));
+        form.setValue('id_entidade_gestora', data[0].id_entidade, { shouldDirty: true });
       }
     } catch (error) {
       console.error('Erro ao buscar entidades gestoras:', error);
@@ -294,51 +319,36 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
 
   const handleCepChange = async (cep: string) => {
     const formattedCep = applyCepMask(cep);
-    
-    setFormData(prev => ({
-      ...prev,
-      num_cep: formattedCep
-    }));
+    form.setValue('num_cep', formattedCep, { shouldDirty: true });
 
-    // Reset validation state
     setCepValid(true);
     setCepError('');
 
-    if (formattedCep.replace(/\D/g, '').length === 8) {
+    const digits = formattedCep.replace(/\D/g, '');
+    if (digits.length === 8) {
       const cepData = await searchCep(formattedCep);
       if (cepData) {
-        // Atualiza nome da rua; número permanece o digitado pelo usuário
         setLogradouroNome(cepData.logradouro || "");
-        setFormData(prev => ({
-          ...prev,
-          des_bairro: cepData.bairro || "",
-          // Atualiza município (IBGE) e UF (código) quando disponíveis
-          id_municipio: cepData.ibge ? parseInt(cepData.ibge, 10) : prev.id_municipio,
-          id_unidade_federativa: mapUfToCode(cepData.uf) ?? prev.id_unidade_federativa,
-        }));
+        form.setValue('des_bairro', cepData.bairro || "", { shouldDirty: true });
+        if (cepData.ibge) form.setValue('id_municipio', parseInt(cepData.ibge, 10), { shouldDirty: true });
+        const ufCode = mapUfToCode(cepData.uf);
+        if (ufCode) form.setValue('id_unidade_federativa', ufCode, { shouldDirty: true });
         setCepValid(true);
         setCepError('');
       } else {
-        // CEP não encontrado
         setCepValid(false);
         setCepError('CEP não encontrado ou inválido');
         setLogradouroNome("");
-        setFormData(prev => ({
-          ...prev,
-          des_bairro: ''
-        }));
+        form.setValue('des_bairro', '', { shouldDirty: true });
       }
-    } else if (formattedCep.replace(/\D/g, '').length > 0) {
-      // CEP incompleto
+    } else if (digits.length > 0) {
       setCepValid(false);
       setCepError('CEP deve ter 8 dígitos');
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.nom_ponto_coleta.trim()) {
+  const onSubmit = async (values: PontosColetaFormValues) => {
+    if (!values.nom_ponto_coleta.trim()) {
       toast({
         title: "Erro",
         description: "Nome do ponto de coleta é obrigatório",
@@ -347,7 +357,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
       return;
     }
 
-    if (!formData.num_cep.trim() || formData.num_cep.replace(/\D/g, '').length !== 8) {
+    if (!values.num_cep.trim() || values.num_cep.replace(/\D/g, '').length !== 8) {
       toast({
         title: "Erro",
         description: "CEP é obrigatório e deve ter 8 dígitos",
@@ -365,7 +375,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
       return;
     }
 
-    if (!formData.des_logradouro.trim()) {
+    if (!values.des_logradouro.trim()) {
       toast({
         title: "Erro",
         description: "Logradouro é obrigatório",
@@ -374,7 +384,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
       return;
     }
 
-    if (!formData.id_entidade_gestora) {
+    if (!values.id_entidade_gestora) {
       toast({
         title: "Erro",
         description: "Entidade gestora é obrigatória",
@@ -385,17 +395,17 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
 
     try {
       const pontoData: any = {
-        nom_ponto_coleta: formData.nom_ponto_coleta,
-        des_logradouro: formData.des_logradouro || '',
-        des_bairro: formData.des_bairro || '',
-        num_cep: formData.num_cep.replace(/\D/g, ''),
-        id_entidade_gestora: formData.id_entidade_gestora,
-        id_municipio: formData.id_municipio,
-        id_unidade_federativa: formData.id_unidade_federativa,
-        id_tipo_ponto_coleta: formData.id_tipo_ponto_coleta || null,
-        id_tipo_situacao: formData.id_tipo_situacao,
-        num_latitude: formData.num_latitude,
-        num_longitude: formData.num_longitude,
+        nom_ponto_coleta: values.nom_ponto_coleta,
+        des_logradouro: values.des_logradouro || '',
+        des_bairro: values.des_bairro || '',
+        num_cep: values.num_cep.replace(/\D/g, ''),
+        id_entidade_gestora: values.id_entidade_gestora,
+        id_municipio: values.id_municipio,
+        id_unidade_federativa: values.id_unidade_federativa,
+        id_tipo_ponto_coleta: values.id_tipo_ponto_coleta || null,
+        id_tipo_situacao: values.id_tipo_situacao,
+        num_latitude: values.num_latitude,
+        num_longitude: values.num_longitude,
         des_status: 'A',
         des_locked: 'D',
         dat_atualizacao: new Date().toISOString(),
@@ -414,19 +424,9 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
     }
   };
 
-  const handleInputChange = (field: string, value: string | number) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
   const handleLocationChange = (lat: number, lng: number) => {
-    setFormData(prev => ({
-      ...prev,
-      num_latitude: lat,
-      num_longitude: lng
-    }));
+    form.setValue('num_latitude', lat, { shouldDirty: true });
+    form.setValue('num_longitude', lng, { shouldDirty: true });
   };
 
   return (
@@ -443,7 +443,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
         </div>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Coluna esquerda: campos do formulário */}
             <div className="space-y-4">
@@ -451,8 +451,8 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
                 <Label htmlFor="nom_ponto_coleta">Nome do Ponto de Coleta *</Label>
                 <Input
                   id="nom_ponto_coleta"
-                  value={formData.nom_ponto_coleta}
-                  onChange={(e) => handleInputChange('nom_ponto_coleta', e.target.value)}
+                  value={form.watch('nom_ponto_coleta') || ''}
+                  onChange={(e) => form.setValue('nom_ponto_coleta', e.target.value, { shouldDirty: true })}
                   placeholder="Nome do ponto de coleta"
                   maxLength={60}
                   required
@@ -468,8 +468,8 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
                   </div>
                 ) : (
                   <Select 
-                    value={formData.id_entidade_gestora?.toString() || ""} 
-                    onValueChange={(value) => handleInputChange('id_entidade_gestora', parseInt(value))}
+                    value={form.watch('id_entidade_gestora')?.toString() || ""} 
+                    onValueChange={(value) => form.setValue('id_entidade_gestora', parseInt(value), { shouldDirty: true })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione uma entidade gestora" />
@@ -498,8 +498,8 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
                   </div>
                 ) : (
                   <Select 
-                    value={formData.id_tipo_ponto_coleta?.toString() || ""} 
-                    onValueChange={(value) => handleInputChange('id_tipo_ponto_coleta', parseInt(value))}
+                    value={form.watch('id_tipo_ponto_coleta')?.toString() || ""} 
+                    onValueChange={(value) => form.setValue('id_tipo_ponto_coleta', parseInt(value), { shouldDirty: true })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione um tipo de ponto de coleta (opcional)" />
@@ -520,12 +520,12 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
                 <div className="relative">
                   <Input
                     id="num_cep"
-                    value={formData.num_cep}
+                    value={form.watch('num_cep') || ''}
                     onChange={(e) => handleCepChange(e.target.value)}
                     placeholder="00000-000"
                     maxLength={9}
                     required
-                    className={!cepValid && formData.num_cep ? 'border-red-500 focus:border-red-500' : ''}
+                    className={!cepValid && (form.watch('num_cep') || '') ? 'border-red-500 focus:border-red-500' : ''}
                   />
                   {cepLoading && (
                     <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -575,8 +575,8 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
                   <Label htmlFor="des_bairro">Bairro</Label>
                   <Input
                     id="des_bairro"
-                    value={formData.des_bairro}
-                    onChange={(e) => handleInputChange('des_bairro', e.target.value)}
+                    value={form.watch('des_bairro') || ''}
+                    onChange={(e) => form.setValue('des_bairro', e.target.value, { shouldDirty: true })}
                     placeholder="Nome do bairro"
                     maxLength={50}
                   />
@@ -587,9 +587,9 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
             {/* Coluna direita: mapa */}
             <div>
               <MapLocationPicker
-                address={`${formData.des_logradouro}, ${formData.des_bairro}, CEP ${formData.num_cep}`}
-                latitude={formData.num_latitude}
-                longitude={formData.num_longitude}
+                address={`${form.watch('des_logradouro') || ''}, ${form.watch('des_bairro') || ''}, CEP ${form.watch('num_cep') || ''}`}
+                latitude={form.watch('num_latitude') || null}
+                longitude={form.watch('num_longitude') || null}
                 onLocationChange={handleLocationChange}
               />
             </div>
