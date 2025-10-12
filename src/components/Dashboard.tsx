@@ -16,9 +16,11 @@ import {
 } from "lucide-react";
 import { useDashboardData, type DashboardFilters } from "@/hooks/useDashboardData";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
+import { useDashboardMapData } from "@/hooks/useDashboardMapData";
 import { DashboardFiltersComponent } from "@/components/DashboardFilters";
 import { DashboardCharts } from "@/components/DashboardCharts";
 import { DashboardInfographic } from "@/components/DashboardInfographic";
+import { DashboardMap } from "@/components/DashboardMap";
 
 // Environmental indicators configuration with icons
 const getIndicatorIcon = (nomIndicador: string) => {
@@ -67,6 +69,7 @@ export function Dashboard() {
 
   const { data, isLoading, error } = useDashboardData(filters);
   const { data: statsData, isLoading: statsLoading } = useDashboardStats(filters);
+  const { data: mapData, isLoading: mapLoading } = useDashboardMapData(filters);
 
   const formatNumber = (value: number, decimals = 1) => {
     return value.toLocaleString('pt-BR', { 
@@ -213,7 +216,9 @@ export function Dashboard() {
         </CardContent>
       </Card>
 
-
+      {!mapLoading && mapData && mapData.length > 0 && (
+        <DashboardMap markers={mapData} />
+      )}
 
       {data?.residuosPorTipo && data.residuosPorTipo.length > 0 && (
         <Card>
