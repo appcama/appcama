@@ -19,6 +19,7 @@ import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { DashboardFiltersComponent } from "@/components/DashboardFilters";
 import { DashboardCharts } from "@/components/DashboardCharts";
 import { DashboardInfographic } from "@/components/DashboardInfographic";
+import { DashboardMap } from "@/components/DashboardMap";
 
 // Environmental indicators configuration with icons
 const getIndicatorIcon = (nomIndicador: string) => {
@@ -259,6 +260,12 @@ export function Dashboard() {
       {data?.residuosPorTipo && (
         <DashboardCharts residuosPorTipo={data.residuosPorTipo} />
       )}
+
+      <DashboardMap 
+        startDate={filters.dataInicial}
+        endDate={filters.dataFinal}
+        entityId={filters.entidadeId}
+      />
 
       {data?.indicadores && data.indicadores.length > 0 && (
         <Card>
