@@ -15,7 +15,6 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
   const markersRef = useRef<google.maps.Marker[]>([]);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
-  const [isMapReady, setIsMapReady] = useState(false);
 
   const { data, isLoading, error } = useDashboardMapData({ startDate, endDate, entityId });
 
@@ -53,16 +52,11 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
     });
 
     infoWindowRef.current = new google.maps.InfoWindow();
-
-    // Aguardar o mapa estar completamente carregado
-    google.maps.event.addListenerOnce(mapInstance.current, 'tilesloaded', () => {
-      setIsMapReady(true);
-    });
   }, [isMapLoaded]);
 
   // Atualizar marcadores quando os dados mudarem
   useEffect(() => {
-    if (!mapInstance.current || !data || !isMapReady) return;
+    if (!mapInstance.current || !data || !isMapLoaded) return;
 
     // Limpar marcadores anteriores
     markersRef.current.forEach(marker => marker.setMap(null));
@@ -152,9 +146,9 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
         google.maps.event.removeListener(listener);
       });
     }
-  }, [data, isMapReady]);
+  }, [data, isMapLoaded]);
 
-  if (isLoading || !isMapReady) {
+  if (isLoading || !isMapLoaded) {
     return (
       <Card className="w-full">
         <CardHeader>
