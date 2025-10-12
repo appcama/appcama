@@ -27,35 +27,34 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
       .catch((error) => console.error('Erro ao carregar Google Maps:', error));
   }, []);
 
-  // Inicializar mapa com observer para garantir dimensões
+  // Inicializar mapa
   useEffect(() => {
     if (!isMapLoaded || !mapContainer.current || mapInstance.current) return;
 
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (entry && entry.contentRect.height > 0) {
-        observer.disconnect();
-        
-        mapInstance.current = new google.maps.Map(mapContainer.current!, {
-          center: { lat: -12.9714, lng: -38.5014 },
-          zoom: 12,
-          mapTypeControl: true,
-          streetViewControl: false,
-          fullscreenControl: true,
-        });
-
-        infoWindowRef.current = new google.maps.InfoWindow();
-
-        // Aguardar tiles carregarem
-        google.maps.event.addListenerOnce(mapInstance.current, 'tilesloaded', () => {
-          setIsMapReady(true);
-        });
-      }
+    mapInstance.current = new google.maps.Map(mapContainer.current, {
+      center: { lat: -12.9714, lng: -38.5014 },
+      zoom: 12,
+      mapTypeControl: true,
+      streetViewControl: false,
+      fullscreenControl: true,
     });
 
-    observer.observe(mapContainer.current);
+    infoWindowRef.current = new google.maps.InfoWindow();
 
-    return () => observer.disconnect();
+    // Timeout de fallback: se tilesloaded não disparar em 3s, marca como pronto
+    const fallbackTimeout = setTimeout(() => {
+      console.log('Timeout: marcando mapa como pronto');
+      setIsMapReady(true);
+    }, 3000);
+
+    // Aguardar tiles carregarem (ideal)
+    google.maps.event.addListenerOnce(mapInstance.current, 'tilesloaded', () => {
+      clearTimeout(fallbackTimeout);
+      console.log('Tiles carregadas: mapa pronto');
+      setIsMapReady(true);
+    });
+
+    return () => clearTimeout(fallbackTimeout);
   }, [isMapLoaded]);
 
   // Atualizar marcadores quando os dados mudarem
