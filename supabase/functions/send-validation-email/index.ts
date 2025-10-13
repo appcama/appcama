@@ -115,7 +115,7 @@ const handler = async (req: Request): Promise<Response> => {
     
     try {
       const emailResponse = await resend.emails.send({
-        from: "ReciclaSystem <onboarding@resend.dev>",
+        from: "ReciclaSystem <noreply@rcyclae.com.br>",
         to: [email],
         subject: `Validação de Conta - ReciclaSystem`,
         html: `
