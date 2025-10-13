@@ -151,39 +151,6 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
     }
   }, [data, isMapReady]);
 
-  if (isLoading || !isMapReady) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Localização dos Pontos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center h-[400px] gap-3">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">
-              {!isMapLoaded ? 'Carregando API do Google Maps...' : 'Inicializando mapa...'}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Localização dos Pontos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-[400px] text-muted-foreground">
-            Erro ao carregar o mapa
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   const totalPontos = (data?.entidades.length || 0) + (data?.pontosColeta.length || 0);
 
   return (
@@ -192,37 +159,55 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
         <CardTitle>Localização dos Pontos</CardTitle>
       </CardHeader>
       <CardContent>
-        {totalPontos === 0 ? (
-          <div className="flex items-center justify-center h-[400px] text-muted-foreground">
-            Nenhum ponto com localização cadastrada
-          </div>
-        ) : (
-          <div className="relative">
-            <div 
-              ref={mapContainer} 
-              className="w-full h-[400px] rounded-lg"
-            />
-            
-            {/* Legenda */}
-            <div className="absolute top-3 right-3 bg-card border border-border rounded-lg p-3 shadow-lg">
-              <div className="text-sm font-semibold mb-2">Legenda</div>
-              <div className="space-y-1 text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                  <span>Entidades Coletoras</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-orange-500"></div>
-                  <span>Entidades Geradoras</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                  <span>Pontos de Coleta</span>
-                </div>
+        <div className="relative">
+          {/* Container do mapa SEMPRE renderizado para evitar loop de inicialização */}
+          <div
+            ref={mapContainer}
+            className="w-full h-[400px] rounded-lg"
+          />
+
+          {/* Overlay de carregamento/erro */}
+          {(isLoading || !isMapReady || error) && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/70">
+              {!error ? (
+                <>
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">
+                    {!isMapLoaded ? 'Carregando API do Google Maps...' : 'Inicializando mapa...'}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">Erro ao carregar o mapa</p>
+              )}
+            </div>
+          )}
+
+          {/* Legenda */}
+          <div className="absolute top-3 right-3 bg-card border border-border rounded-lg p-3 shadow-lg">
+            <div className="text-sm font-semibold mb-2">Legenda</div>
+            <div className="space-y-1 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                <span>Entidades Coletoras</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                <span>Entidades Geradoras</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                <span>Pontos de Coleta</span>
               </div>
             </div>
           </div>
-        )}
+
+          {/* Mensagem quando não há pontos */}
+          {totalPontos === 0 && !isLoading && isMapReady && !error && (
+            <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+              Nenhum ponto com localização cadastrada
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
