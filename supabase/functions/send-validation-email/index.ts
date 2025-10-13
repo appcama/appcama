@@ -27,13 +27,11 @@ const handler = async (req: Request): Promise<Response> => {
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const testRecipient = Deno.env.get("RESEND_TEST_RECIPIENT") || "appcamaong@gmail.com";
     
     console.log("Environment check:", {
       hasResendKey: !!resendApiKey,
       hasSupabaseUrl: !!supabaseUrl,
       hasSupabaseKey: !!supabaseKey,
-      testRecipient: testRecipient,
       resendKeyPrefix: resendApiKey ? resendApiKey.substring(0, 8) + "..." : "not found"
     });
 
@@ -73,7 +71,6 @@ const handler = async (req: Request): Promise<Response> => {
     const { userId, email, userName }: ValidationEmailRequest = await req.json();
     
     console.log("Processing request for:", { userId, email, userName });
-    console.log("Email will be sent to test recipient:", testRecipient);
 
     // Generate token using database function
     console.log("Generating token for user:", userId);
@@ -113,26 +110,16 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Token generated successfully, length:", token.length);
 
-    // Send email to test recipient (owner's email)
-    console.log("Sending email to test recipient:", testRecipient, "for user:", email);
+    // Send email to user
+    console.log("Sending validation email to:", email);
     
     try {
       const emailResponse = await resend.emails.send({
         from: "ReciclaSystem <onboarding@resend.dev>",
-        to: [testRecipient],
-        reply_to: [email], // Set reply-to to the original user's email
-        subject: `[TESTE] Validação de Conta - ReciclaSystem para ${email}`,
+        to: [email],
+        subject: `Validação de Conta - ReciclaSystem`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="background-color: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-              <p style="color: #92400e; margin: 0; font-weight: bold; text-align: center;">
-                ⚠️ MODO TESTE - Email enviado para: ${testRecipient}
-              </p>
-              <p style="color: #92400e; margin: 5px 0 0 0; text-align: center; font-size: 14px;">
-                Email original destinado a: <strong>${email}</strong>
-              </p>
-            </div>
-            
             <div style="text-align: center; margin-bottom: 30px;">
               <h1 style="color: #059669; margin: 0;">ReciclaSystem</h1>
               <p style="color: #6b7280; margin: 5px 0;">Sistema de Gestão de Reciclagem</p>
@@ -169,7 +156,6 @@ const handler = async (req: Request): Promise<Response> => {
             
             <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
               <p style="color: #6b7280; font-size: 14px; margin: 0;">
-                Email destinado originalmente a: <strong>${email}</strong><br>
                 Este código expira em 24 horas.
               </p>
             </div>
@@ -212,8 +198,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       console.log("Email sent successfully:", {
         emailId: emailResponse.data?.id,
-        sentTo: testRecipient,
-        originalRecipient: email
+        sentTo: email
       });
 
       return new Response(
@@ -221,10 +206,8 @@ const handler = async (req: Request): Promise<Response> => {
           success: true, 
           token: token,
           emailId: emailResponse.data?.id,
-          sentTo: testRecipient,
-          originalRecipient: email,
-          message: "Email de validação enviado com sucesso (modo teste)",
-          isTestMode: true
+          sentTo: email,
+          message: "Email de validação enviado com sucesso"
         }),
         {
           status: 200,
