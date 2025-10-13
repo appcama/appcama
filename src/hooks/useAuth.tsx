@@ -168,8 +168,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (!data || data.length === 0) {
-        console.log('[Auth] Credenciais inválidas');
-        return { success: false, error: 'CPF/CNPJ ou senha inválidos' };
+        console.log('[Auth] Credenciais inválidas ou senha não validada');
+        return { 
+          success: false, 
+          error: 'CPF/CNPJ ou senha inválidos. Se você ainda não validou sua senha, verifique seu e-mail.' 
+        };
       }
 
       const userData = data[0];
