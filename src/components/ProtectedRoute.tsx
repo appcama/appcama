@@ -14,6 +14,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   useEffect(() => {
     if (!loading && !user) {
       navigate('/login');
+    } else if (!loading && user && user.passwordValidated === 'D') {
+      // Usuário logado mas senha não validada - redirecionar para validação
+      navigate('/validate-password');
     }
   }, [user, loading, navigate]);
 

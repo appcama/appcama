@@ -176,6 +176,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const userData = data[0];
+      console.log('[Auth] Dados do usuário autenticado:', userData);
+
+      // Verificar se precisa validar senha ANTES de criar sessão Supabase
+      if (userData.password_validated === 'D') {
+        console.log('[Auth] Senha não validada - redirecionando para validação');
+        
+        const isAdmin = await checkIsAdmin(userData.profile_id);
+        
+        // Salvar dados do usuário no estado e localStorage (sem criar sessão Supabase ainda)
+        const authUser: AuthUser = {
+          id: userData.user_id,
+          entityId: userData.entity_id,
+          profileId: userData.profile_id,
+          passwordValidated: userData.password_validated,
+          status: userData.user_status,
+          email: userData.email,
+          isAdmin
+        };
+        
+        setUser(authUser);
+        localStorage.setItem('recicla_e_user', JSON.stringify(authUser));
+        
+        return {
+          success: true,
+          needsValidation: true
+        };
+      }
+
+      // Senha validada - prosseguir com login completo
       const isAdmin = await checkIsAdmin(userData.profile_id);
 
       const authUser: AuthUser = {
@@ -266,12 +295,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Continuar mesmo com erro - a autenticação customizada já funcionou
       }
 
-      // Verificar se precisa validar senha
-      if (userData.password_validated === 'D') {
-        console.log('[Auth] Senha precisa ser validada');
-        return { success: true, needsValidation: true };
-      }
-
       console.log('[Auth] Login bem-sucedido');
       return { success: true };
     } catch (error) {
@@ -284,6 +307,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const validatePassword = async (userId: number, newPassword: string) => {
     try {
+      console.log('[Auth] Validando senha para usuário:', userId);
+      
       const { data, error } = await supabase
         .rpc('validate_user_password', {
           user_id: userId,
@@ -291,17 +316,92 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
 
       if (error) {
+        console.error('[Auth] Erro ao validar senha:', error);
         return { success: false, error: 'Erro ao validar senha' };
       }
 
       if (data) {
-        // Atualizar o usuário local
-        setUser(prev => prev ? { ...prev, passwordValidated: 'A' } : null);
+        console.log('[Auth] Senha validada com sucesso');
+        
+        // Atualizar o usuário no estado com senha validada
+        if (user) {
+          const updatedUser = { ...user, passwordValidated: 'A' };
+          setUser(updatedUser);
+          localStorage.setItem('recicla_e_user', JSON.stringify(updatedUser));
+          
+          // Agora criar a sessão Supabase com o email do usuário
+          if (user.email) {
+            console.log('[Auth] Criando sessão Supabase após validação');
+            const emailForAuth = user.email;
+            
+            try {
+              // Tentar fazer login com Supabase Auth
+              const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+                email: emailForAuth,
+                password: newPassword
+              });
+
+              // Se o usuário não existe no Supabase Auth, criar
+              if (signInError?.message?.includes('Invalid login credentials')) {
+                console.log('[Auth] Usuário não existe no Supabase Auth, criando...');
+                const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+                  email: emailForAuth,
+                  password: newPassword,
+                  options: {
+                    data: {
+                      user_id: user.id,
+                      entity_id: user.entityId,
+                      profile_id: user.profileId
+                    }
+                  }
+                });
+                
+                if (signUpError) {
+                  console.warn('[Auth] Erro ao criar usuário no Supabase Auth:', signUpError);
+                } else {
+                  console.log('[Auth] Usuário criado no Supabase Auth com sucesso');
+                  
+                  if (signUpData?.user) {
+                    await supabase.auth.updateUser({
+                      data: {
+                        user_id: user.id,
+                        entity_id: user.entityId,
+                        profile_id: user.profileId,
+                        email: user.email,
+                        status: user.status,
+                        password_validated: 'A'
+                      }
+                    });
+                  }
+                }
+              } else if (!signInError) {
+                console.log('[Auth] Sessão Supabase criada com sucesso');
+                
+                if (signInData?.user) {
+                  await supabase.auth.updateUser({
+                    data: {
+                      user_id: user.id,
+                      entity_id: user.entityId,
+                      profile_id: user.profileId,
+                      email: user.email,
+                      status: user.status,
+                      password_validated: 'A'
+                    }
+                  });
+                }
+              }
+            } catch (authError) {
+              console.warn('[Auth] Erro ao gerenciar sessão Supabase:', authError);
+            }
+          }
+        }
+        
         return { success: true };
       }
 
       return { success: false, error: 'Falha na validação' };
     } catch (error) {
+      console.error('[Auth] Erro inesperado:', error);
       return { success: false, error: 'Erro inesperado' };
     }
   };
