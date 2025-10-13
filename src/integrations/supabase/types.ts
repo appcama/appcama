@@ -669,6 +669,24 @@ export type Database = {
           },
         ]
       }
+      municipio: {
+        Row: {
+          id_municipio: number
+          id_unidade_federativa: number | null
+          nom_municipio: string
+        }
+        Insert: {
+          id_municipio: number
+          id_unidade_federativa?: number | null
+          nom_municipio: string
+        }
+        Update: {
+          id_municipio?: number
+          id_unidade_federativa?: number | null
+          nom_municipio?: string
+        }
+        Relationships: []
+      }
       perfil: {
         Row: {
           dat_atualizacao: string | null
@@ -920,6 +938,36 @@ export type Database = {
           },
         ]
       }
+      territorio: {
+        Row: {
+          id_territorio: number
+          nom_territorio: string
+        }
+        Insert: {
+          id_territorio?: number
+          nom_territorio: string
+        }
+        Update: {
+          id_territorio?: number
+          nom_territorio?: string
+        }
+        Relationships: []
+      }
+      territorio__municipio: {
+        Row: {
+          id_municipio: number
+          id_territorio: number
+        }
+        Insert: {
+          id_municipio: number
+          id_territorio: number
+        }
+        Update: {
+          id_municipio?: number
+          id_territorio?: number
+        }
+        Relationships: []
+      }
       tipo_entidade: {
         Row: {
           dat_atualizacao: string | null
@@ -1120,6 +1168,24 @@ export type Database = {
             referencedColumns: ["id_usuario"]
           },
         ]
+      }
+      unidade_federativa: {
+        Row: {
+          cod_unidade_federativa: string | null
+          id_unidade_federativa: number
+          nom_unidade_federativa: string
+        }
+        Insert: {
+          cod_unidade_federativa?: string | null
+          id_unidade_federativa: number
+          nom_unidade_federativa: string
+        }
+        Update: {
+          cod_unidade_federativa?: string | null
+          id_unidade_federativa?: number
+          nom_unidade_federativa?: string
+        }
+        Relationships: []
       }
       unidade_medida: {
         Row: {
