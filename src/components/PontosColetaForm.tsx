@@ -169,6 +169,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
 
   useEffect(() => {
     if (editingPontoColeta) {
+      // Primeiro fazer o reset do formulário
       form.reset({
         nom_ponto_coleta: editingPontoColeta.nom_ponto_coleta,
         num_cep: applyCepMask(editingPontoColeta.num_cep),
@@ -183,10 +184,21 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
         num_longitude: editingPontoColeta.num_longitude
       });
 
-      // Preencher imediatamente os campos separados de logradouro e número
-      const { nome, numero } = parseLogradouro(editingPontoColeta.des_logradouro);
-      setLogradouroNome(nome);
-      setLogradouroNumero(numero);
+      // Depois, separar o logradouro em nome e número
+      // Usar setTimeout para garantir que o reset foi aplicado
+      setTimeout(() => {
+        const { nome, numero } = parseLogradouro(editingPontoColeta.des_logradouro);
+        console.log('Parsing logradouro:', { 
+          original: editingPontoColeta.des_logradouro, 
+          parsed: { nome, numero } 
+        });
+        setLogradouroNome(nome);
+        setLogradouroNumero(numero);
+      }, 0);
+    } else {
+      // Ao criar novo, limpar os campos
+      setLogradouroNome('');
+      setLogradouroNumero('');
     }
   }, [editingPontoColeta]);
 
@@ -217,20 +229,24 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
     return { nome: v, numero: "" };
   };
 
-  // Inicializar estados de nome e número do logradouro quando o valor carregado mudar
-  const watchDesLogradouro = form.watch('des_logradouro');
-  useEffect(() => {
-    const { nome, numero } = parseLogradouro(watchDesLogradouro);
-    setLogradouroNome(nome);
-    setLogradouroNumero(numero);
-  }, [watchDesLogradouro]);
+  // Removido o useEffect que causava conflito de sincronização
 
   // Manter des_logradouro sincronizado com os dois campos, evitando re-render desnecessário
   useEffect(() => {
-    const combinado = composeLogradouro(logradouroNome, logradouroNumero);
-    const current = form.getValues('des_logradouro');
-    if (current !== combinado) {
-      form.setValue('des_logradouro', combinado, { shouldDirty: true });
+    // Só sincronizar se houver valores ou não estamos carregando dados de edição
+    if (logradouroNome || logradouroNumero || !editingPontoColeta) {
+      const combinado = composeLogradouro(logradouroNome, logradouroNumero);
+      const current = form.getValues('des_logradouro');
+      
+      // Só atualizar se realmente mudou
+      if (current !== combinado) {
+        console.log('Sincronizando logradouro:', { 
+          nome: logradouroNome, 
+          numero: logradouroNumero, 
+          combinado 
+        });
+        form.setValue('des_logradouro', combinado, { shouldDirty: true });
+      }
     }
   }, [logradouroNome, logradouroNumero]);
 
