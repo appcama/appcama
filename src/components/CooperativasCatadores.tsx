@@ -14,11 +14,23 @@ interface Entidade {
   nom_entidade: string;
   nom_razao_social: string | null;
   id_tipo_pessoa: number;
+  id_tipo_entidade: number;
+  id_tipo_situacao: number;
+  id_municipio: number;
+  id_unidade_federativa: number;
   des_logradouro: string;
   des_bairro: string;
   num_cep: string;
   num_telefone: string | null;
+  num_latitude: number | null;
+  num_longitude: number | null;
+  des_logo_url: string | null;
+  des_status: string;
+  des_locked: string;
   dat_criacao: string;
+  dat_atualizacao: string | null;
+  id_usuario_criador: number;
+  id_usuario_atualizador: number | null;
 }
 
 export function CooperativasCatadores() {
@@ -95,6 +107,7 @@ export function CooperativasCatadores() {
           setEditingEntidade(null);
         }}
         onSuccess={handleFormSuccess}
+        editingEntidade={editingEntidade}
       />
     );
   }
@@ -123,6 +136,7 @@ export function CooperativasCatadores() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Logo</TableHead>
                   <TableHead>CPF/CNPJ</TableHead>
                   <TableHead>Nome</TableHead>
                   <TableHead>Razão Social</TableHead>
@@ -134,6 +148,19 @@ export function CooperativasCatadores() {
               <TableBody>
                 {entidades.map((entidade) => (
                   <TableRow key={entidade.id_entidade}>
+                    <TableCell>
+                      {entidade.des_logo_url ? (
+                        <img 
+                          src={entidade.des_logo_url} 
+                          alt={`Logo ${entidade.nom_entidade}`}
+                          className="h-8 w-8 object-contain rounded"
+                        />
+                      ) : (
+                        <div className="h-8 w-8 bg-muted rounded flex items-center justify-center">
+                          <span className="text-xs text-muted-foreground">-</span>
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell>{entidade.num_cpf_cnpj}</TableCell>
                     <TableCell>{entidade.nom_entidade}</TableCell>
                     <TableCell>{entidade.nom_razao_social || '-'}</TableCell>

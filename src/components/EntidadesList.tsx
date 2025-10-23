@@ -25,6 +25,8 @@ interface Entidade {
   id_tipo_situacao: number;
   id_municipio: number;
   des_status: string;
+  des_logo_url?: string | null;
+  dat_atualizacao?: string | null;
   des_tipo_entidade?: string;
 }
 
@@ -244,6 +246,7 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Logo</TableHead>
                     <TableHead>Nome</TableHead>
                     <TableHead>CPF/CNPJ</TableHead>
                     <TableHead>Tipo</TableHead>
@@ -257,6 +260,19 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
                 <TableBody>
                   {filteredEntidades.map((entidade) => (
                     <TableRow key={entidade.id_entidade}>
+                      <TableCell>
+                        {entidade.des_logo_url ? (
+                          <img 
+                            src={entidade.des_logo_url} 
+                            alt={`Logo ${entidade.nom_entidade}`}
+                            className="h-8 w-8 object-contain rounded"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 bg-muted rounded flex items-center justify-center">
+                            <span className="text-xs text-muted-foreground">-</span>
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="font-medium">
                         {entidade.nom_entidade}
                       </TableCell>
