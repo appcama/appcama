@@ -73,16 +73,7 @@ export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
 
       let query = supabase
         .from('ponto_coleta')
-        .select(`
-          *,
-          entidade_gestora:id_entidade_gestora(
-            nom_entidade,
-            nom_razao_social
-          ),
-          tipo_ponto_coleta:id_tipo_ponto_coleta(
-            des_tipo_ponto_coleta
-          )
-        `);
+        .select('*');
 
       // Se não é administrador, filtrar pela entidade do usuário
       if (!user.isAdmin && user.entityId) {
