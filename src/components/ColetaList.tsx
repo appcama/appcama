@@ -98,10 +98,27 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
         `)
         .eq('des_status', 'A');
 
-      // Se não é administrador, filtrar pela entidade do usuário
+      // Se não é administrador, filtrar pela entidade coletora (usuário criador)
       if (!user.isAdmin && user.entityId) {
-        console.log('Non-admin user, filtering by entityId:', user.entityId);
-        query = query.eq('id_entidade_geradora', user.entityId);
+        console.log('Non-admin user, filtering by collector entityId:', user.entityId);
+        
+        // Buscar usuários da mesma entidade
+        const { data: usuariosDaEntidade } = await supabase
+          .from('usuario')
+          .select('id_usuario')
+          .eq('id_entidade', user.entityId)
+          .eq('des_status', 'A');
+        
+        const userIds = usuariosDaEntidade?.map(u => u.id_usuario) || [];
+        
+        if (userIds.length > 0) {
+          query = query.in('id_usuario_criador', userIds);
+        } else {
+          console.log('No users found for this entity, not loading coletas');
+          setColetas([]);
+          setLoading(false);
+          return;
+        }
       } else if (user.isAdmin) {
         console.log('Admin user, showing all coletas');
       } else {
