@@ -111,9 +111,32 @@ export function GerarCertificado() {
         .eq('des_status', 'A')
         .is('id_certificado', null); // Apenas coletas não certificadas
 
-      // Filtrar por entidade se não for admin
+      // Filtrar por entidade coletora (usuário criador) se não for admin
       if (!user.isAdmin && user.entityId) {
-        query = query.eq('id_entidade_geradora', user.entityId);
+        console.log('Non-admin user, filtering by collector entityId:', user.entityId);
+        
+        // Buscar usuários da mesma entidade
+        const { data: usuariosDaEntidade } = await supabase
+          .from('usuario')
+          .select('id_usuario')
+          .eq('id_entidade', user.entityId)
+          .eq('des_status', 'A');
+        
+        const userIds = usuariosDaEntidade?.map(u => u.id_usuario) || [];
+        
+        if (userIds.length > 0) {
+          query = query.in('id_usuario_criador', userIds);
+        } else {
+          console.log('No users found for this entity, not loading coletas');
+          setColetas([]);
+          setLoading(false);
+          return;
+        }
+      } else if (!user.isAdmin) {
+        console.log('No entityId found and not admin, not loading coletas');
+        setColetas([]);
+        setLoading(false);
+        return;
       }
 
       const { data, error } = await query.order('dat_coleta', { ascending: false });
