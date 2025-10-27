@@ -769,7 +769,7 @@ export type Database = {
           id_entidade_gestora: number
           id_municipio: number
           id_ponto_coleta: number
-          id_tipo_ponto_coleta: number
+          id_tipo_ponto_coleta: number | null
           id_tipo_situacao: number
           id_unidade_federativa: number
           id_usuario_atualizador: number | null
@@ -789,7 +789,7 @@ export type Database = {
           id_entidade_gestora: number
           id_municipio: number
           id_ponto_coleta?: number
-          id_tipo_ponto_coleta: number
+          id_tipo_ponto_coleta?: number | null
           id_tipo_situacao: number
           id_unidade_federativa: number
           id_usuario_atualizador?: number | null
@@ -809,7 +809,7 @@ export type Database = {
           id_entidade_gestora?: number
           id_municipio?: number
           id_ponto_coleta?: number
-          id_tipo_ponto_coleta?: number
+          id_tipo_ponto_coleta?: number | null
           id_tipo_situacao?: number
           id_unidade_federativa?: number
           id_usuario_atualizador?: number | null
@@ -1348,7 +1348,7 @@ export type Database = {
         }[]
       }
       debug_user_data: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           cpf_cnpj: string
           entity_id: number
@@ -1358,14 +1358,8 @@ export type Database = {
           user_id: number
         }[]
       }
-      generate_user_token: {
-        Args: { user_id_param: number }
-        Returns: string
-      }
-      reset_user_password: {
-        Args: { user_id_param: number }
-        Returns: boolean
-      }
+      generate_user_token: { Args: { user_id_param: number }; Returns: string }
+      reset_user_password: { Args: { user_id_param: number }; Returns: boolean }
       validate_user_password: {
         Args: { new_password: string; user_id: number }
         Returns: boolean

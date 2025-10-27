@@ -321,11 +321,6 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
 
       if (error) throw error;
       setTiposPontoColeta(data || []);
-      
-      // Se estamos criando um novo ponto de coleta, definir o primeiro tipo automaticamente
-      if (!editingPontoColeta && data && data.length > 0) {
-        form.setValue('id_tipo_ponto_coleta', data[0].id_tipo_ponto_coleta, { shouldDirty: true });
-      }
     } catch (error) {
       console.error('Erro ao buscar tipos de ponto de coleta:', error);
       toast({
@@ -414,15 +409,6 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
       return;
     }
 
-    if (!values.id_tipo_ponto_coleta) {
-      toast({
-        title: "Erro",
-        description: "Tipo de ponto de coleta é obrigatório",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
       const pontoData: any = {
         nom_ponto_coleta: values.nom_ponto_coleta,
@@ -432,7 +418,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
         id_entidade_gestora: values.id_entidade_gestora,
         id_municipio: values.id_municipio,
         id_unidade_federativa: values.id_unidade_federativa,
-        id_tipo_ponto_coleta: values.id_tipo_ponto_coleta,
+        id_tipo_ponto_coleta: values.id_tipo_ponto_coleta || null,
         id_tipo_situacao: values.id_tipo_situacao,
         num_latitude: values.num_latitude,
         num_longitude: values.num_longitude,
@@ -520,7 +506,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="id_tipo_ponto_coleta">Tipo de Ponto de Coleta *</Label>
+                <Label htmlFor="id_tipo_ponto_coleta">Tipo de Ponto de Coleta (Opcional)</Label>
                 {loadingTipos ? (
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
