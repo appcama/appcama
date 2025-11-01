@@ -25,8 +25,8 @@ export function RelatoriosLayout({ activeItem }: RelatoriosLayoutProps) {
         { id: "coletas-periodo", title: "Coletas por Período", description: "Lista detalhada de todas as coletas realizadas" },
         { id: "residuos-coletados", title: "Resíduos Coletados", description: "Detalhamento por tipo de resíduo, quantidade e valor" },
         { id: "performance-pontos", title: "Performance dos Pontos", description: "Estatísticas e eficiência de cada ponto de coleta" },
-        { id: "ranking-entidades", title: "Ranking de Entidades", description: "Ranking das entidades por volume coletado" },
-        { id: "eventos-coleta", title: "Eventos de Coleta", description: "Relatório consolidado por evento de coleta" }
+        { id: "ranking-entidades", title: "Ranking de Entidades Coletoras", description: "Ranking das entidades por volume coletado" },
+        { id: "eventos-coleta", title: "Eventos", description: "Relatório consolidado por evento de coleta" }
       ]
     },
     "relatorios-gerenciais": {
@@ -37,8 +37,7 @@ export function RelatoriosLayout({ activeItem }: RelatoriosLayoutProps) {
         { id: "dashboard-executivo", title: "Dashboard Executivo", description: "Visão consolidada com KPIs principais" },
         { id: "faturamento", title: "Análise de Faturamento", description: "Análise financeira das coletas e receitas" },
         { id: "produtividade", title: "Produtividade", description: "Análise de eficiência por entidade coletora" },
-        { id: "crescimento", title: "Análise de Crescimento", description: "Evolução temporal das operações" },
-        { id: "custos-beneficios", title: "Custos vs Benefícios", description: "Análise econômica das operações" }
+        { id: "crescimento", title: "Análise de Crescimento", description: "Evolução temporal das operações" }
       ]
     },
     "relatorios-ambientais": {
@@ -47,10 +46,7 @@ export function RelatoriosLayout({ activeItem }: RelatoriosLayoutProps) {
       icon: Recycle,
       reports: [
         { id: "indicadores-ambientais", title: "Indicadores Ambientais", description: "CO2 evitado, água e energia poupadas" },
-        { id: "impacto-ecologico", title: "Impacto Ecológico", description: "Relatório detalhado dos benefícios ambientais" },
-        { id: "reciclometro", title: "Reciclômetro", description: "Visualização do impacto ambiental acumulado" },
-        { id: "certificacao", title: "Dados para Certificação", description: "Informações para certificações e selos verdes" },
-        { id: "sustentabilidade", title: "Métricas de Sustentabilidade", description: "Indicadores de sustentabilidade por período" }
+        { id: "reciclometro", title: "Reciclômetro", description: "Visualização do impacto ambiental acumulado" }
       ]
     },
     "relatorios-comparativos": {
