@@ -83,6 +83,15 @@ async function fetchRelatorioData(
         dat_coleta,
         vlr_total,
         des_status,
+        id_usuario_criador,
+        usuario_criador:usuario!coleta_id_usuario_criador_fkey (
+          id_usuario,
+          id_entidade,
+          entidade_coletora:entidade!usuario_id_entidade_fkey (
+            nom_entidade,
+            des_status
+          )
+        ),
         coleta_residuo (
           id_coleta_residuo,
           qtd_total,
@@ -329,8 +338,8 @@ function processRankingEntidades(coletas: any[], filters: RelatorioFiltersType):
   const entidadesMap = new Map();
   
   coletas.forEach(coleta => {
-    // Entidade COLETORA = entidade gestora do ponto de coleta
-    const entidade = coleta.ponto_coleta?.entidade?.nom_entidade || 'Entidade coletora não informada';
+    // Entidade COLETORA = entidade do usuário que criou a coleta
+    const entidade = coleta.usuario_criador?.entidade_coletora?.nom_entidade || 'Entidade coletora não informada';
     if (!entidadesMap.has(entidade)) {
       entidadesMap.set(entidade, { 
         nome: entidade,
