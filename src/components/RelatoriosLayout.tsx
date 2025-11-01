@@ -26,6 +26,7 @@ export function RelatoriosLayout({ activeItem }: RelatoriosLayoutProps) {
         { id: "residuos-coletados", title: "Resíduos Coletados", description: "Detalhamento por tipo de resíduo, quantidade e valor" },
         { id: "performance-pontos", title: "Performance dos Pontos", description: "Estatísticas e eficiência de cada ponto de coleta" },
         { id: "ranking-entidades", title: "Ranking de Entidades Coletoras", description: "Ranking das entidades por volume coletado" },
+        { id: "ranking-entidades-geradoras", title: "Ranking de Entidades Geradoras", description: "Ranking das entidades geradoras por volume gerado" },
         { id: "eventos-coleta", title: "Eventos", description: "Relatório consolidado por evento de coleta" }
       ]
     },
@@ -37,8 +38,7 @@ export function RelatoriosLayout({ activeItem }: RelatoriosLayoutProps) {
         { id: "dashboard-executivo", title: "Dashboard Executivo", description: "Visão consolidada com KPIs principais" },
         { id: "faturamento", title: "Análise de Faturamento", description: "Análise financeira das coletas e receitas" },
         { id: "produtividade", title: "Produtividade", description: "Análise de eficiência por entidade coletora" },
-        { id: "crescimento", title: "Análise de Crescimento", description: "Evolução temporal das operações" },
-        { id: "ranking-entidades-geradoras", title: "Ranking de Entidades Geradoras", description: "Ranking das entidades geradoras por volume coletado" }
+        { id: "crescimento", title: "Análise de Crescimento", description: "Evolução temporal das operações" }
       ]
     },
     "relatorios-ambientais": {

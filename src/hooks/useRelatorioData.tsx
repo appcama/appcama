@@ -329,7 +329,8 @@ function processRankingEntidades(coletas: any[], filters: RelatorioFiltersType):
   const entidadesMap = new Map();
   
   coletas.forEach(coleta => {
-    const entidade = coleta.entidade?.nom_entidade || 'Entidade não informada';
+    // Entidade COLETORA = entidade gestora do ponto de coleta
+    const entidade = coleta.ponto_coleta?.entidade?.nom_entidade || 'Entidade coletora não informada';
     if (!entidadesMap.has(entidade)) {
       entidadesMap.set(entidade, { 
         nome: entidade,
