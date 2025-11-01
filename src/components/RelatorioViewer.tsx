@@ -34,6 +34,7 @@ export function RelatorioViewer({ reportType, category, filters }: RelatorioView
     "analise-faturamento": "Análise de Faturamento",
     "produtividade": "Relatório de Produtividade",
     "analise-crescimento": "Análise de Crescimento",
+    "ranking-entidades-geradoras": "Ranking de Entidades Geradoras",
     "custos-beneficios": "Análise de Custos vs Benefícios",
     "indicadores-ambientais": "Indicadores Ambientais",
     "impacto-ecologico": "Impacto Ecológico Detalhado",
@@ -309,7 +310,15 @@ function RelatorioTabela({ data, reportType }: { data: any; reportType: string }
         ];
       case 'ranking-entidades':
         return [
-          { key: 'nome', label: 'Entidade' },
+          { key: 'nome', label: 'Entidade Coletora' },
+          { key: 'quantidade', label: 'Resíduos (kg)' },
+          { key: 'valor', label: 'Valor (R$)' },
+          { key: 'entidade', label: 'Coletas' },
+          { key: 'ponto', label: 'Média por Coleta' }
+        ];
+      case 'ranking-entidades-geradoras':
+        return [
+          { key: 'nome', label: 'Entidade Geradora' },
           { key: 'quantidade', label: 'Resíduos (kg)' },
           { key: 'valor', label: 'Valor (R$)' },
           { key: 'entidade', label: 'Coletas' },

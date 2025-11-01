@@ -183,6 +183,8 @@ function processRelatorioData(
       return processProdutividade(coletasParaProcessar, filters);
     case 'analise-crescimento':
       return processAnaliseCrescimento(coletasParaProcessar, filters);
+    case 'ranking-entidades-geradoras':
+      return processRankingEntidadesGeradoras(coletasParaProcessar, filters);
     case 'custos-beneficios':
       return processCustosBeneficios(coletasParaProcessar, filters);
     default:
@@ -328,6 +330,58 @@ function processRankingEntidades(coletas: any[], filters: RelatorioFiltersType):
   
   coletas.forEach(coleta => {
     const entidade = coleta.entidade?.nom_entidade || 'Entidade não informada';
+    if (!entidadesMap.has(entidade)) {
+      entidadesMap.set(entidade, { 
+        nome: entidade,
+        coletas: 0, 
+        valor: 0, 
+        residuos: 0,
+        ultimaColeta: null
+      });
+    }
+    const data = entidadesMap.get(entidade);
+    data.coletas++;
+    data.valor += Number(coleta.vlr_total) || 0;
+    if (coleta.coleta_residuo) {
+      data.residuos += coleta.coleta_residuo.reduce((sum: number, r: any) => sum + (Number(r.qtd_total) || 0), 0);
+    }
+    if (!data.ultimaColeta || new Date(coleta.dat_coleta) > new Date(data.ultimaColeta)) {
+      data.ultimaColeta = coleta.dat_coleta;
+    }
+  });
+
+  const entidadesRanking = Array.from(entidadesMap.values())
+    .sort((a, b) => b.residuos - a.residuos)
+    .map((entidade, index) => ({
+      id: index + 1,
+      nome: entidade.nome,
+      quantidade: Math.round(entidade.residuos),
+      valor: Math.round(entidade.valor * 100) / 100,
+      data: entidade.ultimaColeta,
+      entidade: `${entidade.coletas} coletas`,
+      ponto: `Média: ${Math.round((entidade.valor / entidade.coletas) * 100) / 100}`
+    }));
+
+  const totalResiduos = Array.from(entidadesMap.values()).reduce((sum, e) => sum + e.residuos, 0);
+  const valorTotal = Array.from(entidadesMap.values()).reduce((sum, e) => sum + e.valor, 0);
+
+  return {
+    totalColetas: coletas.length,
+    totalResiduos: Math.round(totalResiduos),
+    valorTotal: Math.round(valorTotal * 100) / 100,
+    entidadesAtivas: entidadesMap.size,
+    residuosPorTipo: processResiduosPorTipo(coletas),
+    indicadores: processIndicadoresAmbientais(totalResiduos),
+    items: entidadesRanking
+  };
+}
+
+function processRankingEntidadesGeradoras(coletas: any[], filters: RelatorioFiltersType): RelatorioData {
+  const entidadesMap = new Map();
+  
+  coletas.forEach(coleta => {
+    // Buscar a entidade geradora através do id_entidade_geradora
+    const entidade = coleta.entidade?.nom_entidade || 'Entidade geradora não informada';
     if (!entidadesMap.has(entidade)) {
       entidadesMap.set(entidade, { 
         nome: entidade,

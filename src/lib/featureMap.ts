@@ -26,6 +26,7 @@ export const idToFeatureMap: Record<string, string> = {
   "relatorios-gerenciais": "Relatórios", 
   "relatorios-ambientais": "Relatórios",
   "relatorios-comparativos": "Relatórios",
+  "ranking-entidades-geradoras": "Relatórios",
 };
 
 export function featureByItemId(itemId: string): string | undefined {
