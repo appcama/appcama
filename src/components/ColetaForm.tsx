@@ -213,11 +213,12 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         // Carregar pontos de coleta (com filtro de entidade se necessário)
         pontosQuery,
         
-        // Carregar eventos
+        // Carregar eventos VIGENTES (não finalizados)
         supabase
           .from('evento')
-          .select('id_evento, nom_evento')
+          .select('id_evento, nom_evento, dat_inicio, dat_termino')
           .eq('des_status', 'A')
+          .gte('dat_termino', new Date().toISOString()) // Apenas eventos não finalizados
           .order('nom_evento')
       ]);
 
@@ -296,8 +297,30 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         });
         setEventos([]);
       } else {
-        console.log('[ColetaForm] Eventos loaded:', eventosResult.data?.length || 0);
-        setEventos(eventosResult.data || []);
+        let eventosData = eventosResult.data || [];
+        console.log('[ColetaForm] Eventos vigentes loaded:', eventosData.length);
+        
+        // Se estiver editando e tiver um id_evento, verificar se esse evento está na lista
+        if (editingColeta?.id_evento) {
+          const eventoExists = eventosData.some((e: any) => e.id_evento === editingColeta.id_evento);
+          
+          // Se o evento não está na lista (é um evento passado), buscar esse evento específico
+          if (!eventoExists) {
+            console.log('[ColetaForm] Evento associado não está na lista vigente, buscando evento passado:', editingColeta.id_evento);
+            const { data: eventoPassado } = await supabase
+              .from('evento')
+              .select('id_evento, nom_evento, dat_inicio, dat_termino')
+              .eq('id_evento', editingColeta.id_evento)
+              .single();
+            
+            if (eventoPassado) {
+              console.log('[ColetaForm] Evento passado adicionado à lista:', eventoPassado.nom_evento);
+              eventosData = [...eventosData, eventoPassado];
+            }
+          }
+        }
+        
+        setEventos(eventosData);
       }
 
       console.log('[ColetaForm] All form data loaded successfully');
