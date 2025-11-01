@@ -1,12 +1,13 @@
 
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Package } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { ColetaViewDialog } from './ColetaViewDialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +52,9 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
   const [coletas, setColetas] = useState<Coleta[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewingColetaId, setViewingColetaId] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -170,6 +174,17 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
     coleta.evento?.nom_evento?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Paginação
+  const totalPages = Math.ceil(filteredColetas.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedColetas = filteredColetas.slice(startIndex, endIndex);
+
+  // Reset página quando filtrar
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -242,6 +257,12 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
 
   return (
     <div className="space-y-6">
+      <ColetaViewDialog 
+        coletaId={viewingColetaId}
+        open={viewingColetaId !== null}
+        onOpenChange={(open) => !open && setViewingColetaId(null)}
+      />
+      
       <Card>
         <CardHeader>
           <div className="flex flex-row items-center justify-between">
@@ -286,7 +307,7 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredColetas.map((coleta) => (
+                  {paginatedColetas.map((coleta) => (
                     <tr key={coleta.id_coleta} className="border-b hover:bg-gray-50">
                       <td className="p-4">{coleta.cod_coleta}</td>
                       <td className="p-4">{formatDate(coleta.dat_coleta)}</td>
@@ -299,6 +320,15 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
                       </td>
                       <td className="p-4">
                         <div className="flex justify-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setViewingColetaId(coleta.id_coleta)}
+                            title="Visualizar"
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
@@ -345,6 +375,48 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Paginação */}
+          {filteredColetas.length > itemsPerPage && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t">
+              <div className="text-sm text-gray-600">
+                Exibindo {startIndex + 1} a {Math.min(endIndex, filteredColetas.length)} de {filteredColetas.length} coletas
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Anterior
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className={currentPage === page ? "bg-green-600 hover:bg-green-700" : ""}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Próxima
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
