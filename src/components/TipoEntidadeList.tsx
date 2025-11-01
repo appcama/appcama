@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Building2, Edit, Power } from "lucide-react";
+import { Plus, Building2, Edit, Power, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -26,6 +26,8 @@ interface TipoEntidadeListProps {
 
 export function TipoEntidadeList({ onAddNew, onEdit }: TipoEntidadeListProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const queryClient = useQueryClient();
 
   const { data: tiposEntidade = [], isLoading, error } = useQuery({
@@ -81,6 +83,12 @@ export function TipoEntidadeList({ onAddNew, onEdit }: TipoEntidadeListProps) {
   const filteredTiposEntidade = tiposEntidade.filter(tipo =>
     tipo.des_tipo_entidade?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Paginação
+  const totalPages = Math.ceil(filteredTiposEntidade.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedTipos = filteredTiposEntidade.slice(startIndex, endIndex);
 
   if (isLoading) {
     return (
@@ -145,7 +153,7 @@ export function TipoEntidadeList({ onAddNew, onEdit }: TipoEntidadeListProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTiposEntidade.map((tipo) => (
+                {paginatedTipos.map((tipo) => (
                   <TableRow key={tipo.id_tipo_entidade}>
                     <TableCell className="font-medium">
                       {tipo.des_tipo_entidade}
@@ -212,6 +220,48 @@ export function TipoEntidadeList({ onAddNew, onEdit }: TipoEntidadeListProps) {
                 ))}
               </TableBody>
             </Table>
+          </div>
+        )}
+
+        {/* Paginação */}
+        {filteredTiposEntidade.length > itemsPerPage && (
+          <div className="flex items-center justify-between mt-6 pt-4 border-t">
+            <div className="text-sm text-gray-600">
+              Exibindo {startIndex + 1} a {Math.min(endIndex, filteredTiposEntidade.length)} de {filteredTiposEntidade.length} tipos
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Anterior
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className={currentPage === page ? "bg-green-600 hover:bg-green-700" : ""}
+                  >
+                    {page}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Próxima
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         )}
       </CardContent>

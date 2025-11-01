@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Edit, Power } from "lucide-react";
+import { Plus, Trash2, Edit, Power, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -33,6 +33,8 @@ interface TipoResiduoListProps {
 
 export function TipoResiduoList({ onAddNew, onEdit }: TipoResiduoListProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const queryClient = useQueryClient();
 
   const { data: tiposResiduo = [], isLoading, error } = useQuery({
@@ -147,6 +149,12 @@ export function TipoResiduoList({ onAddNew, onEdit }: TipoResiduoListProps) {
     tipo.des_recurso_natural?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Paginação
+  const totalPages = Math.ceil(filteredTiposResiduo.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedTipos = filteredTiposResiduo.slice(startIndex, endIndex);
+
   if (isLoading) {
     return (
       <Card>
@@ -210,7 +218,7 @@ export function TipoResiduoList({ onAddNew, onEdit }: TipoResiduoListProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTiposResiduo.map((tipo) => (
+                {paginatedTipos.map((tipo) => (
                   <TableRow key={tipo.id_tipo_residuo}>
                     <TableCell className="font-medium">
                       {tipo.des_tipo_residuo}
@@ -296,6 +304,48 @@ export function TipoResiduoList({ onAddNew, onEdit }: TipoResiduoListProps) {
                 ))}
               </TableBody>
             </Table>
+          </div>
+        )}
+
+        {/* Paginação */}
+        {filteredTiposResiduo.length > itemsPerPage && (
+          <div className="flex items-center justify-between mt-6 pt-4 border-t">
+            <div className="text-sm text-gray-600">
+              Exibindo {startIndex + 1} a {Math.min(endIndex, filteredTiposResiduo.length)} de {filteredTiposResiduo.length} tipos
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Anterior
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className={currentPage === page ? "bg-green-600 hover:bg-green-700" : ""}
+                  >
+                    {page}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Próxima
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         )}
       </CardContent>

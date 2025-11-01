@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Edit, Plus, Power, MapPin, Trash2 } from "lucide-react";
+import { Edit, Plus, Power, MapPin, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -47,6 +47,8 @@ interface TipoPontoColetaListProps {
 
 export function TipoPontoColetaList({ onEdit, onAddNew }: TipoPontoColetaListProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [tipoToDelete, setTipoToDelete] = useState<TipoPontoColeta | null>(null);
   const { toast } = useToast();
@@ -196,6 +198,12 @@ export function TipoPontoColetaList({ onEdit, onAddNew }: TipoPontoColetaListPro
     tipo.des_tipo_ponto_coleta?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Paginação
+  const totalPages = Math.ceil(filteredTiposPontoColeta.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedTipos = filteredTiposPontoColeta.slice(startIndex, endIndex);
+
   if (isLoading) {
     return (
       <Card>
@@ -258,7 +266,7 @@ export function TipoPontoColetaList({ onEdit, onAddNew }: TipoPontoColetaListPro
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTiposPontoColeta.map((tipo) => (
+                  {paginatedTipos.map((tipo) => (
                     <TableRow key={tipo.id_tipo_ponto_coleta}>
                       <TableCell className="font-medium">
                         {tipo.des_tipo_ponto_coleta}
@@ -338,6 +346,48 @@ export function TipoPontoColetaList({ onEdit, onAddNew }: TipoPontoColetaListPro
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          )}
+
+          {/* Paginação */}
+          {filteredTiposPontoColeta.length > itemsPerPage && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t">
+              <div className="text-sm text-gray-600">
+                Exibindo {startIndex + 1} a {Math.min(endIndex, filteredTiposPontoColeta.length)} de {filteredTiposPontoColeta.length} tipos
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Anterior
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className={currentPage === page ? "bg-green-600 hover:bg-green-700" : ""}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Próxima
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

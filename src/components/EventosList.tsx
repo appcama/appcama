@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Calendar, Edit, Power } from "lucide-react";
+import { Plus, Calendar, Edit, Power, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -32,6 +32,8 @@ export function EventosList({ onAddNew, onEdit }: EventosListProps) {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -100,6 +102,17 @@ export function EventosList({ onAddNew, onEdit }: EventosListProps) {
     evento.des_evento?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Paginação
+  const totalPages = Math.ceil(filteredEventos.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedEventos = filteredEventos.slice(startIndex, endIndex);
+
+  // Reset página quando filtrar
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   if (loading) {
     return (
       <Card>
@@ -151,7 +164,7 @@ export function EventosList({ onAddNew, onEdit }: EventosListProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredEventos.map((evento) => (
+                {paginatedEventos.map((evento) => (
                   <TableRow key={evento.id_evento}>
                     <TableCell className="font-medium">
                       {evento.nom_evento || '-'}
@@ -214,6 +227,48 @@ export function EventosList({ onAddNew, onEdit }: EventosListProps) {
                 ))}
               </TableBody>
             </Table>
+          </div>
+        )}
+
+        {/* Paginação */}
+        {filteredEventos.length > itemsPerPage && (
+          <div className="flex items-center justify-between mt-6 pt-4 border-t">
+            <div className="text-sm text-gray-600">
+              Exibindo {startIndex + 1} a {Math.min(endIndex, filteredEventos.length)} de {filteredEventos.length} eventos
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Anterior
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className={currentPage === page ? "bg-green-600 hover:bg-green-700" : ""}
+                  >
+                    {page}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Próxima
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         )}
       </CardContent>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Edit, Power, Trash2, Plus, Package } from "lucide-react";
+import { Edit, Power, Trash2, Plus, Package, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +31,8 @@ export function ResiduoList({ onAddNew, onEdit }: ResiduoListProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [residuoToDelete, setResiduoToDelete] = useState<Residuo | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   const { data: residuos = [], isLoading, error } = useQuery({
     queryKey: ['residuos'],
@@ -131,6 +133,12 @@ export function ResiduoList({ onAddNew, onEdit }: ResiduoListProps) {
     residuo.tipo_residuo?.des_tipo_residuo?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Paginação
+  const totalPages = Math.ceil(filteredResiduos.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedResiduos = filteredResiduos.slice(startIndex, endIndex);
+
   if (isLoading) {
     return (
       <Card>
@@ -191,7 +199,7 @@ export function ResiduoList({ onAddNew, onEdit }: ResiduoListProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredResiduos.map((residuo) => (
+                  {paginatedResiduos.map((residuo) => (
                     <TableRow key={residuo.id_residuo}>
                       <TableCell className="font-medium">
                         {residuo.nom_residuo}
@@ -267,6 +275,48 @@ export function ResiduoList({ onAddNew, onEdit }: ResiduoListProps) {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          )}
+
+          {/* Paginação */}
+          {filteredResiduos.length > itemsPerPage && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t">
+              <div className="text-sm text-gray-600">
+                Exibindo {startIndex + 1} a {Math.min(endIndex, filteredResiduos.length)} de {filteredResiduos.length} resíduos
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Anterior
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className={currentPage === page ? "bg-green-600 hover:bg-green-700" : ""}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Próxima
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

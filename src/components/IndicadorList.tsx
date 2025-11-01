@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, TrendingUp, Edit, Power, Loader2 } from "lucide-react";
+import { Plus, TrendingUp, Edit, Power, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { offlineDB } from "@/lib/offline-db";
 import { useToast } from "@/hooks/use-toast";
@@ -31,6 +31,8 @@ export function IndicadorList({ onEdit, onNew }: IndicadorListProps) {
   const [indicadores, setIndicadores] = useState<Indicador[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const [updatingStatus, setUpdatingStatus] = useState<number | null>(null);
   const { toast } = useToast();
 
@@ -134,6 +136,17 @@ export function IndicadorList({ onEdit, onNew }: IndicadorListProps) {
     (indicador._offline && 'pendente'.includes(searchTerm.toLowerCase()))
   );
 
+  // Paginação
+  const totalPages = Math.ceil(filteredIndicadores.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedIndicadores = filteredIndicadores.slice(startIndex, endIndex);
+
+  // Reset página quando filtrar
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   if (loading) {
     return (
       <Card>
@@ -183,7 +196,7 @@ export function IndicadorList({ onEdit, onNew }: IndicadorListProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredIndicadores.map((indicador) => (
+                {paginatedIndicadores.map((indicador) => (
                   <TableRow key={indicador.id_indicador}>
                     <TableCell className="font-medium">
                       {indicador.nom_indicador}
@@ -257,6 +270,48 @@ export function IndicadorList({ onEdit, onNew }: IndicadorListProps) {
                 ))}
               </TableBody>
             </Table>
+          </div>
+        )}
+
+        {/* Paginação */}
+        {filteredIndicadores.length > itemsPerPage && (
+          <div className="flex items-center justify-between mt-6 pt-4 border-t">
+            <div className="text-sm text-gray-600">
+              Exibindo {startIndex + 1} a {Math.min(endIndex, filteredIndicadores.length)} de {filteredIndicadores.length} indicadores
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Anterior
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className={currentPage === page ? "bg-green-600 hover:bg-green-700" : ""}
+                  >
+                    {page}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Próxima
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         )}
       </CardContent>

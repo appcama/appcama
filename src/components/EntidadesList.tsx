@@ -5,7 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Users, Edit, Power, Trash2 } from "lucide-react";
+import { Plus, Users, Edit, Power, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -39,6 +39,8 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
   const [entidades, setEntidades] = useState<Entidade[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [entidadeToDelete, setEntidadeToDelete] = useState<Entidade | null>(null);
   const [linkedUsersDialogOpen, setLinkedUsersDialogOpen] = useState(false);
@@ -203,6 +205,17 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
     entidade.des_tipo_entidade?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Paginação
+  const totalPages = Math.ceil(filteredEntidades.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedEntidades = filteredEntidades.slice(startIndex, endIndex);
+
+  // Reset página quando filtrar
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   if (loading) {
     return (
       <Card>
@@ -258,7 +271,7 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredEntidades.map((entidade) => (
+                  {paginatedEntidades.map((entidade) => (
                     <TableRow key={entidade.id_entidade}>
                       <TableCell>
                         {entidade.des_logo_url ? (
@@ -369,6 +382,48 @@ export function EntidadesList({ onAddNew, onEdit }: EntidadesListProps) {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          )}
+
+          {/* Paginação */}
+          {filteredEntidades.length > itemsPerPage && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t">
+              <div className="text-sm text-gray-600">
+                Exibindo {startIndex + 1} a {Math.min(endIndex, filteredEntidades.length)} de {filteredEntidades.length} entidades
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Anterior
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className={currentPage === page ? "bg-green-600 hover:bg-green-700" : ""}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Próxima
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
