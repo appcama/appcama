@@ -217,6 +217,11 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
   const handleSelectResiduo = (residuo: Residuo) => {
     setSelectedResiduo(residuo);
     setOpenResiduoCombo(false);
+    
+    // Se for Rejeito, setar valor automaticamente como 0
+    if (residuo.nom_residuo.toLowerCase().includes('rejeito')) {
+      valorUnitario.setValue('0,00');
+    }
   };
 
   const calculateSubtotal = () => {
@@ -421,6 +426,11 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
 
                 <div>
                   <Label htmlFor="valor">Valor Unitário (R$) *</Label>
+                  {selectedResiduo?.nom_residuo.toLowerCase().includes('rejeito') && (
+                    <p className="text-sm text-amber-600 mb-2">
+                      Rejeito não possui valor comercial
+                    </p>
+                  )}
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
                       R$
@@ -433,6 +443,7 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
                       placeholder="0,00"
                       className="pl-10"
                       required
+                      disabled={selectedResiduo?.nom_residuo.toLowerCase().includes('rejeito')}
                     />
                   </div>
                 </div>
