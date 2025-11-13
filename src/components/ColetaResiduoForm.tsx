@@ -240,10 +240,22 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
     const qtd = parseFloat(quantidade.value);
     const valor = valorUnitario.getNumericValue();
 
-    if (qtd <= 0 || valor <= 0) {
+    // Verificar se é Rejeito para permitir valor 0
+    const isRejeito = selectedResiduo.nom_residuo.toLowerCase().includes('rejeito');
+
+    if (qtd <= 0) {
       toast({
         title: 'Erro',
-        description: 'Quantidade e valor devem ser maiores que zero',
+        description: 'Quantidade deve ser maior que zero',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!isRejeito && valor <= 0) {
+      toast({
+        title: 'Erro',
+        description: 'Valor deve ser maior que zero',
         variant: 'destructive',
       });
       return;
