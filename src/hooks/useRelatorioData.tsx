@@ -196,6 +196,8 @@ function processRelatorioData(
       return processRankingEntidadesGeradoras(coletasParaProcessar, filters);
     case 'custos-beneficios':
       return processCustosBeneficios(coletasParaProcessar, filters);
+    case 'rejeitos-coletados':
+      return processRejeitosColetados(coletasParaProcessar, filters);
     default:
       return processRelatorioGenerico(coletasParaProcessar, filters);
   }
@@ -435,6 +437,138 @@ function processRankingEntidadesGeradoras(coletas: any[], filters: RelatorioFilt
     residuosPorTipo: processResiduosPorTipo(coletas),
     indicadores: processIndicadoresAmbientais(totalResiduos),
     items: entidadesRanking
+  };
+}
+
+function processRejeitosColetados(coletas: any[], filters: RelatorioFiltersType): RelatorioData {
+  // Filtrar apenas coletas que contêm resíduos do tipo "Rejeito"
+  const coletasComRejeito: any[] = [];
+  const entidadesMap = new Map();
+  
+  coletas.forEach(coleta => {
+    if (coleta.coleta_residuo && Array.isArray(coleta.coleta_residuo)) {
+      // Filtrar apenas os resíduos do tipo "Rejeito"
+      const rejeitos = coleta.coleta_residuo.filter((cr: any) => 
+        cr.residuo?.nom_residuo?.toLowerCase().includes('rejeito')
+      );
+      
+      if (rejeitos.length > 0) {
+        const entidadeGeradora = coleta.entidade?.nom_entidade || 'Entidade geradora não informada';
+        const entidadeColetora = coleta.usuario_criador?.entidade_coletora?.nom_entidade || 'Não informado';
+        
+        // Calcular total de rejeitos nesta coleta
+        const quantidadeRejeito = rejeitos.reduce((sum: number, r: any) => 
+          sum + (Number(r.qtd_total) || 0), 0
+        );
+        
+        // Adicionar coleta aos dados detalhados
+        coletasComRejeito.push({
+          id: coleta.id_coleta,
+          codigo: coleta.cod_coleta || `COL-${coleta.id_coleta}`,
+          data: coleta.dat_coleta,
+          entidadeGeradora,
+          entidadeColetora,
+          quantidade: quantidadeRejeito,
+          pontoColeta: coleta.ponto_coleta?.nom_ponto_coleta || 'N/A',
+          evento: coleta.evento?.nom_evento || 'Coleta regular'
+        });
+        
+        // Agrupar por entidade geradora
+        if (!entidadesMap.has(entidadeGeradora)) {
+          entidadesMap.set(entidadeGeradora, { 
+            nome: entidadeGeradora,
+            coletas: 0, 
+            quantidade: 0,
+            ultimaColeta: null
+          });
+        }
+        const data = entidadesMap.get(entidadeGeradora);
+        data.coletas++;
+        data.quantidade += quantidadeRejeito;
+        if (!data.ultimaColeta || new Date(coleta.dat_coleta) > new Date(data.ultimaColeta)) {
+          data.ultimaColeta = coleta.dat_coleta;
+        }
+      }
+    }
+  });
+
+  // Ranking de entidades geradoras por quantidade de rejeito
+  const entidadesRanking = Array.from(entidadesMap.values())
+    .sort((a, b) => b.quantidade - a.quantidade)
+    .map((entidade, index) => ({
+      id: index + 1,
+      nome: entidade.nome,
+      quantidade: Math.round(entidade.quantidade),
+      valor: 0, // Rejeito não tem valor comercial
+      data: entidade.ultimaColeta,
+      entidade: `${entidade.coletas} coletas`,
+      ponto: `Média: ${Math.round((entidade.quantidade / entidade.coletas) * 100) / 100} kg/coleta`
+    }));
+
+  const totalRejeitos = Array.from(entidadesMap.values()).reduce((sum, e) => sum + e.quantidade, 0);
+
+  // Items detalhados das coletas com rejeito
+  const itemsDetalhados = coletasComRejeito
+    .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+    .map(item => ({
+      id: item.id,
+      nome: item.codigo,
+      quantidade: Math.round(item.quantidade),
+      valor: 0,
+      data: item.data,
+      entidade: item.entidadeGeradora,
+      ponto: item.pontoColeta,
+      coletora: item.entidadeColetora,
+      evento: item.evento
+    }));
+
+  return {
+    totalColetas: coletasComRejeito.length,
+    totalResiduos: Math.round(totalRejeitos),
+    valorTotal: 0, // Rejeito não possui valor comercial
+    entidadesAtivas: entidadesMap.size,
+    residuosPorTipo: [
+      {
+        nome: 'Rejeito',
+        quantidade: Math.round(totalRejeitos),
+        valor: 0,
+        percentual: 100
+      }
+    ],
+    items: itemsDetalhados,
+    kpis: [
+      {
+        titulo: 'Total de Rejeitos',
+        valor: `${Math.round(totalRejeitos)} kg`,
+        unidade: 'kg',
+        icone: 'trash'
+      },
+      {
+        titulo: 'Coletas com Rejeito',
+        valor: coletasComRejeito.length,
+        icone: 'package'
+      },
+      {
+        titulo: 'Entidades Geradoras',
+        valor: entidadesMap.size,
+        icone: 'building'
+      },
+      {
+        titulo: 'Média por Coleta',
+        valor: coletasComRejeito.length > 0 
+          ? `${Math.round((totalRejeitos / coletasComRejeito.length) * 100) / 100} kg`
+          : '0 kg',
+        unidade: 'kg',
+        icone: 'trending-up'
+      }
+    ],
+    metricas: {
+      produtividade: entidadesRanking.map((e, i) => ({
+        entidade: e.nome,
+        eficiencia: e.quantidade,
+        ranking: i + 1
+      }))
+    }
   };
 }
 

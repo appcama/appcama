@@ -38,7 +38,8 @@ export function RelatoriosLayout({ activeItem }: RelatoriosLayoutProps) {
         { id: "dashboard-executivo", title: "Dashboard Executivo", description: "Visão consolidada com KPIs principais" },
         { id: "faturamento", title: "Análise de Faturamento", description: "Análise financeira das coletas e receitas" },
         { id: "produtividade", title: "Produtividade", description: "Análise de eficiência por entidade coletora" },
-        { id: "crescimento", title: "Análise de Crescimento", description: "Evolução temporal das operações" }
+        { id: "crescimento", title: "Análise de Crescimento", description: "Evolução temporal das operações" },
+        { id: "rejeitos-coletados", title: "Rejeitos Coletados", description: "Quantidade de rejeitos por entidade geradora" }
       ]
     },
     "relatorios-ambientais": {
