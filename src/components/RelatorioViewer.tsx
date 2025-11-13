@@ -36,6 +36,7 @@ export function RelatorioViewer({ reportType, category, filters }: RelatorioView
     "analise-crescimento": "Análise de Crescimento",
     "ranking-entidades-geradoras": "Ranking de Entidades Geradoras",
     "custos-beneficios": "Análise de Custos vs Benefícios",
+    "rejeitos-coletados": "Rejeitos Coletados por Entidade Geradora",
     "indicadores-ambientais": "Indicadores Ambientais",
     "impacto-ecologico": "Impacto Ecológico Detalhado",
     "reciclometro": "Reciclômetro - Impacto Acumulado",
