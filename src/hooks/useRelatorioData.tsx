@@ -539,9 +539,9 @@ function processRejeitosColetados(coletas: any[], filters: RelatorioFiltersType)
     kpis: [
       {
         titulo: 'Total de Rejeitos',
-        valor: `${Math.round(totalRejeitos)} kg`,
+        valor: Math.round(totalRejeitos),
         unidade: 'kg',
-        icone: 'trash'
+        icone: 'scale'
       },
       {
         titulo: 'Coletas com Rejeito',
@@ -551,13 +551,13 @@ function processRejeitosColetados(coletas: any[], filters: RelatorioFiltersType)
       {
         titulo: 'Entidades Geradoras',
         valor: entidadesMap.size,
-        icone: 'building'
+        icone: 'users'
       },
       {
         titulo: 'Média por Coleta',
         valor: coletasComRejeito.length > 0 
-          ? `${Math.round((totalRejeitos / coletasComRejeito.length) * 100) / 100} kg`
-          : '0 kg',
+          ? Math.round((totalRejeitos / coletasComRejeito.length) * 100) / 100
+          : 0,
         unidade: 'kg',
         icone: 'trending-up'
       }
