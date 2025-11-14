@@ -1,6 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line, AreaChart, Area } from "recharts";
 import type { ResiduoTipoData } from "@/hooks/useDashboardData";
+import { useFinancialPrivacy } from "@/hooks/useFinancialPrivacy";
+import { formatFinancialValueShort } from "@/lib/financial-utils";
 
 interface DashboardChartsProps {
   residuosPorTipo: ResiduoTipoData[] | Array<{
@@ -23,6 +25,8 @@ const COLORS = [
 ];
 
 export function DashboardCharts({ residuosPorTipo, chartType = 'default', data }: DashboardChartsProps) {
+  const { showFinancialValues } = useFinancialPrivacy();
+  
   // Normalizar dados para formato consistente
   const normalizeData = (data: any[]) => {
     return data.map(item => ({
@@ -60,7 +64,7 @@ export function DashboardCharts({ residuosPorTipo, chartType = 'default', data }
           {payload.map((entry: any, index: number) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
               {entry.dataKey === 'valor' 
-                ? `Valor: R$ ${entry.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                ? `Valor: ${formatFinancialValueShort(entry.value, showFinancialValues)}`
                 : `${entry.name}: ${entry.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} toneladas (${entry.payload.percentage}%)`
               }
             </p>
@@ -181,7 +185,7 @@ export function DashboardCharts({ residuosPorTipo, chartType = 'default', data }
                 <CartesianGrid strokeDasharray="2 2" className="stroke-muted/30" />
                 <XAxis dataKey="periodo" className="text-xs fill-muted-foreground" />
                 <YAxis 
-                  tickFormatter={(value) => `R$ ${value.toLocaleString('pt-BR')}`}
+                  tickFormatter={(value) => showFinancialValues ? `R$ ${value.toLocaleString('pt-BR')}` : '•••'}
                   className="text-xs fill-muted-foreground" 
                 />
                 <Tooltip content={<CustomTooltip />} />
@@ -282,14 +286,13 @@ export function DashboardCharts({ residuosPorTipo, chartType = 'default', data }
               />
               <YAxis 
                 type="number" 
-                tickFormatter={(value) => `R$ ${value.toLocaleString('pt-BR')}`}
+                tickFormatter={(value) => showFinancialValues ? `R$ ${value.toLocaleString('pt-BR')}` : '•••'}
                 className="text-xs fill-muted-foreground"
                 axisLine={false}
                 tickLine={false}
               />
               <Tooltip 
                 content={<CustomTooltip />}
-                formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Valor Total']}
                 cursor={{ fill: 'hsl(var(--muted))', opacity: 0.1 }}
               />
               <Bar 
