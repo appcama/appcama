@@ -20,6 +20,9 @@ import { DashboardFiltersComponent } from "@/components/DashboardFilters";
 import { DashboardCharts } from "@/components/DashboardCharts";
 import { DashboardInfographic } from "@/components/DashboardInfographic";
 import { DashboardMap } from "@/components/DashboardMap";
+import { FinancialPrivacyProvider, useFinancialPrivacy } from "@/hooks/useFinancialPrivacy";
+import { FinancialPrivacyToggle } from "@/components/FinancialPrivacyToggle";
+import { formatFinancialValue } from "@/lib/financial-utils";
 
 // Environmental indicators configuration with icons
 const getIndicatorIcon = (nomIndicador: string) => {
@@ -54,7 +57,7 @@ const formatPercentage = (percentage: number) => {
   };
 };
 
-export function Dashboard() {
+function DashboardContent() {
   const [filters, setFilters] = useState<DashboardFilters>({
     dataInicial: new Date().getFullYear() + "-01-01",
     dataFinal: (() => {
@@ -68,6 +71,7 @@ export function Dashboard() {
 
   const { data, isLoading, error } = useDashboardData(filters);
   const { data: statsData, isLoading: statsLoading } = useDashboardStats(filters);
+  const { showFinancialValues } = useFinancialPrivacy();
 
   const formatNumber = (value: number, decimals = 1) => {
     return value.toLocaleString('pt-BR', { 
@@ -79,13 +83,16 @@ export function Dashboard() {
   return (
     <div className="p-4 sm:p-6 space-y-6">
       <div>
-        <div className="flex items-center gap-3 sm:gap-4 flex-nowrap">
-          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">Reciclômetro e Ecoindicadores do RcyclaÊ</h1>
-          <img
-            src="/rodapecama.png"
-            alt="Marca institucional - Ministério e Governo"
-            className="h-16 sm:h-20 md:h-24 w-auto object-contain shrink-0"
-          />
+        <div className="flex items-center justify-between gap-3 sm:gap-4 flex-wrap">
+          <div className="flex items-center gap-3 sm:gap-4 flex-nowrap">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">Reciclômetro e Ecoindicadores do RcyclaÊ</h1>
+            <img
+              src="/rodapecama.png"
+              alt="Marca institucional - Ministério e Governo"
+              className="h-16 sm:h-20 md:h-24 w-auto object-contain shrink-0"
+            />
+          </div>
+          <FinancialPrivacyToggle />
         </div>
         <p className="text-muted-foreground">
           Visão geral do sistema de controle de reciclagem
@@ -246,7 +253,7 @@ export function Dashboard() {
                         {formatNumber(residuo.total_quantidade || 0, 3)}
                       </TableCell>
                       <TableCell className="text-right">
-                        R$ {(residuo.total_valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {formatFinancialValue(residuo.total_valor || 0, showFinancialValues)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -337,5 +344,13 @@ export function Dashboard() {
       
       
     </div>
+  );
+}
+
+export function Dashboard() {
+  return (
+    <FinancialPrivacyProvider>
+      <DashboardContent />
+    </FinancialPrivacyProvider>
   );
 }
