@@ -16,15 +16,20 @@ export function FinancialPrivacyToggle() {
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            variant="ghost"
-            size="icon"
+            variant="outline"
             onClick={toggleFinancialValues}
-            className="h-8 w-8"
+            className="flex items-center gap-2"
           >
             {showFinancialValues ? (
-              <Eye className="h-4 w-4" />
+              <>
+                <EyeOff className="h-4 w-4" />
+                <span className="hidden sm:inline">Ocultar Valores</span>
+              </>
             ) : (
-              <EyeOff className="h-4 w-4" />
+              <>
+                <Eye className="h-4 w-4" />
+                <span className="hidden sm:inline">Mostrar Valores</span>
+              </>
             )}
           </Button>
         </TooltipTrigger>

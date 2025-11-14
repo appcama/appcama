@@ -21,7 +21,6 @@ import { DashboardCharts } from "@/components/DashboardCharts";
 import { DashboardInfographic } from "@/components/DashboardInfographic";
 import { DashboardMap } from "@/components/DashboardMap";
 import { FinancialPrivacyProvider, useFinancialPrivacy } from "@/hooks/useFinancialPrivacy";
-import { FinancialPrivacyToggle } from "@/components/FinancialPrivacyToggle";
 import { formatFinancialValue } from "@/lib/financial-utils";
 
 // Environmental indicators configuration with icons
@@ -83,16 +82,13 @@ function DashboardContent() {
   return (
     <div className="p-4 sm:p-6 space-y-6">
       <div>
-        <div className="flex items-center justify-between gap-3 sm:gap-4 flex-wrap">
-          <div className="flex items-center gap-3 sm:gap-4 flex-nowrap">
-            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">Reciclômetro e Ecoindicadores do RcyclaÊ</h1>
-            <img
-              src="/rodapecama.png"
-              alt="Marca institucional - Ministério e Governo"
-              className="h-16 sm:h-20 md:h-24 w-auto object-contain shrink-0"
-            />
-          </div>
-          <FinancialPrivacyToggle />
+        <div className="flex items-center gap-3 sm:gap-4 flex-nowrap">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">Reciclômetro e Ecoindicadores do RcyclaÊ</h1>
+          <img
+            src="/rodapecama.png"
+            alt="Marca institucional - Ministério e Governo"
+            className="h-16 sm:h-20 md:h-24 w-auto object-contain shrink-0"
+          />
         </div>
         <p className="text-muted-foreground">
           Visão geral do sistema de controle de reciclagem
