@@ -10,6 +10,7 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import type { DashboardFilters } from "@/hooks/useDashboardData";
+import { FinancialPrivacyToggle } from "@/components/FinancialPrivacyToggle";
 
 interface Entidade {
   id_entidade: number;
@@ -356,6 +357,7 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
             <RotateCcw className="h-4 w-4" />
             Limpar Filtros
           </Button>
+          <FinancialPrivacyToggle />
         </div>
       </CardContent>
     </Card>
