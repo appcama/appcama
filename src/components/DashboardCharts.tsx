@@ -65,7 +65,7 @@ export function DashboardCharts({ residuosPorTipo, chartType = 'default', data }
             <p key={index} className="text-sm" style={{ color: entry.color }}>
               {entry.dataKey === 'valor' 
                 ? `Valor: ${formatFinancialValueShort(entry.value, showFinancialValues)}`
-                : `${entry.name}: ${entry.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} toneladas (${entry.payload.percentage}%)`
+                : `${entry.name}: ${(entry.value * 1000).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg (${entry.payload.percentage}%)`
               }
             </p>
           ))}

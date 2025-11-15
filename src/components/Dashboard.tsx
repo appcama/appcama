@@ -209,9 +209,9 @@ function DashboardContent() {
           ) : (
             <div className="flex items-baseline gap-2">
               <span className="text-3xl sm:text-4xl font-bold text-recycle-green">
-                {formatNumber(data?.totalResiduos || 0, 3)}
+                {formatNumber((data?.totalResiduos || 0) * 1000, 3)}
               </span>
-              <span className="text-lg text-muted-foreground">toneladas</span>
+              <span className="text-lg text-muted-foreground">quilos</span>
             </div>
           )}
         </CardContent>
@@ -224,7 +224,7 @@ function DashboardContent() {
           <CardHeader>
             <CardTitle>Totais por Tipo de Resíduo</CardTitle>
             <CardDescription>
-              Quantidade coletada em toneladas por tipo de material
+              Quantidade coletada em quilos por tipo de material
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -233,7 +233,7 @@ function DashboardContent() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Tipo de Resíduo</TableHead>
-                    <TableHead className="text-right">Quantidade (t)</TableHead>
+                    <TableHead className="text-right">Quantidade (kg)</TableHead>
                     <TableHead className="text-right">Valor Total (R$)</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -246,7 +246,7 @@ function DashboardContent() {
                         {residuo.des_tipo_residuo}
                       </TableCell>
                       <TableCell className="text-right">
-                        {formatNumber(residuo.total_quantidade || 0, 3)}
+                        {formatNumber((residuo.total_quantidade || 0) * 1000, 3)}
                       </TableCell>
                       <TableCell className="text-right">
                         {formatFinancialValue(residuo.total_valor || 0, showFinancialValues)}
