@@ -209,7 +209,7 @@ function DashboardContent() {
           ) : (
             <div className="flex items-baseline gap-2">
               <span className="text-3xl sm:text-4xl font-bold text-recycle-green">
-                {formatNumber((data?.totalResiduos || 0) * 1000, 3)}
+                {formatNumber((data?.totalResiduos || 0) * 1000, 2)}
               </span>
               <span className="text-lg text-muted-foreground">quilos</span>
             </div>
@@ -246,7 +246,7 @@ function DashboardContent() {
                         {residuo.des_tipo_residuo}
                       </TableCell>
                       <TableCell className="text-right">
-                        {formatNumber((residuo.total_quantidade || 0) * 1000, 3)}
+                        {formatNumber((residuo.total_quantidade || 0) * 1000, 2)}
                       </TableCell>
                       <TableCell className="text-right">
                         {formatFinancialValue(residuo.total_valor || 0, showFinancialValues)}
