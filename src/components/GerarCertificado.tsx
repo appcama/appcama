@@ -55,6 +55,7 @@ interface Entidade {
 interface Evento {
   id_evento: number;
   nom_evento: string;
+  des_status: string;
 }
 
 export function GerarCertificado() {
@@ -205,8 +206,7 @@ export function GerarCertificado() {
     try {
       const { data, error } = await supabase
         .from('evento')
-        .select('id_evento, nom_evento')
-        .eq('des_status', 'A')
+        .select('id_evento, nom_evento, des_status')
         .order('nom_evento');
 
       if (error) throw error;
@@ -406,7 +406,7 @@ export function GerarCertificado() {
                   <SelectItem value="all">Todos os eventos</SelectItem>
                   {eventos.map((evento) => (
                     <SelectItem key={evento.id_evento} value={evento.id_evento.toString()}>
-                      {evento.nom_evento}
+                      {evento.nom_evento} {evento.des_status === 'I' ? '(Inativo)' : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
