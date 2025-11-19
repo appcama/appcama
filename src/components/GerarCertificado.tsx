@@ -23,6 +23,7 @@ interface Coleta {
   id_entidade_geradora?: number;
   id_certificado?: number;
   id_usuario_criador?: number;
+  id_evento?: number;
   entidade?: {
     nom_entidade: string;
     num_cpf_cnpj: string;
@@ -51,6 +52,11 @@ interface Entidade {
   nom_entidade: string;
 }
 
+interface Evento {
+  id_evento: number;
+  nom_evento: string;
+}
+
 export function GerarCertificado() {
   const [coletas, setColetas] = useState<Coleta[]>([]);
   const [selectedColetas, setSelectedColetas] = useState<number[]>([]);
@@ -63,6 +69,8 @@ export function GerarCertificado() {
   const [openFim, setOpenFim] = useState(false);
   const [entidadeId, setEntidadeId] = useState<string>('all');
   const [entidades, setEntidades] = useState<Entidade[]>([]);
+  const [eventoId, setEventoId] = useState<string>('all');
+  const [eventos, setEventos] = useState<Evento[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const { toast } = useToast();
@@ -88,6 +96,7 @@ export function GerarCertificado() {
           id_entidade_geradora,
           id_certificado,
           id_usuario_criador,
+          id_evento,
           entidade:id_entidade_geradora (
             nom_entidade,
             num_cpf_cnpj,
@@ -192,9 +201,25 @@ export function GerarCertificado() {
     }
   };
 
+  const loadEventos = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('evento')
+        .select('id_evento, nom_evento')
+        .eq('des_status', 'A')
+        .order('nom_evento');
+
+      if (error) throw error;
+      setEventos(data || []);
+    } catch (error) {
+      console.error('[GerarCertificado] Error loading eventos:', error);
+    }
+  };
+
   useEffect(() => {
     loadColetas();
     loadEntidades();
+    loadEventos();
   }, [user]);
 
   const filteredColetas = coletas.filter(coleta => {
@@ -220,8 +245,9 @@ export function GerarCertificado() {
     const matchesDataInicio = !dataInicio || new Date(coleta.dat_coleta) >= dataInicio;
     const matchesDataFim = !dataFim || new Date(coleta.dat_coleta) <= dataFim;
     const matchesEntidade = entidadeId === 'all' || coleta.id_entidade_geradora?.toString() === entidadeId;
+    const matchesEvento = eventoId === 'all' || coleta.id_evento?.toString() === eventoId;
 
-    return matchesSearch && matchesDataInicio && matchesDataFim && matchesEntidade;
+    return matchesSearch && matchesDataInicio && matchesDataFim && matchesEntidade && matchesEvento;
   });
 
   // Paginação
@@ -306,10 +332,11 @@ export function GerarCertificado() {
     setDataInicio(undefined);
     setDataFim(undefined);
     setEntidadeId('all');
+    setEventoId('all');
     setSearchTerm('');
   };
 
-  const hasActiveFilters = dataInicio || dataFim || (entidadeId !== 'all') || searchTerm;
+  const hasActiveFilters = dataInicio || dataFim || (entidadeId !== 'all') || (eventoId !== 'all') || searchTerm;
 
   const validation = validateSelection();
   const allSelected = filteredColetas.length > 0 && selectedColetas.length === filteredColetas.length;
@@ -349,7 +376,7 @@ export function GerarCertificado() {
             <CardTitle>Filtros</CardTitle>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
             {/* Entidade Geradora */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Entidade</label>
@@ -362,6 +389,24 @@ export function GerarCertificado() {
                   {entidades.map((entidade) => (
                     <SelectItem key={entidade.id_entidade} value={entidade.id_entidade.toString()}>
                       {entidade.nom_entidade}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Evento */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Evento</label>
+              <Select value={eventoId} onValueChange={setEventoId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os eventos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os eventos</SelectItem>
+                  {eventos.map((evento) => (
+                    <SelectItem key={evento.id_evento} value={evento.id_evento.toString()}>
+                      {evento.nom_evento}
                     </SelectItem>
                   ))}
                 </SelectContent>
