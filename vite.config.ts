@@ -7,7 +7,7 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
-    // Remover porta fixa para evitar conflito e mismatch do HMR
+    port: 8080,
   },
   plugins: [
     react(),
