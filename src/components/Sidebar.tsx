@@ -306,16 +306,17 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose,
   };
 
   return (
-    <div 
-      className={cn(
-        "bg-white flex flex-col h-full transition-all duration-300 ease-in-out",
-        !isMobile && (collapsed ? "w-20" : "w-64"),
-        !isMobile && "border-r border-gray-200"
-      )}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      {!isMobile && (
+    <TooltipProvider delayDuration={300}>
+      <div 
+        className={cn(
+          "bg-white flex flex-col h-full transition-all duration-300 ease-in-out",
+          !isMobile && (collapsed ? "w-20" : "w-64"),
+          !isMobile && "border-r border-gray-200"
+        )}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        {!isMobile && (
         <div className="p-4 border-b border-gray-200 relative">
           <div className="flex items-center justify-center">
             <div className="flex items-center justify-center cursor-pointer" onClick={handleLogoClick}>
@@ -350,11 +351,9 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose,
         </div>
       )}
       
-      <TooltipProvider delayDuration={300}>
-        <nav className={cn("flex-1 overflow-y-auto", isMobile ? "p-2" : "p-4")}>
-          {menuGroups.map(renderGroup)}
-        </nav>
-      </TooltipProvider>
+      <nav className={cn("flex-1 overflow-y-auto", isMobile ? "p-2" : "p-4")}>
+        {menuGroups.map(renderGroup)}
+      </nav>
       
       {/* Botão de Sair */}
       <div className={cn("border-t border-gray-200", isMobile ? "p-2" : "p-4")}>
@@ -389,6 +388,7 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose,
           </button>
         )}
       </div>
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }
