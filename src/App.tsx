@@ -27,21 +27,21 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-    <Toaster />
-    <Sonner />
-    <AuthProvider>
-      <PermissionsProvider>
-        <BrowserRouter
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true,
-          }}
-        >
-          <div className="relative">
-            <OfflineIndicator className="fixed top-4 right-4 z-50" />
-            <PWAPrompt />
-            <PWAUpdateBanner />
-            <Routes>
+      <AuthProvider>
+        <PermissionsProvider>
+          <BrowserRouter
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true,
+            }}
+          >
+            <Toaster />
+            <Sonner />
+            <div className="relative">
+              <OfflineIndicator className="fixed top-4 right-4 z-50" />
+              <PWAPrompt />
+              <PWAUpdateBanner />
+              <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/validate-password" element={<ValidatePassword />} />
               <Route path="/validar-certificado/:codigo" element={<ValidarCertificado />} />
@@ -52,12 +52,12 @@ const App = () => {
               } />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
-            </Routes>
-          </div>
-        </BrowserRouter>
-      </PermissionsProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+              </Routes>
+            </div>
+          </BrowserRouter>
+        </PermissionsProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 };
 
