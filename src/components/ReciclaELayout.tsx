@@ -38,9 +38,14 @@ export function ReciclaELayout() {
   const [currentView, setCurrentView] = useState<'list' | 'form'>('list');
   const [editingItem, setEditingItem] = useState<any>(null);
   const [selectedPerfilId, setSelectedPerfilId] = useState<number | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { user } = useAuth();
   const { allowedFeatures, loading: permissionsLoading } = usePermissions();
   const { isMobile } = useBreakpoints();
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed(prev => !prev);
+  };
 
   console.log('[ReciclaELayout] Current user:', user);
   console.log('[ReciclaELayout] Allowed features:', allowedFeatures);
@@ -267,11 +272,13 @@ export function ReciclaELayout() {
           </main>
         </>
       ) : (
-        <div className="flex h-screen">
+        <div className="flex h-screen transition-all duration-300">
           <Sidebar
             activeItem={activeItem}
             onItemClick={handleItemClick}
             allowedFeatures={allowedFeatures}
+            collapsed={sidebarCollapsed}
+            onToggle={toggleSidebar}
           />
           <main className="flex-1 overflow-hidden">
             <div className="h-full overflow-y-auto bg-gray-50">
