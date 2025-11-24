@@ -51,6 +51,7 @@ interface MenuItem {
 export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose, collapsed = false, onToggle }: SidebarProps) {
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const [autoExpandTimer, setAutoExpandTimer] = useState<NodeJS.Timeout | null>(null);
+  const [autoCollapseTimer, setAutoCollapseTimer] = useState<NodeJS.Timeout | null>(null);
   const { isMobile } = useBreakpoints();
   const { logout } = useAuth();
   const navigate = useNavigate();
@@ -60,8 +61,11 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose,
       if (autoExpandTimer) {
         clearTimeout(autoExpandTimer);
       }
+      if (autoCollapseTimer) {
+        clearTimeout(autoCollapseTimer);
+      }
     };
-  }, [autoExpandTimer]);
+  }, [autoExpandTimer, autoCollapseTimer]);
 
   const handleLogoClick = () => {
     navigate('/');
@@ -77,6 +81,13 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose,
   };
 
   const handleMouseEnter = () => {
+    // Cancelar timer de auto-collapse se existir
+    if (autoCollapseTimer) {
+      clearTimeout(autoCollapseTimer);
+      setAutoCollapseTimer(null);
+    }
+
+    // Auto-expand se estiver collapsed
     if (collapsed && onToggle && !isMobile) {
       const timer = setTimeout(() => {
         onToggle();
@@ -86,9 +97,18 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose,
   };
 
   const handleMouseLeave = () => {
+    // Cancelar timer de auto-expand se existir
     if (autoExpandTimer) {
       clearTimeout(autoExpandTimer);
       setAutoExpandTimer(null);
+    }
+
+    // Auto-collapse se estiver expandida (não collapsed)
+    if (!collapsed && onToggle && !isMobile) {
+      const timer = setTimeout(() => {
+        onToggle();
+      }, 5000); // 5 segundos
+      setAutoCollapseTimer(timer);
     }
   };
 
