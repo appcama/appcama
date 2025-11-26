@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, Filter, RotateCcw, AlertCircle } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { CalendarIcon, Filter, RotateCcw, AlertCircle, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,7 @@ interface DashboardFiltersProps {
 }
 
 export function DashboardFiltersComponent({ filters, onFiltersChange }: DashboardFiltersProps) {
+  const [isExpanded, setIsExpanded] = useState(true);
   const [entidades, setEntidades] = useState<Entidade[]>([]);
   const [tiposEntidade, setTiposEntidade] = useState<TipoEntidade[]>([]);
   const [eventos, setEventos] = useState<Evento[]>([]);
@@ -192,14 +194,24 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
   };
 
   return (
-    <Card className="mb-6">
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <Filter className="h-5 w-5 text-recycle-green" />
-          <CardTitle>Filtros</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent>
+    <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+      <Card className="mb-6">
+        <CollapsibleTrigger asChild>
+          <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Filter className="h-5 w-5 text-recycle-green" />
+                <CardTitle>Filtros</CardTitle>
+              </div>
+              <ChevronDown className={cn(
+                "h-5 w-5 text-muted-foreground transition-transform duration-200",
+                isExpanded && "transform rotate-180"
+              )} />
+            </div>
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {/* Entidade Filter */}
           <div className="space-y-2">
@@ -359,7 +371,9 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
           </Button>
           <FinancialPrivacyToggle />
         </div>
-      </CardContent>
-    </Card>
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 }
