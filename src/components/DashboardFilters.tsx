@@ -34,7 +34,7 @@ interface DashboardFiltersProps {
 }
 
 export function DashboardFiltersComponent({ filters, onFiltersChange }: DashboardFiltersProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [entidades, setEntidades] = useState<Entidade[]>([]);
   const [tiposEntidade, setTiposEntidade] = useState<TipoEntidade[]>([]);
   const [eventos, setEventos] = useState<Evento[]>([]);
