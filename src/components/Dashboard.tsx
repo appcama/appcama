@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -13,7 +14,10 @@ import {
   Recycle,
   Users,
   Zap,
+  Maximize,
+  Minimize,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useDashboardData, type DashboardFilters } from "@/hooks/useDashboardData";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { DashboardFiltersComponent } from "@/components/DashboardFilters";
@@ -57,6 +61,8 @@ const formatPercentage = (percentage: number) => {
 };
 
 function DashboardContent() {
+  const dashboardRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [filters, setFilters] = useState<DashboardFilters>({
     dataInicial: new Date().getFullYear() + "-01-01",
     dataFinal: (() => {
@@ -79,16 +85,50 @@ function DashboardContent() {
     });
   };
 
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await dashboardRef.current?.requestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        await document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    } catch (error) {
+      toast.error("Não foi possível ativar tela cheia");
+    }
+  };
+
+  // Detectar saída de tela cheia pelo ESC
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
   return (
-    <div className="p-4 sm:p-6 space-y-6">
+    <div ref={dashboardRef} className="p-4 sm:p-6 space-y-6 bg-background">
       <div>
-        <div className="flex items-center gap-3 sm:gap-4 flex-nowrap">
-          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">Reciclômetro e Ecoindicadores do RcyclaÊ</h1>
-          <img
-            src="/rodapecama.png"
-            alt="Marca institucional - Ministério e Governo"
-            className="h-16 sm:h-20 md:h-24 w-auto object-contain shrink-0"
-          />
+        <div className="flex items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-4 flex-nowrap">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">Reciclômetro e Ecoindicadores do RcyclaÊ</h1>
+            <img
+              src="/rodapecama.png"
+              alt="Marca institucional - Ministério e Governo"
+              className="h-16 sm:h-20 md:h-24 w-auto object-contain shrink-0"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={toggleFullscreen}
+            title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}
+          >
+            {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+          </Button>
         </div>
         <p className="text-muted-foreground">
           Visão geral do sistema de controle de reciclagem
