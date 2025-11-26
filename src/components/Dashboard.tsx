@@ -187,6 +187,44 @@ function DashboardContent() {
         </Card>
       </div>
 
+      {data?.indicadores && data.indicadores.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Ecoindicadores</CardTitle>
+            <CardDescription>
+              Benefícios ambientais calculados com base nos resíduos coletados
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {data.indicadores.map((indicador) => {
+                const Icon = getIndicatorIcon(indicador.nom_indicador);
+                const colorClass = getIndicatorColor(indicador.nom_indicador);
+                
+                return (
+                  <div key={indicador.id_indicador} className={`p-4 rounded-lg ${colorClass}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">
+                        {formatNumber(indicador.total, 1)}
+                      </p>
+                      <p className="text-sm font-medium">
+                        {indicador.nom_indicador}
+                      </p>
+                      <p className="text-xs opacity-75">
+                        {indicador.des_unidade_medida}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -269,44 +307,6 @@ function DashboardContent() {
         endDate={filters.dataFinal}
         entityId={filters.entidadeId}
       />
-
-      {data?.indicadores && data.indicadores.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Ecoindicadores</CardTitle>
-            <CardDescription>
-              Benefícios ambientais calculados com base nos resíduos coletados
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {data.indicadores.map((indicador) => {
-                const Icon = getIndicatorIcon(indicador.nom_indicador);
-                const colorClass = getIndicatorColor(indicador.nom_indicador);
-                
-                return (
-                  <div key={indicador.id_indicador} className={`p-4 rounded-lg ${colorClass}`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <Icon className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">
-                        {formatNumber(indicador.total, 1)}
-                      </p>
-                      <p className="text-sm font-medium">
-                        {indicador.nom_indicador}
-                      </p>
-                      <p className="text-xs opacity-75">
-                        {indicador.des_unidade_medida}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       <DashboardInfographic filters={filters} />
 
