@@ -1,6 +1,6 @@
 
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
 interface ProtectedRouteProps {
@@ -9,16 +9,6 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate('/login');
-    } else if (!loading && user && user.passwordValidated === 'D') {
-      // Usuário logado mas senha não validada - redirecionar para validação
-      navigate('/validate-password');
-    }
-  }, [user, loading, navigate]);
 
   if (loading) {
     return (
@@ -32,7 +22,11 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!user) {
-    return null;
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.passwordValidated === 'D') {
+    return <Navigate to="/validate-password" replace />;
   }
 
   return <>{children}</>;
