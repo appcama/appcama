@@ -21,6 +21,7 @@ export const idToFeatureMap: Record<string, string> = {
   coletas: "Coletas",
   certificados: "Certificados",
   "gerar-certificado": "Certificados", // Gerar certificado usa mesma permissão
+  "meus-numeros": "Meus Números",
   // Relatórios - todos mapeiam para a funcionalidade "Relatórios" existente
   "relatorios-operacionais": "Relatórios",
   "relatorios-gerenciais": "Relatórios", 

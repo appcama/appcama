@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Dashboard } from '@/components/Dashboard';
+import { MeusNumeros } from '@/components/MeusNumeros';
 import { EntidadesList } from '@/components/EntidadesList';
 import { PontosColetaList } from '@/components/PontosColetaList';
 import { EventosList } from '@/components/EventosList';
@@ -42,6 +43,13 @@ export function ReciclaELayout() {
   const { user } = useAuth();
   const { allowedFeatures, loading: permissionsLoading } = usePermissions();
   const { isMobile } = useBreakpoints();
+
+  // Redirecionar usuários não-admin para "Meus Números"
+  useEffect(() => {
+    if (user && !user.isAdmin) {
+      setActiveItem('meus-numeros');
+    }
+  }, [user]);
 
   const toggleSidebar = () => {
     setSidebarCollapsed(prev => !prev);
@@ -193,6 +201,8 @@ export function ReciclaELayout() {
     switch (activeItem) {
       case 'dashboard':
         return <Dashboard />;
+      case 'meus-numeros':
+        return <MeusNumeros />;
       case 'entidades':
         return <EntidadesList onAddNew={handleAddNew} onEdit={handleEdit} />;
       case 'pontos-coleta':
