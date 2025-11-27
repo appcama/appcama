@@ -122,6 +122,11 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose,
           icon: Home,
         },
         {
+          id: "meus-numeros",
+          label: "Meus Números",
+          icon: TrendingUp,
+        },
+        {
           id: "entidades",
           label: "Entidades",
           icon: Building,
