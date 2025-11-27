@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface DashboardInfographicProps {
   filters: DashboardFilters;
+  entityId?: number;  // ID da entidade para filtrar (opcional)
 }
 
 // Mapeamento de tipos de resíduo para cores e ícones
@@ -89,12 +90,12 @@ const formatNumber = (value: number) => {
   return value.toFixed(0).replace('.', ',');
 };
 
-export function DashboardInfographic({ filters }: DashboardInfographicProps) {
+export function DashboardInfographic({ filters, entityId }: DashboardInfographicProps) {
   const { data, isLoading } = useDashboardData(filters);
 
   // Busca dedicada: indicadores por grupo_residuo (sem proporção)
   const { data: indicadoresPorGrupo, isLoading: loadingGrupos } = useQuery<Record<GroupKey, GroupMetrics>>({
-    queryKey: ["indicadores-por-grupo", filters],
+    queryKey: ["indicadores-por-grupo", filters, entityId],
     queryFn: async () => {
       // 1) Buscar coletas no período e filtros aplicados
       let coletaQuery = supabase
@@ -103,6 +104,27 @@ export function DashboardInfographic({ filters }: DashboardInfographicProps) {
         .gte("dat_coleta", filters.dataInicial)
         .lte("dat_coleta", filters.dataFinal)
         .eq("des_status", "A");
+
+      // Se entityId for fornecido, filtrar por usuários da entidade (Meus Números)
+      if (entityId) {
+        const { data: usuariosDaEntidade } = await supabase
+          .from("usuario")
+          .select("id_usuario")
+          .eq("id_entidade", entityId)
+          .eq("des_status", "A");
+        
+        const usuarioIds = usuariosDaEntidade?.map(u => u.id_usuario) || [];
+        if (usuarioIds.length > 0) {
+          coletaQuery = coletaQuery.in("id_usuario_criador", usuarioIds);
+        } else {
+          return {
+            papel: emptyMetrics(),
+            plastico: emptyMetrics(),
+            metal: emptyMetrics(),
+            vidro: emptyMetrics(),
+          } as Record<GroupKey, GroupMetrics>;
+        }
+      }
 
       if (filters.entidadeId) {
         coletaQuery = coletaQuery.eq("id_entidade_geradora", filters.entidadeId);
