@@ -379,7 +379,7 @@ function MeusNumerosContent() {
       />
 
       {/* Infographic */}
-      <DashboardInfographic filters={filters} />
+      <DashboardInfographic filters={filters} entityId={user?.entityId} />
     </div>
   );
 }
