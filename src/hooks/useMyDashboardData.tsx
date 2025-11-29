@@ -187,16 +187,16 @@ export function useMyDashboardData(entityId: number, filters: MyDashboardFilters
         }
       });
 
-      // Convert quantities to tons and keep calculated values
+      // Keep quantities in kg
       const residuosProcessados = Array.from(residuosMap.values()).map(r => ({
         ...r,
-        total_quantidade: r.total_quantidade / 1000, // Convert to tons
+        total_quantidade: r.total_quantidade, // Keep in kg
         total_valor: r.total_valor
       }));
 
       return {
         indicadores: Array.from(indicadoresMap.values()),
-        totalResiduos: totalResiduos / 1000, // Convert to tons
+        totalResiduos: totalResiduos, // Keep in kg
         residuosPorTipo: residuosProcessados,
       };
     },
