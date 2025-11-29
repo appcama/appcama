@@ -6,18 +6,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { ChevronDown } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-interface TipoEntidade {
-  id_tipo_entidade: number;
-  des_tipo_entidade: string;
-}
-
 interface Evento {
   id_evento: number;
   nom_evento: string;
 }
 
 interface MyDashboardFilters {
-  tipoEntidadeId?: number;
   eventoId?: number;
   dataInicial: string;
   dataFinal: string;
@@ -30,25 +24,11 @@ interface MeusNumeroFiltersProps {
 
 export function MeusNumeroFilters({ filters, onFiltersChange }: MeusNumeroFiltersProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [tiposEntidade, setTiposEntidade] = useState<TipoEntidade[]>([]);
   const [eventos, setEventos] = useState<Evento[]>([]);
 
   useEffect(() => {
-    fetchTiposEntidade();
     fetchEventos();
   }, []);
-
-  const fetchTiposEntidade = async () => {
-    const { data, error } = await supabase
-      .from("tipo_entidade")
-      .select("id_tipo_entidade, des_tipo_entidade")
-      .eq("des_status", "A")
-      .order("des_tipo_entidade");
-
-    if (!error && data) {
-      setTiposEntidade(data);
-    }
-  };
 
   const fetchEventos = async () => {
     const today = new Date().toISOString().split('T')[0];
@@ -90,27 +70,7 @@ export function MeusNumeroFilters({ filters, onFiltersChange }: MeusNumeroFilter
         
         <CollapsibleContent>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="tipo-entidade">Tipo de Entidade</Label>
-                <Select
-                  value={filters.tipoEntidadeId?.toString() || "all"}
-                  onValueChange={(value) => handleFilterChange("tipoEntidadeId", value === "all" ? null : parseInt(value))}
-                >
-                  <SelectTrigger id="tipo-entidade">
-                    <SelectValue placeholder="Todos os tipos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os tipos</SelectItem>
-                    {tiposEntidade.map((tipo) => (
-                      <SelectItem key={tipo.id_tipo_entidade} value={tipo.id_tipo_entidade.toString()}>
-                        {tipo.des_tipo_entidade}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="evento">Evento</Label>
                 <Select
