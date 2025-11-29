@@ -290,9 +290,9 @@ export function useRelatorioExport() {
       const pageWidth = doc.internal.pageSize.width;
       const pageHeight = doc.internal.pageSize.height;
       const leftMargin = 14;
-      const topMargin = 20;
+      const topMargin = 12;
       const logoSize = 30;
-      const headerSpacing = 35; // espaço vertical adicional abaixo do logo para títulos
+      const headerSpacing = 25; // espaço vertical adicional abaixo do logo para títulos
       const contentTop = topMargin + logoSize + headerSpacing; // início do conteúdo abaixo do cabeçalho
       const bottomReserved = 60; // área reservada para QR/validação
       const safeContentBottom = pageHeight - bottomReserved - 10; // limite seguro para conteúdo
@@ -380,10 +380,7 @@ export function useRelatorioExport() {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(18);
         doc.setTextColor(40, 40, 40);
-        doc.text('CERTIFICADO DE COLETA DE RESÍDUOS RECICLÁVEIS', pageWidth / 2, topMargin + logoSize + 8, { align: 'center' });
-        doc.setFontSize(14);
-        doc.setTextColor(46, 204, 113);
-        doc.text(`Código: ${certificado.cod_validador}`, pageWidth / 2, topMargin + logoSize + 20, { align: 'center' });
+        doc.text('CERTIFICADO DE COLETA DE RESÍDUOS RECICLÁVEIS', pageWidth / 2, topMargin + logoSize + 6, { align: 'center' });
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
         doc.setTextColor(100, 100, 100);
@@ -398,18 +395,25 @@ export function useRelatorioExport() {
         doc.setFontSize(10);
         doc.setTextColor(40, 40, 40);
         doc.text('VALIDAÇÃO PÚBLICA', leftMargin, footerY + 5);
+        
+        // Código do certificado em destaque
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(46, 204, 113);
+        doc.text(`Código: ${certificado.cod_validador}`, leftMargin, footerY + 12);
+        
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8);
         doc.setTextColor(100, 100, 100);
-        doc.text('Escaneie o QR Code ou acesse:', leftMargin, footerY + 11);
+        doc.text('Escaneie o QR Code ou acesse:', leftMargin, footerY + 18);
         doc.setFontSize(7);
         doc.setTextColor(0, 0, 255);
-        doc.textWithLink(validationUrl, leftMargin, footerY + 17, { url: validationUrl });
+        doc.textWithLink(validationUrl, leftMargin, footerY + 24, { url: validationUrl });
         // "Emitido em" abaixo do link de validação pública
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8);
         doc.setTextColor(100, 100, 100);
-        doc.text(`Emitido em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, leftMargin, footerY + 24);
+        doc.text(`Emitido em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, leftMargin, footerY + 31);
         // Linha separadora reposicionada para não sobrepor o QR Code
         const lineY = footerY + qrSize + 6;
         doc.setDrawColor(200, 200, 200);
