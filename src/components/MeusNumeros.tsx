@@ -23,6 +23,7 @@ import { DashboardInfographic } from "@/components/DashboardInfographic";
 import { FinancialPrivacyProvider, useFinancialPrivacy } from "@/hooks/useFinancialPrivacy";
 import { formatFinancialValue } from "@/lib/financial-utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserEntity } from "@/hooks/useUserEntity";
 
 // Helper function to get appropriate icon for each indicator
 const getIndicatorIcon = (nomIndicador: string) => {
@@ -57,6 +58,7 @@ function MeusNumerosContent() {
   const dashboardRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const { showFinancialValues } = useFinancialPrivacy();
+  const { data: userEntity } = useUserEntity();
   const [filters, setFilters] = useState<MyDashboardFilters>({
     dataInicial: new Date().getFullYear() + "-01-01",
     dataFinal: (() => {
@@ -110,14 +112,23 @@ function MeusNumerosContent() {
               className="h-16 sm:h-20 md:h-24 w-auto object-contain shrink-0"
             />
           </div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={toggleFullscreen}
-            title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}
-          >
-            {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
-          </Button>
+          <div className="flex items-center gap-3">
+            {userEntity?.des_logo_url && (
+              <img
+                src={userEntity.des_logo_url}
+                alt={userEntity.nom_entidade}
+                className="h-16 sm:h-20 md:h-24 w-auto object-contain shrink-0"
+              />
+            )}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={toggleFullscreen}
+              title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}
+            >
+              {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+            </Button>
+          </div>
         </div>
         <p className="text-muted-foreground">
           Visão geral dos números da sua entidade
