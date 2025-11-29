@@ -25,12 +25,14 @@ import { cn } from "@/lib/utils";
 import { featureByItemId } from "@/lib/featureMap";
 import { useBreakpoints } from "@/hooks/use-breakpoints";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserEntity } from "@/hooks/useUserEntity";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface SidebarProps {
   activeItem: string;
@@ -55,6 +57,7 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose,
   const { isMobile } = useBreakpoints();
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const { data: userEntity } = useUserEntity();
 
   useEffect(() => {
     return () => {
@@ -379,6 +382,57 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose,
       <nav className={cn("flex-1 overflow-y-auto", isMobile ? "p-2" : "p-4")}>
         {menuGroups.map(renderGroup)}
       </nav>
+      
+      {/* Entidade do Usuário */}
+      {userEntity && (
+        <div className={cn("border-t border-gray-200", isMobile ? "p-2" : "p-4")}>
+          {collapsed && !isMobile ? (
+            <Tooltip delayDuration={300}>
+              <TooltipTrigger asChild>
+                <div className="flex justify-center">
+                  <Avatar className="h-10 w-10">
+                    {userEntity.des_logo_url && (
+                      <AvatarImage src={userEntity.des_logo_url} alt={userEntity.nom_entidade} />
+                    )}
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                      {userEntity.nom_entidade
+                        .split(' ')
+                        .map(word => word[0])
+                        .join('')
+                        .slice(0, 2)
+                        .toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="font-medium max-w-xs">
+                {userEntity.nom_entidade}
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <div className="flex items-center gap-3 px-2 py-2">
+              <Avatar className="h-10 w-10 flex-shrink-0">
+                {userEntity.des_logo_url && (
+                  <AvatarImage src={userEntity.des_logo_url} alt={userEntity.nom_entidade} />
+                )}
+                <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                  {userEntity.nom_entidade
+                    .split(' ')
+                    .map(word => word[0])
+                    .join('')
+                    .slice(0, 2)
+                    .toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">
+                  {userEntity.nom_entidade}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       
       {/* Botão de Sair */}
       <div className={cn("border-t border-gray-200", isMobile ? "p-2" : "p-4")}>
