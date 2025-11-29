@@ -225,7 +225,7 @@ export function useRelatorioExport() {
     }
   };
 
-  // Função auxiliar para carregar e comprimir imagens
+  // Função auxiliar para carregar e comprimir imagens com fundo branco
   const loadImageAsCompressedBase64 = async (url: string, maxSize: number = 120, quality: number = 0.7): Promise<string | null> => {
     return new Promise((resolve) => {
       const img = new Image();
@@ -237,6 +237,12 @@ export function useRelatorioExport() {
         canvas.height = img.height * scale;
         const ctx = canvas.getContext('2d');
         if (!ctx) { resolve(null); return; }
+        
+        // Preencher fundo branco para evitar transparência preta no JPEG
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Desenhar imagem sobre o fundo branco
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         resolve(canvas.toDataURL('image/jpeg', quality));
       };
