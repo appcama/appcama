@@ -4,23 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  Building2,
-  TrendingUp,
-  Calendar,
   Leaf,
   Droplets,
   Wind,
   Battery,
   Trees,
   Recycle,
-  Users,
   Zap,
   Maximize,
   Minimize,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useMyDashboardData, type MyDashboardFilters } from "@/hooks/useMyDashboardData";
-import { useDashboardStats } from "@/hooks/useDashboardStats";
 import { MeusNumeroFilters } from "@/components/MeusNumeroFilters";
 import { DashboardCharts } from "@/components/DashboardCharts";
 import { DashboardMap } from "@/components/DashboardMap";
@@ -55,16 +50,6 @@ const getIndicatorColor = (nomIndicador: string) => {
   return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
 };
 
-const formatPercentage = (percentage: number) => {
-  const isPositive = percentage >= 0;
-  const color = isPositive ? "text-green-600" : "text-red-600";
-  const arrow = isPositive ? "↑" : "↓";
-  return (
-    <span className={color}>
-      {arrow} {Math.abs(percentage).toFixed(1)}%
-    </span>
-  );
-};
 
 function MeusNumerosContent() {
   const { user } = useAuth();
@@ -79,7 +64,6 @@ function MeusNumerosContent() {
   });
 
   const { data, isLoading, error } = useMyDashboardData(user?.entityId || 0, filters);
-  const { data: stats, isLoading: statsLoading } = useDashboardStats(filters);
 
   const handleFiltersChange = (newFilters: MyDashboardFilters) => {
     setFilters({
@@ -139,72 +123,6 @@ function MeusNumerosContent() {
       </div>
 
       <MeusNumeroFilters filters={filters} onFiltersChange={handleFiltersChange} />
-
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statsLoading ? (
-          <>
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-          </>
-        ) : (
-          <>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total de Entidades</CardTitle>
-                <Building2 className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.totalEntidades || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  {formatPercentage(stats?.totalEntidadesPercentage || 0)} do período anterior
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Cooperativas/Catadores</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.entidadesColetoras || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  {formatPercentage(stats?.entidadesColetorasPercentage || 0)} do período anterior
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total de Eventos</CardTitle>
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.eventosColeta || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  {formatPercentage(stats?.eventosColetaPercentage || 0)} do período anterior
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Entidades Geradoras</CardTitle>
-                <Recycle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats?.geradoresResiduos || 0}</div>
-                <p className="text-xs text-muted-foreground">
-                  {formatPercentage(stats?.geradoresResiduosPercentage || 0)} do período anterior
-                </p>
-              </CardContent>
-            </Card>
-          </>
-        )}
-      </div>
 
       {/* Ecoindicators Section */}
       {isLoading ? (
