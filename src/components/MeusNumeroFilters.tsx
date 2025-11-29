@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Filter, RotateCcw } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { FinancialPrivacyToggle } from "@/components/FinancialPrivacyToggle";
 
 interface Evento {
   id_evento: number;
@@ -25,10 +27,15 @@ interface MeusNumeroFiltersProps {
 export function MeusNumeroFilters({ filters, onFiltersChange }: MeusNumeroFiltersProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [eventos, setEventos] = useState<Evento[]>([]);
+  const [tempFilters, setTempFilters] = useState<MyDashboardFilters>(filters);
 
   useEffect(() => {
     fetchEventos();
   }, []);
+
+  useEffect(() => {
+    setTempFilters(filters);
+  }, [filters]);
 
   const fetchEventos = async () => {
     const today = new Date().toISOString().split('T')[0];
@@ -46,10 +53,36 @@ export function MeusNumeroFilters({ filters, onFiltersChange }: MeusNumeroFilter
   };
 
   const handleFilterChange = (key: keyof MyDashboardFilters, value: any) => {
-    onFiltersChange({
-      ...filters,
+    setTempFilters({
+      ...tempFilters,
       [key]: value || undefined,
     });
+  };
+
+  const handleApplyFilters = () => {
+    onFiltersChange(tempFilters);
+  };
+
+  const getCurrentYearDates = () => ({
+    dataInicial: `${new Date().getFullYear()}-01-01`,
+    dataFinal: (() => {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    })(),
+  });
+
+  const handleClearFilters = () => {
+    const currentYear = getCurrentYearDates();
+    const clearedFilters = {
+      eventoId: undefined,
+      dataInicial: currentYear.dataInicial,
+      dataFinal: currentYear.dataFinal,
+    };
+    setTempFilters(clearedFilters);
+    onFiltersChange(clearedFilters);
   };
 
   return (
@@ -74,7 +107,7 @@ export function MeusNumeroFilters({ filters, onFiltersChange }: MeusNumeroFilter
               <div className="space-y-2">
                 <Label htmlFor="evento">Evento</Label>
                 <Select
-                  value={filters.eventoId?.toString() || "all"}
+                  value={tempFilters.eventoId?.toString() || "all"}
                   onValueChange={(value) => handleFilterChange("eventoId", value === "all" ? null : parseInt(value))}
                 >
                   <SelectTrigger id="evento">
@@ -97,7 +130,7 @@ export function MeusNumeroFilters({ filters, onFiltersChange }: MeusNumeroFilter
                   id="data-inicial"
                   type="date"
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                  value={filters.dataInicial}
+                  value={tempFilters.dataInicial}
                   onChange={(e) => handleFilterChange("dataInicial", e.target.value)}
                 />
               </div>
@@ -108,10 +141,23 @@ export function MeusNumeroFilters({ filters, onFiltersChange }: MeusNumeroFilter
                   id="data-final"
                   type="date"
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                  value={filters.dataFinal}
+                  value={tempFilters.dataFinal}
                   onChange={(e) => handleFilterChange("dataFinal", e.target.value)}
                 />
               </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button onClick={handleApplyFilters} className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white">
+                <Filter className="h-4 w-4" />
+                Aplicar Filtros
+              </Button>
+              <Button variant="outline" onClick={handleClearFilters} className="flex items-center gap-2">
+                <RotateCcw className="h-4 w-4" />
+                Limpar Filtros
+              </Button>
+              <FinancialPrivacyToggle />
             </div>
           </CardContent>
         </CollapsibleContent>

@@ -20,7 +20,8 @@ import { MeusNumeroFilters } from "@/components/MeusNumeroFilters";
 import { DashboardCharts } from "@/components/DashboardCharts";
 import { DashboardMap } from "@/components/DashboardMap";
 import { DashboardInfographic } from "@/components/DashboardInfographic";
-import { FinancialPrivacyProvider } from "@/hooks/useFinancialPrivacy";
+import { FinancialPrivacyProvider, useFinancialPrivacy } from "@/hooks/useFinancialPrivacy";
+import { formatFinancialValue } from "@/lib/financial-utils";
 import { useAuth } from "@/hooks/useAuth";
 
 // Helper function to get appropriate icon for each indicator
@@ -55,6 +56,7 @@ function MeusNumerosContent() {
   const { user } = useAuth();
   const dashboardRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const { showFinancialValues } = useFinancialPrivacy();
   const [filters, setFilters] = useState<MyDashboardFilters>({
     dataInicial: new Date().getFullYear() + "-01-01",
     dataFinal: (() => {
@@ -189,10 +191,7 @@ function MeusNumerosContent() {
                             })}
                           </TableCell>
                           <TableCell className="text-right">
-                            R$ {residuo.total_valor.toLocaleString("pt-BR", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
+                            {formatFinancialValue(residuo.total_valor, showFinancialValues)}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -207,12 +206,10 @@ function MeusNumerosContent() {
                             })}
                         </TableCell>
                         <TableCell className="text-right">
-                          R$ {data.residuosPorTipo
-                            .reduce((sum, r) => sum + r.total_valor, 0)
-                            .toLocaleString("pt-BR", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
+                          {formatFinancialValue(
+                            data.residuosPorTipo.reduce((sum, r) => sum + r.total_valor, 0),
+                            showFinancialValues
+                          )}
                         </TableCell>
                       </TableRow>
                     </TableBody>
