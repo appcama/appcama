@@ -181,7 +181,7 @@ export function CertificadoPreviewDialog({
           vlr_total_certificado: vlrTotalCertificado,
           num_cpf_cnpj_gerador: entidade?.num_cpf_cnpj || '',
           id_entidade: selectedColetas[0].id_entidade_geradora,
-          observacoes: observacoes || `Certificado gerado a partir de ${selectedColetas.length} coleta(s): ${selectedColetas.map(c => c.cod_coleta).join(', ')}`,
+          observacoes: observacoes || null,
           id_usuario_criador: user.id,
           dat_criacao: new Date().toISOString(),
           des_status: 'A',
