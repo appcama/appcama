@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileCheck, CheckSquare, Square, Filter, Calendar as CalendarIcon, X, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FileCheck, CheckSquare, Square, Filter, Calendar as CalendarIcon, X, RotateCcw, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ptBR } from 'date-fns/locale';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
 
 interface Coleta {
   id_coleta: number;
@@ -74,6 +76,7 @@ export function GerarCertificado() {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [showOnlyAvailable, setShowOnlyAvailable] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -222,6 +225,11 @@ export function GerarCertificado() {
     loadEventos();
   }, [user]);
 
+  // Função para verificar se uma coleta pode ser selecionada
+  const canSelectColeta = (coleta: Coleta) => {
+    return coleta.id_entidade_geradora !== null && coleta.id_entidade_geradora !== undefined;
+  };
+
   const filteredColetas = coletas.filter(coleta => {
     const normalizedTerm = searchTerm.trim().toLowerCase();
     const termDigits = searchTerm.replace(/\D/g, '');
@@ -246,20 +254,39 @@ export function GerarCertificado() {
     const matchesDataFim = !dataFim || new Date(coleta.dat_coleta) <= dataFim;
     const matchesEntidade = entidadeId === 'all' || coleta.id_entidade_geradora?.toString() === entidadeId;
     const matchesEvento = eventoId === 'all' || coleta.id_evento?.toString() === eventoId;
+    const matchesAvailability = !showOnlyAvailable || canSelectColeta(coleta);
 
-    return matchesSearch && matchesDataInicio && matchesDataFim && matchesEntidade && matchesEvento;
+    return matchesSearch && matchesDataInicio && matchesDataFim && matchesEntidade && matchesEvento && matchesAvailability;
   });
 
+  // Ordenar: coletas COM entidade geradora primeiro, SEM entidade depois
+  // Dentro de cada grupo, manter ordem por data decrescente
+  const sortedColetas = [...filteredColetas].sort((a, b) => {
+    const aHasEntidade = canSelectColeta(a);
+    const bHasEntidade = canSelectColeta(b);
+    
+    // Se um tem entidade e outro não, prioriza o que tem
+    if (aHasEntidade && !bHasEntidade) return -1;
+    if (!aHasEntidade && bHasEntidade) return 1;
+    
+    // Se ambos têm ou não têm, ordenar por data decrescente
+    return new Date(b.dat_coleta).getTime() - new Date(a.dat_coleta).getTime();
+  });
+
+  // Contar coletas disponíveis e indisponíveis
+  const selectableColetas = sortedColetas.filter(canSelectColeta);
+  const unavailableCount = sortedColetas.length - selectableColetas.length;
+
   // Paginação
-  const totalPages = Math.ceil(filteredColetas.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedColetas.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedColetas = filteredColetas.slice(startIndex, endIndex);
+  const paginatedColetas = sortedColetas.slice(startIndex, endIndex);
 
   // Reset página quando filtrar
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, dataInicio, dataFim, entidadeId]);
+  }, [searchTerm, dataInicio, dataFim, entidadeId, showOnlyAvailable]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -277,6 +304,9 @@ export function GerarCertificado() {
   }
 
   const handleSelectColeta = (coletaId: number) => {
+    const coleta = coletas.find(c => c.id_coleta === coletaId);
+    if (!coleta || !canSelectColeta(coleta)) return; // Ignora se não pode selecionar
+    
     setSelectedColetas(prev => {
       if (prev.includes(coletaId)) {
         return prev.filter(id => id !== coletaId);
@@ -287,10 +317,13 @@ export function GerarCertificado() {
   };
 
   const handleSelectAll = () => {
-    if (selectedColetas.length === filteredColetas.length) {
+    const allSelectableSelected = selectableColetas.length > 0 && 
+      selectableColetas.every(c => selectedColetas.includes(c.id_coleta));
+    
+    if (allSelectableSelected) {
       setSelectedColetas([]);
     } else {
-      setSelectedColetas(filteredColetas.map(c => c.id_coleta));
+      setSelectedColetas(selectableColetas.map(c => c.id_coleta));
     }
   };
 
@@ -334,12 +367,14 @@ export function GerarCertificado() {
     setEntidadeId('all');
     setEventoId('all');
     setSearchTerm('');
+    setShowOnlyAvailable(false);
   };
 
-  const hasActiveFilters = dataInicio || dataFim || (entidadeId !== 'all') || (eventoId !== 'all') || searchTerm;
+  const hasActiveFilters = dataInicio || dataFim || (entidadeId !== 'all') || (eventoId !== 'all') || searchTerm || showOnlyAvailable;
 
   const validation = validateSelection();
-  const allSelected = filteredColetas.length > 0 && selectedColetas.length === filteredColetas.length;
+  const allSelected = selectableColetas.length > 0 && 
+    selectableColetas.every(c => selectedColetas.includes(c.id_coleta));
 
   if (loading) {
     return (
@@ -352,7 +387,15 @@ export function GerarCertificado() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Gerar Certificado</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold text-gray-900">Gerar Certificado</h1>
+          {unavailableCount > 0 && (
+            <Badge variant="secondary" className="bg-gray-200 text-gray-700">
+              <AlertTriangle className="w-3 h-3 mr-1" />
+              {unavailableCount} indisponível{unavailableCount !== 1 ? 'is' : ''}
+            </Badge>
+          )}
+        </div>
         <Button 
           onClick={handleGenerateCertificate}
           disabled={!validation.valid}
@@ -486,13 +529,26 @@ export function GerarCertificado() {
             </div>
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex gap-4 items-center">
             <Input
               placeholder="Buscar por código, entidade, CPF/CNPJ ou data"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-md"
             />
+            <div className="flex items-center gap-2 ml-auto">
+              <Checkbox 
+                id="show-only-available"
+                checked={showOnlyAvailable}
+                onCheckedChange={(checked) => setShowOnlyAvailable(checked as boolean)}
+              />
+              <label 
+                htmlFor="show-only-available" 
+                className="text-sm font-medium cursor-pointer select-none"
+              >
+                Mostrar apenas disponíveis para certificação
+              </label>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -504,62 +560,98 @@ export function GerarCertificado() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-4 font-semibold w-12">
-                      <Checkbox
-                        checked={allSelected}
-                        onCheckedChange={handleSelectAll}
-                        aria-label="Selecionar todas"
-                      />
-                    </th>
-                    <th className="text-left p-4 font-semibold">Código</th>
-                    <th className="text-left p-4 font-semibold">Data</th>
-                    <th className="text-left p-4 font-semibold">Entidade Geradora</th>
-                    <th className="text-left p-4 font-semibold">CPF/CNPJ</th>
-                    <th className="text-left p-4 font-semibold">Entidade Coletora</th>
-                    <th className="text-left p-4 font-semibold">Ponto de Coleta</th>
-                    <th className="text-right p-4 font-semibold">Valor Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedColetas.map((coleta) => (
-                    <tr 
-                      key={coleta.id_coleta} 
-                      className={`border-b hover:bg-gray-50 cursor-pointer ${
-                        selectedColetas.includes(coleta.id_coleta) ? 'bg-green-50' : ''
-                      }`}
-                      onClick={() => handleSelectColeta(coleta.id_coleta)}
-                    >
-                      <td className="p-4">
+              <TooltipProvider>
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-4 font-semibold w-12">
                         <Checkbox
-                          checked={selectedColetas.includes(coleta.id_coleta)}
-                          onCheckedChange={() => handleSelectColeta(coleta.id_coleta)}
-                          onClick={(e) => e.stopPropagation()}
+                          checked={allSelected}
+                          onCheckedChange={handleSelectAll}
+                          aria-label="Selecionar todas disponíveis"
                         />
-                      </td>
-                      <td className="p-4">{coleta.cod_coleta}</td>
-                      <td className="p-4">{formatDate(coleta.dat_coleta)}</td>
-                      <td className="p-4">{coleta.entidade?.nom_entidade || '-'}</td>
-                      <td className="p-4">{coleta.entidade?.num_cpf_cnpj || '-'}</td>
-                      <td className="p-4">{coleta.entidade_coletora?.nom_entidade || '-'}</td>
-                      <td className="p-4">{coleta.ponto_coleta?.nom_ponto_coleta || '-'}</td>
-                      <td className="p-4 text-right font-semibold text-recycle-green">
-                        {formatCurrency(coleta.vlr_total)}
-                      </td>
+                      </th>
+                      <th className="text-left p-4 font-semibold">Código</th>
+                      <th className="text-left p-4 font-semibold">Data</th>
+                      <th className="text-left p-4 font-semibold">Entidade Geradora</th>
+                      <th className="text-left p-4 font-semibold">CPF/CNPJ</th>
+                      <th className="text-left p-4 font-semibold">Entidade Coletora</th>
+                      <th className="text-left p-4 font-semibold">Ponto de Coleta</th>
+                      <th className="text-right p-4 font-semibold">Valor Total</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {paginatedColetas.map((coleta) => {
+                      const isSelectable = canSelectColeta(coleta);
+                      
+                      return (
+                        <Tooltip key={coleta.id_coleta}>
+                          <TooltipTrigger asChild>
+                            <tr 
+                              className={cn(
+                                "border-b transition-colors",
+                                isSelectable 
+                                  ? `hover:bg-gray-50 cursor-pointer ${selectedColetas.includes(coleta.id_coleta) ? 'bg-green-50' : ''}`
+                                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              )}
+                              onClick={() => isSelectable && handleSelectColeta(coleta.id_coleta)}
+                            >
+                              <td className="p-4">
+                                <Checkbox
+                                  checked={selectedColetas.includes(coleta.id_coleta)}
+                                  onCheckedChange={() => handleSelectColeta(coleta.id_coleta)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  disabled={!isSelectable}
+                                  className={!isSelectable ? 'opacity-50' : ''}
+                                />
+                              </td>
+                              <td className="p-4">{coleta.cod_coleta}</td>
+                              <td className="p-4">{formatDate(coleta.dat_coleta)}</td>
+                              <td className="p-4">
+                                {coleta.entidade?.nom_entidade ? (
+                                  coleta.entidade.nom_entidade
+                                ) : (
+                                  <span className="flex items-center gap-1 italic text-gray-400">
+                                    <AlertTriangle className="w-4 h-4" />
+                                    Não cadastrada
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-4">{coleta.entidade?.num_cpf_cnpj || '-'}</td>
+                              <td className="p-4">{coleta.entidade_coletora?.nom_entidade || '-'}</td>
+                              <td className="p-4">{coleta.ponto_coleta?.nom_ponto_coleta || '-'}</td>
+                              <td className={cn(
+                                "p-4 text-right font-semibold",
+                                isSelectable ? 'text-recycle-green' : 'text-gray-400'
+                              )}>
+                                {formatCurrency(coleta.vlr_total)}
+                              </td>
+                            </tr>
+                          </TooltipTrigger>
+                          {!isSelectable && (
+                            <TooltipContent side="top">
+                              <p>Não é possível gerar certificado sem entidade geradora cadastrada</p>
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </TooltipProvider>
             </div>
           )}
 
           {/* Paginação */}
-          {filteredColetas.length > itemsPerPage && (
+          {sortedColetas.length > itemsPerPage && (
             <div className="flex items-center justify-between mt-6 pt-4 border-t">
               <div className="text-sm text-gray-600">
-                Exibindo {startIndex + 1} a {Math.min(endIndex, filteredColetas.length)} de {filteredColetas.length} coletas
+                Exibindo {startIndex + 1} a {Math.min(endIndex, sortedColetas.length)} de {sortedColetas.length} coletas
+                {unavailableCount > 0 && (
+                  <span className="text-gray-400 ml-1">
+                    ({selectableColetas.length} disponíveis para certificação)
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <Button
