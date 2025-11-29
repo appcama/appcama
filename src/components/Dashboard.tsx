@@ -227,116 +227,122 @@ function DashboardContent() {
         </Card>
       </div>
 
-      {data?.indicadores && data.indicadores.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Ecoindicadores</CardTitle>
-            <CardDescription>
-              Benefícios ambientais calculados com base nos resíduos coletados
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {data.indicadores.map((indicador) => {
-                const Icon = getIndicatorIcon(indicador.nom_indicador);
-                const colorClass = getIndicatorColor(indicador.nom_indicador);
-                
-                return (
-                  <div key={indicador.id_indicador} className={`p-4 rounded-lg ${colorClass}`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <Icon className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">
-                        {formatNumber(indicador.total, 1)}
-                      </p>
-                      <p className="text-sm font-medium">
-                        {indicador.nom_indicador}
-                      </p>
-                      <p className="text-xs opacity-75">
-                        {indicador.des_unidade_medida}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left column: Reciclômetro and Totais por Tipo de Resíduo */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Recycle className="h-5 w-5 text-recycle-green" />
+                <CardTitle>Reciclômetro</CardTitle>
+              </div>
+              <CardDescription>
+                Período: {(() => {
+                  const [yearInicial, monthInicial, dayInicial] = filters.dataInicial.split('-').map(Number);
+                  const [yearFinal, monthFinal, dayFinal] = filters.dataFinal.split('-').map(Number);
+                  const dataInicialLocal = new Date(yearInicial, monthInicial - 1, dayInicial);
+                  const dataFinalLocal = new Date(yearFinal, monthFinal - 1, dayFinal);
+                  return `${dataInicialLocal.toLocaleDateString('pt-BR')} - ${dataFinalLocal.toLocaleDateString('pt-BR')}`;
+                })()} 
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <Skeleton className="h-16 w-32" />
+              ) : (
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl sm:text-4xl font-bold text-recycle-green">
+                    {formatNumber((data?.totalResiduos || 0) * 1000, 2)}
+                  </span>
+                  <span className="text-lg text-muted-foreground">quilos</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Recycle className="h-5 w-5 text-recycle-green" />
-            <CardTitle>Reciclômetro</CardTitle>
-          </div>
-          <CardDescription>
-            Período: {(() => {
-              const [yearInicial, monthInicial, dayInicial] = filters.dataInicial.split('-').map(Number);
-              const [yearFinal, monthFinal, dayFinal] = filters.dataFinal.split('-').map(Number);
-              const dataInicialLocal = new Date(yearInicial, monthInicial - 1, dayInicial);
-              const dataFinalLocal = new Date(yearFinal, monthFinal - 1, dayFinal);
-              return `${dataInicialLocal.toLocaleDateString('pt-BR')} - ${dataFinalLocal.toLocaleDateString('pt-BR')}`;
-            })()} 
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <Skeleton className="h-16 w-32" />
-          ) : (
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl sm:text-4xl font-bold text-recycle-green">
-                {formatNumber((data?.totalResiduos || 0) * 1000, 2)}
-              </span>
-              <span className="text-lg text-muted-foreground">quilos</span>
-            </div>
+          {data?.residuosPorTipo && data.residuosPorTipo.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Totais por Tipo de Resíduo</CardTitle>
+                <CardDescription>
+                  Quantidade coletada em quilos por tipo de material
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Tipo de Resíduo</TableHead>
+                        <TableHead className="text-right">Quantidade (kg)</TableHead>
+                        <TableHead className="text-right">Valor Total (R$)</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {data.residuosPorTipo
+                        .sort((a, b) => b.total_quantidade - a.total_quantidade)
+                        .map((residuo) => (
+                        <TableRow key={residuo.id_tipo_residuo}>
+                          <TableCell className="font-medium">
+                            {residuo.des_tipo_residuo}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatNumber((residuo.total_quantidade || 0) * 1000, 2)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatFinancialValue(residuo.total_valor || 0, showFinancialValues)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
+        </div>
 
-
-
-      {data?.residuosPorTipo && data.residuosPorTipo.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Totais por Tipo de Resíduo</CardTitle>
-            <CardDescription>
-              Quantidade coletada em quilos por tipo de material
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tipo de Resíduo</TableHead>
-                    <TableHead className="text-right">Quantidade (kg)</TableHead>
-                    <TableHead className="text-right">Valor Total (R$)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.residuosPorTipo
-                    .sort((a, b) => b.total_quantidade - a.total_quantidade)
-                    .map((residuo) => (
-                    <TableRow key={residuo.id_tipo_residuo}>
-                      <TableCell className="font-medium">
-                        {residuo.des_tipo_residuo}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatNumber((residuo.total_quantidade || 0) * 1000, 2)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatFinancialValue(residuo.total_valor || 0, showFinancialValues)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+        {/* Right column: Ecoindicadores */}
+        <div>
+          {data?.indicadores && data.indicadores.length > 0 && (
+            <Card className="h-full">
+              <CardHeader>
+                <CardTitle>Ecoindicadores</CardTitle>
+                <CardDescription>
+                  Benefícios ambientais calculados com base nos resíduos coletados
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {data.indicadores.map((indicador) => {
+                    const Icon = getIndicatorIcon(indicador.nom_indicador);
+                    const colorClass = getIndicatorColor(indicador.nom_indicador);
+                    
+                    return (
+                      <div key={indicador.id_indicador} className={`p-4 rounded-lg ${colorClass}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <Icon className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold">
+                            {formatNumber(indicador.total, 1)}
+                          </p>
+                          <p className="text-sm font-medium">
+                            {indicador.nom_indicador}
+                          </p>
+                          <p className="text-xs opacity-75">
+                            {indicador.des_unidade_medida}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
 
       {data?.residuosPorTipo && (
         <DashboardCharts residuosPorTipo={data.residuosPorTipo} />
