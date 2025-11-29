@@ -225,8 +225,15 @@ export function useRelatorioExport() {
     }
   };
 
+  // Interface para resultado da compressão de imagem
+  interface CompressedImageResult {
+    base64: string;
+    originalWidth: number;
+    originalHeight: number;
+  }
+
   // Função auxiliar para carregar e comprimir imagens com fundo branco
-  const loadImageAsCompressedBase64 = async (url: string, maxSize: number = 120, quality: number = 0.7): Promise<string | null> => {
+  const loadImageAsCompressedBase64 = async (url: string, maxSize: number = 120, quality: number = 0.7): Promise<CompressedImageResult | null> => {
     return new Promise((resolve) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
@@ -244,11 +251,35 @@ export function useRelatorioExport() {
         
         // Desenhar imagem sobre o fundo branco
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', quality));
+        
+        resolve({
+          base64: canvas.toDataURL('image/jpeg', quality),
+          originalWidth: img.width,
+          originalHeight: img.height
+        });
       };
       img.onerror = () => resolve(null);
       img.src = url;
     });
+  };
+
+  // Função para calcular dimensões proporcionais, mantendo o maior lado igual a maxSize
+  const calculateProportionalSize = (originalWidth: number, originalHeight: number, maxSize: number): { width: number; height: number } => {
+    const aspectRatio = originalWidth / originalHeight;
+    
+    if (originalWidth >= originalHeight) {
+      // Imagem horizontal ou quadrada: largura = maxSize
+      return {
+        width: maxSize,
+        height: maxSize / aspectRatio
+      };
+    } else {
+      // Imagem vertical: altura = maxSize
+      return {
+        width: maxSize * aspectRatio,
+        height: maxSize
+      };
+    }
   };
 
   const exportCertificadoPDF = async (certificado: any) => {
@@ -286,11 +317,20 @@ export function useRelatorioExport() {
       const entidadeColetora = usuarioCriador?.entidade;
       const entityColetoraLogoUrl = entidadeColetora?.des_logo_url || null;
 
-      // Pré-carregar e comprimir todas as imagens
-      const [logoRecyclaECompressed, logoEntidadeCompressed] = await Promise.all([
+      // Pré-carregar e comprimir todas as imagens (com dimensões)
+      const [logoRecyclaEResult, logoEntidadeResult] = await Promise.all([
         loadImageAsCompressedBase64('/logo-original.png', 120, 0.7),
         entityColetoraLogoUrl ? loadImageAsCompressedBase64(entityColetoraLogoUrl, 120, 0.7) : Promise.resolve(null)
       ]);
+
+      // Calcular dimensões proporcionais para cada logo
+      const logoRecyclaESize = logoRecyclaEResult 
+        ? calculateProportionalSize(logoRecyclaEResult.originalWidth, logoRecyclaEResult.originalHeight, logoSize)
+        : { width: logoSize, height: logoSize };
+
+      const logoEntidadeSize = logoEntidadeResult 
+        ? calculateProportionalSize(logoEntidadeResult.originalWidth, logoEntidadeResult.originalHeight, logoSize)
+        : { width: logoSize, height: logoSize };
 
       // QR Code e Link de Validação (gerar antes para reutilizar) - OTIMIZADO
       const validationUrl = `${window.location.origin}/validar-certificado/${certificado.cod_validador}`;
@@ -311,23 +351,28 @@ export function useRelatorioExport() {
       let isFirstDraw = true;
       const drawHeaderFooter = () => {
         // Cabeçalho
-        // Logo RecyclaE no canto esquerdo
-        if (logoRecyclaECompressed) {
+        // Logo RecyclaE no canto esquerdo - com proporção correta
+        if (logoRecyclaEResult) {
           try { 
+            // Centralizar verticalmente se não for quadrada
+            const yOffset = (logoSize - logoRecyclaESize.height) / 2;
             if (isFirstDraw) {
-              doc.addImage(logoRecyclaECompressed, 'JPEG', leftMargin, topMargin, logoSize, logoSize, 'logo_recyclae', 'FAST');
+              doc.addImage(logoRecyclaEResult.base64, 'JPEG', leftMargin, topMargin + yOffset, logoRecyclaESize.width, logoRecyclaESize.height, 'logo_recyclae', 'FAST');
             } else {
-              doc.addImage(logoRecyclaECompressed, 'JPEG', leftMargin, topMargin, logoSize, logoSize, 'logo_recyclae');
+              doc.addImage(logoRecyclaEResult.base64, 'JPEG', leftMargin, topMargin + yOffset, logoRecyclaESize.width, logoRecyclaESize.height, 'logo_recyclae');
             }
           } catch {}
         }
-        // Logo da Entidade Coletora no canto direito
-        if (logoEntidadeCompressed) {
+        // Logo da Entidade Coletora no canto direito - com proporção correta
+        if (logoEntidadeResult) {
           try { 
+            // Alinhar à direita e centralizar verticalmente
+            const xPos = pageWidth - leftMargin - logoEntidadeSize.width;
+            const yOffset = (logoSize - logoEntidadeSize.height) / 2;
             if (isFirstDraw) {
-              doc.addImage(logoEntidadeCompressed, 'JPEG', pageWidth - leftMargin - logoSize, topMargin, logoSize, logoSize, 'logo_entidade', 'FAST');
+              doc.addImage(logoEntidadeResult.base64, 'JPEG', xPos, topMargin + yOffset, logoEntidadeSize.width, logoEntidadeSize.height, 'logo_entidade', 'FAST');
             } else {
-              doc.addImage(logoEntidadeCompressed, 'JPEG', pageWidth - leftMargin - logoSize, topMargin, logoSize, logoSize, 'logo_entidade');
+              doc.addImage(logoEntidadeResult.base64, 'JPEG', xPos, topMargin + yOffset, logoEntidadeSize.width, logoEntidadeSize.height, 'logo_entidade');
             }
           } catch {}
         }
