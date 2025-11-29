@@ -467,7 +467,7 @@ export function useRelatorioExport() {
       doc.setFontSize(12);
       doc.setTextColor(40, 40, 40);
       doc.text('DADOS DA ENTIDADE COLETORA', leftMargin, yLeft);
-      yLeft += 10;
+      yLeft += 7;
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
@@ -484,7 +484,7 @@ export function useRelatorioExport() {
         doc.text(label, leftMargin, yLeft);
         doc.setFont('helvetica', 'normal');
         doc.text(value, leftMargin + 36, yLeft);
-        yLeft += 7;
+        yLeft += 5;
       });
 
       // Coluna Direita — Entidade Geradora
@@ -492,7 +492,7 @@ export function useRelatorioExport() {
       doc.setFontSize(12);
       doc.setTextColor(40, 40, 40);
       doc.text('DADOS DA ENTIDADE GERADORA', leftMargin + colWidth + colGap, yRight);
-      yRight += 10;
+      yRight += 7;
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
@@ -509,11 +509,11 @@ export function useRelatorioExport() {
         doc.text(label, leftMargin + colWidth + colGap, yRight);
         doc.setFont('helvetica', 'normal');
         doc.text(value, leftMargin + colWidth + colGap + 36, yRight);
-        yRight += 7;
+        yRight += 5;
       });
 
       // Atualizar yPosition abaixo do bloco mais alto
-      yPosition = Math.max(yLeft, yRight) + 10;
+      yPosition = Math.max(yLeft, yRight) + 6;
 
       // Buscar resíduos do certificado
       const { data: residuos } = await supabase
@@ -530,7 +530,7 @@ export function useRelatorioExport() {
       const textoExplicativo = 'A Entidade Coletora acima certifica que recebeu e/ou coletou, do Gerador, no período especificado, os resíduos sólidos listados abaixo, destinados ao tratamento por meio de reciclagem.';
       const textoQuebrado = doc.splitTextToSize(textoExplicativo, pageWidth - (leftMargin * 2));
       doc.text(textoQuebrado, leftMargin, yPosition);
-      yPosition += (textoQuebrado.length * 5) + 8;
+      yPosition += (textoQuebrado.length * 5) + 5;
 
       // Tabela de Resíduos
       doc.setFont('helvetica', 'bold');
