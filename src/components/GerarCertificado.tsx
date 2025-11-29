@@ -1,21 +1,32 @@
-import { useState, useEffect } from 'react';
-import { FileCheck, CheckSquare, Square, Filter, Calendar as CalendarIcon, X, RotateCcw, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
-import { CertificadoPreviewDialog } from './CertificadoPreviewDialog';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { ptBR } from 'date-fns/locale';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Badge } from '@/components/ui/badge';
+import { useState, useEffect } from "react";
+import {
+  FileCheck,
+  CheckSquare,
+  Square,
+  Filter,
+  Calendar as CalendarIcon,
+  X,
+  RotateCcw,
+  ChevronLeft,
+  ChevronRight,
+  AlertTriangle,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { CertificadoPreviewDialog } from "./CertificadoPreviewDialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { ptBR } from "date-fns/locale";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 
 interface Coleta {
   id_coleta: number;
@@ -64,15 +75,15 @@ export function GerarCertificado() {
   const [coletas, setColetas] = useState<Coleta[]>([]);
   const [selectedColetas, setSelectedColetas] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [showPreview, setShowPreview] = useState(false);
   const [dataInicio, setDataInicio] = useState<Date | undefined>(undefined);
   const [dataFim, setDataFim] = useState<Date | undefined>(undefined);
   const [openInicio, setOpenInicio] = useState(false);
   const [openFim, setOpenFim] = useState(false);
-  const [entidadeId, setEntidadeId] = useState<string>('all');
+  const [entidadeId, setEntidadeId] = useState<string>("all");
   const [entidades, setEntidades] = useState<Entidade[]>([]);
-  const [eventoId, setEventoId] = useState<string>('all');
+  const [eventoId, setEventoId] = useState<string>("all");
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -83,7 +94,7 @@ export function GerarCertificado() {
   const loadColetas = async () => {
     try {
       setLoading(true);
-      
+
       if (!user) {
         setColetas([]);
         setLoading(false);
@@ -91,8 +102,9 @@ export function GerarCertificado() {
       }
 
       let query = supabase
-        .from('coleta')
-        .select(`
+        .from("coleta")
+        .select(
+          `
           id_coleta,
           cod_coleta,
           dat_coleta,
@@ -122,42 +134,43 @@ export function GerarCertificado() {
               id_municipio
             )
           )
-        `)
-        .eq('des_status', 'A')
-        .is('id_certificado', null); // Apenas coletas não certificadas
+        `,
+        )
+        .eq("des_status", "A")
+        .is("id_certificado", null); // Apenas coletas não certificadas
 
       // Filtrar por entidade coletora (usuário criador) se não for admin
       if (!user.isAdmin && user.entityId) {
-        console.log('Non-admin user, filtering by collector entityId:', user.entityId);
-        
+        console.log("Non-admin user, filtering by collector entityId:", user.entityId);
+
         // Buscar usuários da mesma entidade
         const { data: usuariosDaEntidade } = await supabase
-          .from('usuario')
-          .select('id_usuario')
-          .eq('id_entidade', user.entityId)
-          .eq('des_status', 'A');
-        
-        const userIds = usuariosDaEntidade?.map(u => u.id_usuario) || [];
-        
+          .from("usuario")
+          .select("id_usuario")
+          .eq("id_entidade", user.entityId)
+          .eq("des_status", "A");
+
+        const userIds = usuariosDaEntidade?.map((u) => u.id_usuario) || [];
+
         if (userIds.length > 0) {
-          query = query.in('id_usuario_criador', userIds);
+          query = query.in("id_usuario_criador", userIds);
         } else {
-          console.log('No users found for this entity, not loading coletas');
+          console.log("No users found for this entity, not loading coletas");
           setColetas([]);
           setLoading(false);
           return;
         }
       } else if (!user.isAdmin) {
-        console.log('No entityId found and not admin, not loading coletas');
+        console.log("No entityId found and not admin, not loading coletas");
         setColetas([]);
         setLoading(false);
         return;
       }
 
-      const { data, error } = await query.order('dat_coleta', { ascending: false });
+      const { data, error } = await query.order("dat_coleta", { ascending: false });
 
       if (error) {
-        console.error('[GerarCertificado] Error loading coletas:', error);
+        console.error("[GerarCertificado] Error loading coletas:", error);
         throw error;
       }
 
@@ -165,7 +178,7 @@ export function GerarCertificado() {
       const processed = (data || []).map((coleta: any) => ({
         ...coleta,
         entidade_coletora: coleta?.usuario?.entidade
-          ? { 
+          ? {
               nom_entidade: coleta.usuario.entidade.nom_entidade,
               num_cpf_cnpj: coleta.usuario.entidade.num_cpf_cnpj,
               num_cep: coleta.usuario.entidade.num_cep,
@@ -179,11 +192,11 @@ export function GerarCertificado() {
 
       setColetas(processed);
     } catch (error) {
-      console.error('[GerarCertificado] Unexpected error:', error);
+      console.error("[GerarCertificado] Unexpected error:", error);
       toast({
-        title: 'Erro',
-        description: 'Erro ao carregar coletas disponíveis',
-        variant: 'destructive',
+        title: "Erro",
+        description: "Erro ao carregar coletas disponíveis",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -193,29 +206,29 @@ export function GerarCertificado() {
   const loadEntidades = async () => {
     try {
       const { data, error } = await supabase
-        .from('entidade')
-        .select('id_entidade, nom_entidade')
-        .eq('des_status', 'A')
-        .order('nom_entidade');
+        .from("entidade")
+        .select("id_entidade, nom_entidade")
+        .eq("des_status", "A")
+        .order("nom_entidade");
 
       if (error) throw error;
       setEntidades(data || []);
     } catch (error) {
-      console.error('[GerarCertificado] Error loading entidades:', error);
+      console.error("[GerarCertificado] Error loading entidades:", error);
     }
   };
 
   const loadEventos = async () => {
     try {
       const { data, error } = await supabase
-        .from('evento')
-        .select('id_evento, nom_evento, des_status')
-        .order('nom_evento');
+        .from("evento")
+        .select("id_evento, nom_evento, des_status")
+        .order("nom_evento");
 
       if (error) throw error;
       setEventos(data || []);
     } catch (error) {
-      console.error('[GerarCertificado] Error loading eventos:', error);
+      console.error("[GerarCertificado] Error loading eventos:", error);
     }
   };
 
@@ -230,15 +243,15 @@ export function GerarCertificado() {
     return coleta.id_entidade_geradora !== null && coleta.id_entidade_geradora !== undefined;
   };
 
-  const filteredColetas = coletas.filter(coleta => {
+  const filteredColetas = coletas.filter((coleta) => {
     const normalizedTerm = searchTerm.trim().toLowerCase();
-    const termDigits = searchTerm.replace(/\D/g, '');
-    const cpfCnpjDigits = (coleta.entidade?.num_cpf_cnpj || '').replace(/\D/g, '');
-    const dateStr = formatDate(coleta.dat_coleta) || ''; // dd/mm/aaaa
+    const termDigits = searchTerm.replace(/\D/g, "");
+    const cpfCnpjDigits = (coleta.entidade?.num_cpf_cnpj || "").replace(/\D/g, "");
+    const dateStr = formatDate(coleta.dat_coleta) || ""; // dd/mm/aaaa
 
     // Normalizar valores para evitar chamadas em undefined
-    const codeLower = (coleta.cod_coleta || '').toLowerCase();
-    const entidadeNomeLower = (coleta.entidade?.nom_entidade || '').toLowerCase();
+    const codeLower = (coleta.cod_coleta || "").toLowerCase();
+    const entidadeNomeLower = (coleta.entidade?.nom_entidade || "").toLowerCase();
 
     const matchesSearch =
       // Código
@@ -252,11 +265,13 @@ export function GerarCertificado() {
 
     const matchesDataInicio = !dataInicio || new Date(coleta.dat_coleta) >= dataInicio;
     const matchesDataFim = !dataFim || new Date(coleta.dat_coleta) <= dataFim;
-    const matchesEntidade = entidadeId === 'all' || coleta.id_entidade_geradora?.toString() === entidadeId;
-    const matchesEvento = eventoId === 'all' || coleta.id_evento?.toString() === eventoId;
+    const matchesEntidade = entidadeId === "all" || coleta.id_entidade_geradora?.toString() === entidadeId;
+    const matchesEvento = eventoId === "all" || coleta.id_evento?.toString() === eventoId;
     const matchesAvailability = !showOnlyAvailable || canSelectColeta(coleta);
 
-    return matchesSearch && matchesDataInicio && matchesDataFim && matchesEntidade && matchesEvento && matchesAvailability;
+    return (
+      matchesSearch && matchesDataInicio && matchesDataFim && matchesEntidade && matchesEvento && matchesAvailability
+    );
   });
 
   // Ordenar: coletas COM entidade geradora primeiro, SEM entidade depois
@@ -264,11 +279,11 @@ export function GerarCertificado() {
   const sortedColetas = [...filteredColetas].sort((a, b) => {
     const aHasEntidade = canSelectColeta(a);
     const bHasEntidade = canSelectColeta(b);
-    
+
     // Se um tem entidade e outro não, prioriza o que tem
     if (aHasEntidade && !bHasEntidade) return -1;
     if (!aHasEntidade && bHasEntidade) return 1;
-    
+
     // Se ambos têm ou não têm, ordenar por data decrescente
     return new Date(b.dat_coleta).getTime() - new Date(a.dat_coleta).getTime();
   });
@@ -289,27 +304,27 @@ export function GerarCertificado() {
   }, [searchTerm, dataInicio, dataFim, entidadeId, showOnlyAvailable]);
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
     }).format(value);
   };
 
   // Usar declaração de função para garantir hoisting dentro do componente
   function formatDate(dateString: string) {
-    if (!dateString) return '';
+    if (!dateString) return "";
     const d = new Date(dateString);
-    if (isNaN(d.getTime())) return '';
-    return d.toLocaleDateString('pt-BR');
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleDateString("pt-BR");
   }
 
   const handleSelectColeta = (coletaId: number) => {
-    const coleta = coletas.find(c => c.id_coleta === coletaId);
+    const coleta = coletas.find((c) => c.id_coleta === coletaId);
     if (!coleta || !canSelectColeta(coleta)) return; // Ignora se não pode selecionar
-    
-    setSelectedColetas(prev => {
+
+    setSelectedColetas((prev) => {
       if (prev.includes(coletaId)) {
-        return prev.filter(id => id !== coletaId);
+        return prev.filter((id) => id !== coletaId);
       } else {
         return [...prev, coletaId];
       }
@@ -317,43 +332,43 @@ export function GerarCertificado() {
   };
 
   const handleSelectAll = () => {
-    const allSelectableSelected = selectableColetas.length > 0 && 
-      selectableColetas.every(c => selectedColetas.includes(c.id_coleta));
-    
+    const allSelectableSelected =
+      selectableColetas.length > 0 && selectableColetas.every((c) => selectedColetas.includes(c.id_coleta));
+
     if (allSelectableSelected) {
       setSelectedColetas([]);
     } else {
-      setSelectedColetas(selectableColetas.map(c => c.id_coleta));
+      setSelectedColetas(selectableColetas.map((c) => c.id_coleta));
     }
   };
 
   // Validar se todas as coletas selecionadas são da mesma entidade
   const validateSelection = () => {
     if (selectedColetas.length === 0) {
-      return { valid: false, message: 'Selecione ao menos uma coleta' };
+      return { valid: false, message: "Selecione ao menos uma coleta" };
     }
 
-    const selectedColetasData = coletas.filter(c => selectedColetas.includes(c.id_coleta));
-    const entidadeIds = [...new Set(selectedColetasData.map(c => c.id_entidade_geradora))];
+    const selectedColetasData = coletas.filter((c) => selectedColetas.includes(c.id_coleta));
+    const entidadeIds = [...new Set(selectedColetasData.map((c) => c.id_entidade_geradora))];
 
     if (entidadeIds.length > 1) {
-      return { 
-        valid: false, 
-        message: 'Todas as coletas devem ser da mesma entidade geradora' 
+      return {
+        valid: false,
+        message: "Todas as coletas devem ser da mesma entidade geradora",
       };
     }
 
-    return { valid: true, message: '' };
+    return { valid: true, message: "" };
   };
 
   const handleGenerateCertificate = () => {
     const validation = validateSelection();
-    
+
     if (!validation.valid) {
       toast({
-        title: 'Seleção Inválida',
+        title: "Seleção Inválida",
         description: validation.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
       return;
     }
@@ -364,17 +379,18 @@ export function GerarCertificado() {
   const handleLimparFiltros = () => {
     setDataInicio(undefined);
     setDataFim(undefined);
-    setEntidadeId('all');
-    setEventoId('all');
-    setSearchTerm('');
+    setEntidadeId("all");
+    setEventoId("all");
+    setSearchTerm("");
     setShowOnlyAvailable(false);
   };
 
-  const hasActiveFilters = dataInicio || dataFim || (entidadeId !== 'all') || (eventoId !== 'all') || searchTerm || showOnlyAvailable;
+  const hasActiveFilters =
+    dataInicio || dataFim || entidadeId !== "all" || eventoId !== "all" || searchTerm || showOnlyAvailable;
 
   const validation = validateSelection();
-  const allSelected = selectableColetas.length > 0 && 
-    selectableColetas.every(c => selectedColetas.includes(c.id_coleta));
+  const allSelected =
+    selectableColetas.length > 0 && selectableColetas.every((c) => selectedColetas.includes(c.id_coleta));
 
   if (loading) {
     return (
@@ -392,11 +408,11 @@ export function GerarCertificado() {
           {unavailableCount > 0 && (
             <Badge variant="secondary" className="bg-gray-200 text-gray-700">
               <AlertTriangle className="w-3 h-3 mr-1" />
-              {unavailableCount} indisponível{unavailableCount !== 1 ? 'is' : ''}
+              {unavailableCount} indisponíve{unavailableCount !== 1 ? "is" : "l"}
             </Badge>
           )}
         </div>
-        <Button 
+        <Button
           onClick={handleGenerateCertificate}
           disabled={!validation.valid}
           className="bg-green-600 hover:bg-green-700"
@@ -418,7 +434,7 @@ export function GerarCertificado() {
             <Filter className="w-5 h-5 text-green-600" />
             <CardTitle>Filtros</CardTitle>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
             {/* Entidade Geradora */}
             <div className="space-y-2">
@@ -449,7 +465,7 @@ export function GerarCertificado() {
                   <SelectItem value="all">Todos os eventos</SelectItem>
                   {eventos.map((evento) => (
                     <SelectItem key={evento.id_evento} value={evento.id_evento.toString()}>
-                      {evento.nom_evento} {evento.des_status === 'I' ? '(Inativo)' : ''}
+                      {evento.nom_evento} {evento.des_status === "I" ? "(Inativo)" : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -463,10 +479,7 @@ export function GerarCertificado() {
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !dataInicio && "text-muted-foreground"
-                    )}
+                    className={cn("w-full justify-start text-left font-normal", !dataInicio && "text-muted-foreground")}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {dataInicio ? format(dataInicio, "dd/MM/yyyy") : "Selecione"}
@@ -476,7 +489,10 @@ export function GerarCertificado() {
                   <Calendar
                     mode="single"
                     selected={dataInicio}
-                    onSelect={(date) => { setDataInicio(date); setOpenInicio(false); }}
+                    onSelect={(date) => {
+                      setDataInicio(date);
+                      setOpenInicio(false);
+                    }}
                     initialFocus
                     locale={ptBR}
                     className="pointer-events-auto"
@@ -492,10 +508,7 @@ export function GerarCertificado() {
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !dataFim && "text-muted-foreground"
-                    )}
+                    className={cn("w-full justify-start text-left font-normal", !dataFim && "text-muted-foreground")}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {dataFim ? format(dataFim, "dd/MM/yyyy") : "Selecione"}
@@ -505,7 +518,10 @@ export function GerarCertificado() {
                   <Calendar
                     mode="single"
                     selected={dataFim}
-                    onSelect={(date) => { setDataFim(date); setOpenFim(false); }}
+                    onSelect={(date) => {
+                      setDataFim(date);
+                      setOpenFim(false);
+                    }}
                     initialFocus
                     locale={ptBR}
                     className="pointer-events-auto"
@@ -517,12 +533,7 @@ export function GerarCertificado() {
             {/* Botão Limpar Filtros */}
             <div className="space-y-2">
               <label className="text-sm font-medium invisible">Ações</label>
-              <Button
-                variant="outline"
-                onClick={handleLimparFiltros}
-                disabled={!hasActiveFilters}
-                className="w-full"
-              >
+              <Button variant="outline" onClick={handleLimparFiltros} disabled={!hasActiveFilters} className="w-full">
                 <RotateCcw className="mr-2 h-4 w-4" />
                 Limpar Filtros
               </Button>
@@ -537,15 +548,12 @@ export function GerarCertificado() {
               className="max-w-md"
             />
             <div className="flex items-center gap-2 ml-auto">
-              <Checkbox 
+              <Checkbox
                 id="show-only-available"
                 checked={showOnlyAvailable}
                 onCheckedChange={(checked) => setShowOnlyAvailable(checked as boolean)}
               />
-              <label 
-                htmlFor="show-only-available" 
-                className="text-sm font-medium cursor-pointer select-none"
-              >
+              <label htmlFor="show-only-available" className="text-sm font-medium cursor-pointer select-none">
                 Mostrar apenas disponíveis para certificação
               </label>
             </div>
@@ -554,9 +562,9 @@ export function GerarCertificado() {
         <CardContent>
           {filteredColetas.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              {coletas.length === 0 
-                ? 'Nenhuma coleta disponível para certificação'
-                : 'Nenhuma coleta encontrada com os filtros aplicados'}
+              {coletas.length === 0
+                ? "Nenhuma coleta disponível para certificação"
+                : "Nenhuma coleta encontrada com os filtros aplicados"}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -583,16 +591,16 @@ export function GerarCertificado() {
                   <tbody>
                     {paginatedColetas.map((coleta) => {
                       const isSelectable = canSelectColeta(coleta);
-                      
+
                       return (
                         <Tooltip key={coleta.id_coleta}>
                           <TooltipTrigger asChild>
-                            <tr 
+                            <tr
                               className={cn(
                                 "border-b transition-colors",
-                                isSelectable 
-                                  ? `hover:bg-gray-50 cursor-pointer ${selectedColetas.includes(coleta.id_coleta) ? 'bg-green-50' : ''}`
-                                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                isSelectable
+                                  ? `hover:bg-gray-50 cursor-pointer ${selectedColetas.includes(coleta.id_coleta) ? "bg-green-50" : ""}`
+                                  : "bg-gray-100 text-gray-400 cursor-not-allowed",
                               )}
                               onClick={() => isSelectable && handleSelectColeta(coleta.id_coleta)}
                             >
@@ -602,7 +610,7 @@ export function GerarCertificado() {
                                   onCheckedChange={() => handleSelectColeta(coleta.id_coleta)}
                                   onClick={(e) => e.stopPropagation()}
                                   disabled={!isSelectable}
-                                  className={!isSelectable ? 'opacity-50' : ''}
+                                  className={!isSelectable ? "opacity-50" : ""}
                                 />
                               </td>
                               <td className="p-4">{coleta.cod_coleta}</td>
@@ -617,13 +625,15 @@ export function GerarCertificado() {
                                   </span>
                                 )}
                               </td>
-                              <td className="p-4">{coleta.entidade?.num_cpf_cnpj || '-'}</td>
-                              <td className="p-4">{coleta.entidade_coletora?.nom_entidade || '-'}</td>
-                              <td className="p-4">{coleta.ponto_coleta?.nom_ponto_coleta || '-'}</td>
-                              <td className={cn(
-                                "p-4 text-right font-semibold",
-                                isSelectable ? 'text-recycle-green' : 'text-gray-400'
-                              )}>
+                              <td className="p-4">{coleta.entidade?.num_cpf_cnpj || "-"}</td>
+                              <td className="p-4">{coleta.entidade_coletora?.nom_entidade || "-"}</td>
+                              <td className="p-4">{coleta.ponto_coleta?.nom_ponto_coleta || "-"}</td>
+                              <td
+                                className={cn(
+                                  "p-4 text-right font-semibold",
+                                  isSelectable ? "text-recycle-green" : "text-gray-400",
+                                )}
+                              >
                                 {formatCurrency(coleta.vlr_total)}
                               </td>
                             </tr>
@@ -648,23 +658,21 @@ export function GerarCertificado() {
               <div className="text-sm text-gray-600">
                 Exibindo {startIndex + 1} a {Math.min(endIndex, sortedColetas.length)} de {sortedColetas.length} coletas
                 {unavailableCount > 0 && (
-                  <span className="text-gray-400 ml-1">
-                    ({selectableColetas.length} disponíveis para certificação)
-                  </span>
+                  <span className="text-gray-400 ml-1">({selectableColetas.length} disponíveis para certificação)</span>
                 )}
               </div>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
                 >
                   <ChevronLeft className="h-4 w-4" />
                   Anterior
                 </Button>
                 <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                     <Button
                       key={page}
                       variant={currentPage === page ? "default" : "outline"}
@@ -679,7 +687,7 @@ export function GerarCertificado() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
                 >
                   Próxima
