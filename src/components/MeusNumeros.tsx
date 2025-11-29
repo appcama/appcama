@@ -124,167 +124,168 @@ function MeusNumerosContent() {
 
       <MeusNumeroFilters filters={filters} onFiltersChange={handleFiltersChange} />
 
-      {/* Ecoindicators Section */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-32" />
-          ))}
-        </div>
-      ) : error ? (
-        <Card className="border-destructive">
-          <CardContent className="pt-6">
-            <p className="text-destructive text-center">
-              Erro ao carregar ecoindicadores. Por favor, tente novamente.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Ecoindicadores</h2>
-            {data?.indicadores && data.indicadores.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-                {data.indicadores.map((indicador) => {
-                  const Icon = getIndicatorIcon(indicador.nom_indicador);
-                  const colorClass = getIndicatorColor(indicador.nom_indicador);
-                  
-                  return (
-                    <Card key={indicador.id_indicador} className="overflow-hidden">
-                      <CardHeader className={`pb-3 ${colorClass}`}>
-                        <div className="flex items-center gap-2">
-                          <Icon className="h-5 w-5" />
-                          <CardTitle className="text-sm font-medium">
-                            {indicador.nom_indicador}
-                          </CardTitle>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-4">
-                        <div className="space-y-1">
-                          <div className="text-2xl font-bold">
-                            {indicador.total.toLocaleString("pt-BR", {
+      {/* Two column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left column: Reciclômetro and Totais por Tipo de Resíduo */}
+        <div className="space-y-6">
+          {/* Recyclometer */}
+          <Card className="bg-gradient-to-br from-primary/5 to-primary/10">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Recycle className="h-5 w-5 text-primary" />
+                Reciclômetro
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center space-y-2">
+                {isLoading ? (
+                  <Skeleton className="h-20" />
+                ) : (
+                  <>
+                    <div className="text-4xl font-bold text-primary">
+                      {data?.totalResiduos?.toLocaleString("pt-BR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      }) || "0,00"}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      toneladas coletadas
+                    </p>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Waste by Type Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Totais por Tipo de Resíduo</CardTitle>
+              <CardDescription>Quantidade e valor arrecadado por tipo</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <Skeleton className="h-64" />
+              ) : data?.residuosPorTipo && data.residuosPorTipo.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Tipo de Resíduo</TableHead>
+                        <TableHead className="text-right">Quantidade (ton)</TableHead>
+                        <TableHead className="text-right">Valor Total (R$)</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {data.residuosPorTipo.map((residuo) => (
+                        <TableRow key={residuo.id_tipo_residuo}>
+                          <TableCell className="font-medium">
+                            {residuo.des_tipo_residuo}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {residuo.total_quantidade.toLocaleString("pt-BR", {
+                              minimumFractionDigits: 2,
                               maximumFractionDigits: 2,
                             })}
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {indicador.des_unidade_medida}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-muted-foreground text-center">
-                    Nenhum ecoindicador disponível para o período selecionado.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            R$ {residuo.total_valor.toLocaleString("pt-BR", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow className="font-bold bg-muted/50">
+                        <TableCell>Total</TableCell>
+                        <TableCell className="text-right">
+                          {data.residuosPorTipo
+                            .reduce((sum, r) => sum + r.total_quantidade, 0)
+                            .toLocaleString("pt-BR", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          R$ {data.residuosPorTipo
+                            .reduce((sum, r) => sum + r.total_valor, 0)
+                            .toLocaleString("pt-BR", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-center py-8">
+                  Nenhum resíduo registrado para o período selecionado.
+                </p>
+              )}
+            </CardContent>
+          </Card>
         </div>
-      )}
 
-      {/* Recyclometer */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Recycle className="h-5 w-5" />
-            Reciclômetro
-          </CardTitle>
-          <CardDescription>Total de resíduos coletados</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <Skeleton className="h-20" />
-          ) : (
-            <div className="space-y-2">
-              <div className="text-4xl font-bold text-primary">
-                {data?.totalResiduos?.toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                }) || "0,00"}
-                <span className="text-2xl ml-2">toneladas</span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Coletados no período selecionado
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Waste by Type Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Totais por Tipo de Resíduo</CardTitle>
-          <CardDescription>Quantidade e valor arrecadado por tipo</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <Skeleton className="h-64" />
-          ) : data?.residuosPorTipo && data.residuosPorTipo.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tipo de Resíduo</TableHead>
-                    <TableHead className="text-right">Quantidade (ton)</TableHead>
-                    <TableHead className="text-right">Valor Total (R$)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.residuosPorTipo.map((residuo) => (
-                    <TableRow key={residuo.id_tipo_residuo}>
-                      <TableCell className="font-medium">
-                        {residuo.des_tipo_residuo}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {residuo.total_quantidade.toLocaleString("pt-BR", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        R$ {residuo.total_valor.toLocaleString("pt-BR", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </TableCell>
-                    </TableRow>
+        {/* Right column: Ecoindicadores */}
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Leaf className="h-5 w-5 text-green-600" />
+                Ecoindicadores
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Skeleton key={i} className="h-24" />
                   ))}
-                  <TableRow className="font-bold bg-muted/50">
-                    <TableCell>Total</TableCell>
-                    <TableCell className="text-right">
-                      {data.residuosPorTipo
-                        .reduce((sum, r) => sum + r.total_quantidade, 0)
-                        .toLocaleString("pt-BR", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      R$ {data.residuosPorTipo
-                        .reduce((sum, r) => sum + r.total_valor, 0)
-                        .toLocaleString("pt-BR", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-center py-8">
-              Nenhum resíduo registrado para o período selecionado.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+                </div>
+              ) : error ? (
+                <p className="text-destructive text-center">
+                  Erro ao carregar ecoindicadores. Por favor, tente novamente.
+                </p>
+              ) : data?.indicadores && data.indicadores.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {data.indicadores.map((indicador) => {
+                    const IconComponent = getIndicatorIcon(indicador.nom_indicador);
+                    const colorClass = getIndicatorColor(indicador.nom_indicador);
+                    
+                    return (
+                      <Card key={indicador.id_indicador} className={`${colorClass} border-2`}>
+                        <CardContent className="pt-6">
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-muted-foreground">
+                                {indicador.nom_indicador}
+                              </p>
+                              <p className="text-2xl font-bold">
+                                {indicador.total.toLocaleString("pt-BR", {
+                                  maximumFractionDigits: 2,
+                                })}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {indicador.des_unidade_medida}
+                              </p>
+                            </div>
+                            <IconComponent className="h-8 w-8 text-muted-foreground" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-center py-8">
+                  Nenhum ecoindicador disponível para o período selecionado.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Charts */}
       <DashboardCharts residuosPorTipo={data?.residuosPorTipo || []} />
