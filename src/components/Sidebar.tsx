@@ -32,7 +32,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 
 interface SidebarProps {
   activeItem: string;
@@ -390,19 +390,24 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose,
             <Tooltip delayDuration={300}>
               <TooltipTrigger asChild>
                 <div className="flex justify-center">
-                  <Avatar className="h-10 w-10">
-                    {userEntity.des_logo_url && (
-                      <AvatarImage src={userEntity.des_logo_url} alt={userEntity.nom_entidade} />
-                    )}
-                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                      {userEntity.nom_entidade
-                        .split(' ')
-                        .map(word => word[0])
-                        .join('')
-                        .slice(0, 2)
-                        .toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  {userEntity.des_logo_url ? (
+                    <img 
+                      src={userEntity.des_logo_url} 
+                      alt={userEntity.nom_entidade}
+                      className="h-10 w-10 object-contain rounded"
+                    />
+                  ) : (
+                    <div className="h-10 w-10 bg-primary/10 rounded flex items-center justify-center">
+                      <span className="text-xs font-semibold text-primary">
+                        {userEntity.nom_entidade
+                          .split(' ')
+                          .map(word => word[0])
+                          .join('')
+                          .slice(0, 2)
+                          .toUpperCase()}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </TooltipTrigger>
               <TooltipContent side="right" className="font-medium max-w-xs">
@@ -411,19 +416,24 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose,
             </Tooltip>
           ) : (
             <div className="flex items-center gap-3 px-2 py-2">
-              <Avatar className="h-10 w-10 flex-shrink-0">
-                {userEntity.des_logo_url && (
-                  <AvatarImage src={userEntity.des_logo_url} alt={userEntity.nom_entidade} />
-                )}
-                <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                  {userEntity.nom_entidade
-                    .split(' ')
-                    .map(word => word[0])
-                    .join('')
-                    .slice(0, 2)
-                    .toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              {userEntity.des_logo_url ? (
+                <img 
+                  src={userEntity.des_logo_url} 
+                  alt={userEntity.nom_entidade}
+                  className="h-10 w-10 object-contain rounded flex-shrink-0"
+                />
+              ) : (
+                <div className="h-10 w-10 bg-primary/10 rounded flex items-center justify-center flex-shrink-0">
+                  <span className="text-xs font-semibold text-primary">
+                    {userEntity.nom_entidade
+                      .split(' ')
+                      .map(word => word[0])
+                      .join('')
+                      .slice(0, 2)
+                      .toUpperCase()}
+                  </span>
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">
                   {userEntity.nom_entidade}
