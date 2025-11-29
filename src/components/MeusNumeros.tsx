@@ -149,7 +149,7 @@ function MeusNumerosContent() {
                       }) || "0,00"}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      toneladas coletadas
+                      quilos coletados
                     </p>
                   </>
                 )}
@@ -172,7 +172,7 @@ function MeusNumerosContent() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Tipo de Resíduo</TableHead>
-                        <TableHead className="text-right">Quantidade (ton)</TableHead>
+                        <TableHead className="text-right">Quantidade (kg)</TableHead>
                         <TableHead className="text-right">Valor Total (R$)</TableHead>
                       </TableRow>
                     </TableHeader>
