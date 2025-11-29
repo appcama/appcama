@@ -277,8 +277,13 @@ export function useRelatorioExport() {
       // Desenhar cabeçalho/rodapé em todas as páginas
       const drawHeaderFooter = () => {
         // Cabeçalho
+        // Logo RecyclaE no canto esquerdo
         if (logoForHeader) {
           try { doc.addImage(logoForHeader, 'PNG', leftMargin, topMargin, logoSize, logoSize); } catch {}
+        }
+        // Logo da Entidade Coletora no canto direito
+        if (entityColetoraLogoUrl) {
+          try { doc.addImage(entityColetoraLogoUrl, 'PNG', pageWidth - leftMargin - logoSize, topMargin, logoSize, logoSize); } catch {}
         }
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(18);
@@ -324,16 +329,18 @@ export function useRelatorioExport() {
         doc.text(`Código de Validação: ${certificado.cod_validador}`, pageWidth / 2, lineY + 10, { align: 'center' });
       };
 
-      // Cabeçalho/rodapé da primeira página
-      drawHeaderFooter();
-      // Buscar entidade coletora (usuário criador do certificado)
+      // Buscar entidade coletora (usuário criador do certificado) ANTES de desenhar cabeçalho
       const { supabase } = await import('@/integrations/supabase/client');
       const { data: usuarioCriador } = await supabase
         .from('usuario')
-        .select('id_usuario, entidade:id_entidade(nom_entidade, num_cpf_cnpj, num_cep, des_logradouro, des_bairro, id_municipio)')
+        .select('id_usuario, entidade:id_entidade(nom_entidade, num_cpf_cnpj, num_cep, des_logradouro, des_bairro, id_municipio, des_logo_url)')
         .eq('id_usuario', certificado.id_usuario_criador)
         .single();
       const entidadeColetora = usuarioCriador?.entidade;
+      const entityColetoraLogoUrl = entidadeColetora?.des_logo_url || null;
+
+      // Cabeçalho/rodapé da primeira página
+      drawHeaderFooter();
       const entidadeColetoraIdMunicipio = entidadeColetora?.id_municipio || null;
 
       // Buscar dados da entidade geradora a partir de uma coleta do certificado
