@@ -225,6 +225,26 @@ export function useRelatorioExport() {
     }
   };
 
+  // Função auxiliar para carregar e comprimir imagens
+  const loadImageAsCompressedBase64 = async (url: string, maxSize: number = 120, quality: number = 0.7): Promise<string | null> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { resolve(null); return; }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => resolve(null);
+      img.src = url;
+    });
+  };
+
   const exportCertificadoPDF = async (certificado: any) => {
     setIsExporting(true);
     try {
@@ -250,41 +270,62 @@ export function useRelatorioExport() {
         creator: 'ReciclaE'
       });
 
-      // Adicionar logo da entidade no canto superior esquerdo
-      const logoUrl = certificado.entidade?.des_logo_url;
-      let logoForHeader: string | null = null;
-      try {
-        logoForHeader = logoUrl || '/logo-original.png';
-      } catch {
-        logoForHeader = null;
-      }
+      // Buscar entidade coletora (usuário criador do certificado) para pegar logo
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: usuarioCriador } = await supabase
+        .from('usuario')
+        .select('id_usuario, entidade:id_entidade(nom_entidade, num_cpf_cnpj, num_cep, des_logradouro, des_bairro, id_municipio, des_logo_url)')
+        .eq('id_usuario', certificado.id_usuario_criador)
+        .single();
+      const entidadeColetora = usuarioCriador?.entidade;
+      const entityColetoraLogoUrl = entidadeColetora?.des_logo_url || null;
 
-      // QR Code e Link de Validação (gerar antes para reutilizar)
+      // Pré-carregar e comprimir todas as imagens
+      const [logoRecyclaECompressed, logoEntidadeCompressed] = await Promise.all([
+        loadImageAsCompressedBase64('/logo-original.png', 120, 0.7),
+        entityColetoraLogoUrl ? loadImageAsCompressedBase64(entityColetoraLogoUrl, 120, 0.7) : Promise.resolve(null)
+      ]);
+
+      // QR Code e Link de Validação (gerar antes para reutilizar) - OTIMIZADO
       const validationUrl = `${window.location.origin}/validar-certificado/${certificado.cod_validador}`;
       let qrCodeDataUrl: string | null = null;
       const qrSize = Math.round(Math.max(28, Math.min(42, pageWidth * 0.09)));
       try {
         qrCodeDataUrl = await QRCode.toDataURL(validationUrl, {
-          width: 200,
+          width: 80,
           margin: 1,
-          errorCorrectionLevel: 'M',
+          errorCorrectionLevel: 'L',
         });
       } catch (qrError) {
         console.error('Erro ao gerar QR Code, usando rodapé sem QR:', qrError);
         qrCodeDataUrl = null;
       }
 
-      // Desenhar cabeçalho/rodapé em todas as páginas
+      // Desenhar cabeçalho/rodapé em todas as páginas (com alias para reutilização)
+      let isFirstDraw = true;
       const drawHeaderFooter = () => {
         // Cabeçalho
         // Logo RecyclaE no canto esquerdo
-        if (logoForHeader) {
-          try { doc.addImage(logoForHeader, 'PNG', leftMargin, topMargin, logoSize, logoSize); } catch {}
+        if (logoRecyclaECompressed) {
+          try { 
+            if (isFirstDraw) {
+              doc.addImage(logoRecyclaECompressed, 'JPEG', leftMargin, topMargin, logoSize, logoSize, 'logo_recyclae', 'FAST');
+            } else {
+              doc.addImage(logoRecyclaECompressed, 'JPEG', leftMargin, topMargin, logoSize, logoSize, 'logo_recyclae');
+            }
+          } catch {}
         }
         // Logo da Entidade Coletora no canto direito
-        if (entityColetoraLogoUrl) {
-          try { doc.addImage(entityColetoraLogoUrl, 'PNG', pageWidth - leftMargin - logoSize, topMargin, logoSize, logoSize); } catch {}
+        if (logoEntidadeCompressed) {
+          try { 
+            if (isFirstDraw) {
+              doc.addImage(logoEntidadeCompressed, 'JPEG', pageWidth - leftMargin - logoSize, topMargin, logoSize, logoSize, 'logo_entidade', 'FAST');
+            } else {
+              doc.addImage(logoEntidadeCompressed, 'JPEG', pageWidth - leftMargin - logoSize, topMargin, logoSize, logoSize, 'logo_entidade');
+            }
+          } catch {}
         }
+        isFirstDraw = false;
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(18);
         doc.setTextColor(40, 40, 40);
@@ -328,16 +369,6 @@ export function useRelatorioExport() {
         doc.text('Este certificado comprova que os resíduos listados foram coletados e destinados adequadamente.', pageWidth / 2, lineY + 5, { align: 'center' });
         doc.text(`Código de Validação: ${certificado.cod_validador}`, pageWidth / 2, lineY + 10, { align: 'center' });
       };
-
-      // Buscar entidade coletora (usuário criador do certificado) ANTES de desenhar cabeçalho
-      const { supabase } = await import('@/integrations/supabase/client');
-      const { data: usuarioCriador } = await supabase
-        .from('usuario')
-        .select('id_usuario, entidade:id_entidade(nom_entidade, num_cpf_cnpj, num_cep, des_logradouro, des_bairro, id_municipio, des_logo_url)')
-        .eq('id_usuario', certificado.id_usuario_criador)
-        .single();
-      const entidadeColetora = usuarioCriador?.entidade;
-      const entityColetoraLogoUrl = entidadeColetora?.des_logo_url || null;
 
       // Cabeçalho/rodapé da primeira página
       drawHeaderFooter();
@@ -523,8 +554,8 @@ export function useRelatorioExport() {
         yPosition += splitText.length * 5 + 10;
       }
 
-      // Observações
-      if (certificado.observacoes) {
+      // Observações (somente se existir conteúdo)
+      if (certificado.observacoes && certificado.observacoes.trim()) {
         if (yPosition > safeContentBottom) {
           doc.addPage();
           drawHeaderFooter();
