@@ -98,14 +98,34 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // Função para preparar dados (limpar máscaras) antes de qualquer submissão
+  const prepareDataForSubmit = (data: FormData) => {
+    return {
+      nom_entidade: data.nom_entidade,
+      num_cpf_cnpj: data.num_cpf_cnpj.replace(/[^\d]/g, ''), // Remove máscara
+      id_tipo_entidade: parseInt(data.id_tipo_entidade),
+      id_tipo_pessoa: parseInt(data.id_tipo_pessoa),
+      nom_razao_social: data.nom_razao_social || null,
+      id_tipo_situacao: parseInt(data.id_tipo_situacao),
+      des_logradouro: data.des_logradouro,
+      des_bairro: data.des_bairro,
+      num_cep: data.num_cep.replace(/[^\d]/g, ''), // Remove máscara
+      id_municipio: parseInt(data.id_municipio),
+      id_unidade_federativa: 29, // Bahia
+      num_telefone: data.num_telefone?.replace(/\D/g, '') || null, // Remove máscara
+      num_latitude: latitude,
+      num_longitude: longitude,
+    };
+  };
+
   // Original submit function for online operations
-  const originalSubmit = async (data: FormData) => {
+  const originalSubmit = async (cleanedData: any) => {
     if (!user) {
       throw new Error("Usuário não autenticado");
     }
 
-    // Remover formatação do CPF/CNPJ
-    const cpfCnpjLimpo = data.num_cpf_cnpj.replace(/[^\d]/g, '');
+    // Dados já vêm limpos, usar diretamente
+    const cpfCnpjLimpo = cleanedData.num_cpf_cnpj;
     
     // Verificar se CPF/CNPJ já existe (excluindo a própria entidade em caso de edição)
     const { data: existingEntity } = await supabase
@@ -117,8 +137,6 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
     if (existingEntity && existingEntity.length > 0) {
       throw new Error("CPF/CNPJ já cadastrado no sistema");
     }
-    
-    const telefoneLimpo = data.num_telefone?.replace(/\D/g, '') || null;
     
     // Upload da logo se houver
     let logoUrl = null;
@@ -151,20 +169,7 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
     }
     
     const insertData: any = {
-      nom_entidade: data.nom_entidade,
-      num_cpf_cnpj: cpfCnpjLimpo,
-      id_tipo_entidade: parseInt(data.id_tipo_entidade),
-      id_tipo_pessoa: parseInt(data.id_tipo_pessoa),
-      nom_razao_social: data.nom_razao_social || null,
-      id_tipo_situacao: parseInt(data.id_tipo_situacao),
-      des_logradouro: data.des_logradouro,
-      des_bairro: data.des_bairro,
-      num_cep: data.num_cep.replace(/[^\d]/g, ''),
-      id_municipio: parseInt(data.id_municipio),
-      id_unidade_federativa: 29, // Bahia
-      num_telefone: telefoneLimpo,
-      num_latitude: latitude,
-      num_longitude: longitude,
+      ...cleanedData,
       id_usuario_criador: user.id,
       dat_criacao: new Date().toISOString(),
       des_logo_url: logoUrl,
@@ -431,7 +436,9 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
   };
 
   const onSubmit = async (data: FormData) => {
-    await submitForm(data, !!editingEntidade, editingEntidade?.id_entidade);
+    // Limpar máscaras antes de enviar
+    const cleanedData = prepareDataForSubmit(data);
+    await submitForm(cleanedData, !!editingEntidade, editingEntidade?.id_entidade);
   };
 
   return (
