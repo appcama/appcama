@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Building2,
   Calendar,
@@ -16,6 +17,7 @@ import {
   Zap,
   Maximize,
   Minimize,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useDashboardData, type DashboardFilters } from "@/hooks/useDashboardData";
@@ -26,6 +28,7 @@ import { DashboardInfographic } from "@/components/DashboardInfographic";
 import { DashboardMap } from "@/components/DashboardMap";
 import { FinancialPrivacyProvider, useFinancialPrivacy } from "@/hooks/useFinancialPrivacy";
 import { formatFinancialValue } from "@/lib/financial-utils";
+import { cn } from "@/lib/utils";
 
 // Environmental indicators configuration with icons
 const getIndicatorIcon = (nomIndicador: string) => {
@@ -63,6 +66,7 @@ const formatPercentage = (percentage: number) => {
 function DashboardContent() {
   const dashboardRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isStatsExpanded, setIsStatsExpanded] = useState(true);
   const [filters, setFilters] = useState<DashboardFilters>({
     dataInicial: new Date().getFullYear() + "-01-01",
     dataFinal: (() => {
@@ -137,95 +141,114 @@ function DashboardContent() {
 
       <DashboardFiltersComponent filters={filters} onFiltersChange={setFilters} />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total de Entidades</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold">
-                    {statsLoading ? <Skeleton className="h-8 w-8" /> : (statsData?.totalEntidades || 0)}
-                  </span>
+      {/* KPIs - Collapsible */}
+      <Collapsible open={isStatsExpanded} onOpenChange={setIsStatsExpanded}>
+        <Card className="mb-6">
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-recycle-green" />
+                  <CardTitle className="text-lg">Resumo Geral</CardTitle>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Cadastradas no sistema</p>
-                <p className={formatPercentage(statsData?.totalEntidadesPercentage || 0).className}>
-                  {formatPercentage(statsData?.totalEntidadesPercentage || 0).text}
-                </p>
+                <ChevronDown className={cn(
+                  "h-5 w-5 text-muted-foreground transition-transform duration-200",
+                  isStatsExpanded && "transform rotate-180"
+                )} />
               </div>
-              <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                <Building2 className="h-4 w-4 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Card 1: Total de Entidades */}
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Total de Entidades</p>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-2xl font-bold">
+                          {statsLoading ? <Skeleton className="h-8 w-8" /> : (statsData?.totalEntidades || 0)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">Cadastradas no sistema</p>
+                      <p className={formatPercentage(statsData?.totalEntidadesPercentage || 0).className}>
+                        {formatPercentage(statsData?.totalEntidadesPercentage || 0).text}
+                      </p>
+                    </div>
+                    <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
+                      <Building2 className="h-4 w-4 text-green-600" />
+                    </div>
+                  </div>
+                </div>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Entidades Coletoras</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold">
-                    {statsLoading ? <Skeleton className="h-8 w-8" /> : (statsData?.entidadesColetoras || 0)}
-                  </span>
+                {/* Card 2: Entidades Coletoras */}
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Entidades Coletoras</p>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-2xl font-bold">
+                          {statsLoading ? <Skeleton className="h-8 w-8" /> : (statsData?.entidadesColetoras || 0)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">Cooperativas e catadores</p>
+                      <p className={formatPercentage(statsData?.entidadesColetorasPercentage || 0).className}>
+                        {formatPercentage(statsData?.entidadesColetorasPercentage || 0).text}
+                      </p>
+                    </div>
+                    <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Users className="h-4 w-4 text-blue-600" />
+                    </div>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Cooperativas e catadores</p>
-                <p className={formatPercentage(statsData?.entidadesColetorasPercentage || 0).className}>
-                  {formatPercentage(statsData?.entidadesColetorasPercentage || 0).text}
-                </p>
-              </div>
-              <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <Users className="h-4 w-4 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Eventos de Coleta</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold">
-                    {statsLoading ? <Skeleton className="h-8 w-8" /> : (statsData?.eventosColeta || 0)}
-                  </span>
+                {/* Card 3: Eventos de Coleta */}
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Eventos de Coleta</p>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-2xl font-bold">
+                          {statsLoading ? <Skeleton className="h-8 w-8" /> : (statsData?.eventosColeta || 0)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">Eventos ativos</p>
+                      <p className={formatPercentage(statsData?.eventosColetaPercentage || 0).className}>
+                        {formatPercentage(statsData?.eventosColetaPercentage || 0).text}
+                      </p>
+                    </div>
+                    <div className="h-8 w-8 bg-orange-100 rounded-full flex items-center justify-center">
+                      <Calendar className="h-4 w-4 text-orange-600" />
+                    </div>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Eventos ativos</p>
-                <p className={formatPercentage(statsData?.eventosColetaPercentage || 0).className}>
-                  {formatPercentage(statsData?.eventosColetaPercentage || 0).text}
-                </p>
-              </div>
-              <div className="h-8 w-8 bg-orange-100 rounded-full flex items-center justify-center">
-                <Calendar className="h-4 w-4 text-orange-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Geradores de Resíduo</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold">
-                    {statsLoading ? <Skeleton className="h-8 w-8" /> : (statsData?.geradoresResiduos || 0)}
-                  </span>
+                {/* Card 4: Geradores de Resíduo */}
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Geradores de Resíduo</p>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-2xl font-bold">
+                          {statsLoading ? <Skeleton className="h-8 w-8" /> : (statsData?.geradoresResiduos || 0)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">Empresas e geradores</p>
+                      <p className={formatPercentage(statsData?.geradoresResiduosPercentage || 0).className}>
+                        {formatPercentage(statsData?.geradoresResiduosPercentage || 0).text}
+                      </p>
+                    </div>
+                    <div className="h-8 w-8 bg-brown-100 rounded-full flex items-center justify-center">
+                      <Factory className="h-4 w-4 text-brown-600" />
+                    </div>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Empresas e geradores</p>
-                <p className={formatPercentage(statsData?.geradoresResiduosPercentage || 0).className}>
-                  {formatPercentage(statsData?.geradoresResiduosPercentage || 0).text}
-                </p>
               </div>
-              <div className="h-8 w-8 bg-brown-100 rounded-full flex items-center justify-center">
-                <Factory className="h-4 w-4 text-brown-600" />
-              </div>
-            </div>
-          </CardContent>
+            </CardContent>
+          </CollapsibleContent>
         </Card>
-      </div>
+      </Collapsible>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left column: Reciclômetro and Totais por Tipo de Resíduo */}
