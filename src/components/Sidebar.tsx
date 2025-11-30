@@ -55,7 +55,7 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose,
   const [autoExpandTimer, setAutoExpandTimer] = useState<NodeJS.Timeout | null>(null);
   const [autoCollapseTimer, setAutoCollapseTimer] = useState<NodeJS.Timeout | null>(null);
   const { isMobile } = useBreakpoints();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
   const { data: userEntity } = useUserEntity();
 
@@ -73,14 +73,11 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose,
   const handleLogoClick = () => {
     navigate('/');
     
-    // REGRA 001: Se for CAMA, direciona para dashboard
-    // REGRA 002: Se for empreendimento, direciona para meus números
-    const tipoEntidade = userEntity?.tipo_entidade?.des_tipo_entidade?.toUpperCase();
-    
-    if (tipoEntidade?.includes('CAMA')) {
+    // REGRA 001: Quando o perfil for de administrador (id_perfil = 2), vai para o dashboard
+    // REGRA 002: Restante todo vai para meus números
+    if (user?.profileId === 2) {
       onItemClick('dashboard');
     } else {
-      // Empreendimentos e outros tipos vão para Meus Números
       onItemClick('meus-numeros');
     }
   };
