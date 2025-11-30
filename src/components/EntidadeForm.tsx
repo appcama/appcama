@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useOfflineForm } from "@/hooks/useOfflineForm";
-import { applyCpfCnpjMask, validateCpfOrCnpj, applyPhoneMask, formatCep } from "@/lib/cpf-cnpj-utils";
+import { applyCpfCnpjMask, validateCpfOrCnpj, applyPhoneMask, formatCep, getDocumentType } from "@/lib/cpf-cnpj-utils";
 import { LogoUploadArea } from "@/components/LogoUploadArea";
 import { ImageResizeDialog } from "@/components/ImageResizeDialog";
 import { MapLocationPicker } from "@/components/MapLocationPicker";
@@ -508,6 +508,14 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                           onChange={(e) => {
                             const value = applyCpfCnpjMask(e.target.value);
                             field.onChange(value);
+                            
+                            // Detectar automaticamente o tipo de pessoa baseado no documento
+                            const docType = getDocumentType(value);
+                            if (docType === 'cpf') {
+                              form.setValue('id_tipo_pessoa', '1'); // Pessoa Física
+                            } else if (docType === 'cnpj') {
+                              form.setValue('id_tipo_pessoa', '2'); // Pessoa Jurídica
+                            }
                           }}
                         />
                       </FormControl>
@@ -544,23 +552,40 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                 <FormField
                   control={form.control}
                   name="id_tipo_pessoa"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo de Pessoa *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o tipo de pessoa" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="1">Pessoa Física</SelectItem>
-                          <SelectItem value="2">Pessoa Jurídica</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  render={({ field }) => {
+                    // Verificar se o documento está completo (CPF ou CNPJ válido)
+                    const cpfCnpjValue = form.watch('num_cpf_cnpj');
+                    const docType = getDocumentType(cpfCnpjValue || '');
+                    const isDocumentComplete = docType !== null;
+                    
+                    return (
+                      <FormItem>
+                        <FormLabel>Tipo de Pessoa *</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                          value={field.value}
+                          disabled={isDocumentComplete}
+                        >
+                          <FormControl>
+                            <SelectTrigger className={isDocumentComplete ? 'bg-muted cursor-not-allowed' : ''}>
+                              <SelectValue placeholder="Selecione o tipo de pessoa" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="1">Pessoa Física</SelectItem>
+                            <SelectItem value="2">Pessoa Jurídica</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {isDocumentComplete && (
+                          <p className="text-xs text-muted-foreground">
+                            Tipo de pessoa definido automaticamente pelo {docType === 'cpf' ? 'CPF' : 'CNPJ'}
+                          </p>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
 
                 <FormField
