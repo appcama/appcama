@@ -6,6 +6,10 @@ interface UserEntity {
   id_entidade: number;
   nom_entidade: string;
   des_logo_url: string | null;
+  id_tipo_entidade: number;
+  tipo_entidade?: {
+    des_tipo_entidade: string | null;
+  };
 }
 
 export function useUserEntity() {
@@ -18,7 +22,13 @@ export function useUserEntity() {
       
       const { data, error } = await supabase
         .from('entidade')
-        .select('id_entidade, nom_entidade, des_logo_url')
+        .select(`
+          id_entidade, 
+          nom_entidade, 
+          des_logo_url,
+          id_tipo_entidade,
+          tipo_entidade:tipo_entidade!inner(des_tipo_entidade)
+        `)
         .eq('id_entidade', user.entityId)
         .single();
       
