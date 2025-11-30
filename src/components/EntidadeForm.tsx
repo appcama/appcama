@@ -95,6 +95,7 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
   // Estados para dividir o logradouro em nome da rua e número
   const [logradouroNome, setLogradouroNome] = useState<string>("");
   const [logradouroNumero, setLogradouroNumero] = useState<string>("");
+  const [triggerGeocode, setTriggerGeocode] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -214,7 +215,7 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
       id_tipo_entidade: editingEntidade?.id_tipo_entidade?.toString() || "",
       id_tipo_pessoa: editingEntidade?.id_tipo_pessoa?.toString() || "1",
       nom_razao_social: editingEntidade?.nom_razao_social || "",
-      id_tipo_situacao: editingEntidade?.id_tipo_situacao?.toString() || "",
+      id_tipo_situacao: editingEntidade?.id_tipo_situacao?.toString() || "1", // REGRA 001: Default "Ativo"
       des_logradouro: editingEntidade?.des_logradouro || "",
       des_bairro: editingEntidade?.des_bairro || "",
       num_cep: editingEntidade?.num_cep ? formatCep(editingEntidade.num_cep) : "",
@@ -262,6 +263,17 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
     const combinado = composeLogradouro(logradouroNome, logradouroNumero);
     form.setValue('des_logradouro', combinado, { shouldValidate: true, shouldDirty: true });
   }, [logradouroNome, logradouroNumero]);
+
+  // Disparar geocodificação automaticamente após digitar número do logradouro
+  useEffect(() => {
+    if (logradouroNumero && logradouroNumero.trim() && logradouroNome) {
+      const timer = setTimeout(() => {
+        setTriggerGeocode(true);
+      }, 1500); // Aguardar 1.5 segundos após digitar
+      
+      return () => clearTimeout(timer);
+    }
+  }, [logradouroNumero, logradouroNome]);
 
   useEffect(() => {
     fetchSelectData();
@@ -562,9 +574,13 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Situação *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        defaultValue={field.value}
+                        disabled={!editingEntidade} // REGRA 002: Desabilitar para novas entidades
+                      >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger className={!editingEntidade ? 'bg-muted cursor-not-allowed' : ''}>
                             <SelectValue placeholder="Selecione a situação" />
                           </SelectTrigger>
                         </FormControl>
@@ -576,6 +592,11 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                           ))}
                         </SelectContent>
                       </Select>
+                      {!editingEntidade && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Novas entidades são cadastradas automaticamente como "Ativo"
+                        </p>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}
@@ -723,6 +744,8 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                       setLatitude(lat);
                       setLongitude(lng);
                     }}
+                    triggerGeocode={triggerGeocode}
+                    onGeocodeComplete={() => setTriggerGeocode(false)}
                   />
                 </div>
               </div>
