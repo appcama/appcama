@@ -72,7 +72,17 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose,
 
   const handleLogoClick = () => {
     navigate('/');
-    onItemClick('dashboard');
+    
+    // REGRA 001: Se for CAMA, direciona para dashboard
+    // REGRA 002: Se for empreendimento, direciona para meus números
+    const tipoEntidade = userEntity?.tipo_entidade?.des_tipo_entidade?.toUpperCase();
+    
+    if (tipoEntidade?.includes('CAMA')) {
+      onItemClick('dashboard');
+    } else {
+      // Empreendimentos e outros tipos vão para Meus Números
+      onItemClick('meus-numeros');
+    }
   };
 
   const toggleExpanded = (itemId: string) => {
