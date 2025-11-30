@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -96,6 +96,7 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
   const [logradouroNome, setLogradouroNome] = useState<string>("");
   const [logradouroNumero, setLogradouroNumero] = useState<string>("");
   const [triggerGeocode, setTriggerGeocode] = useState(false);
+  const lastGeocodeTimeRef = useRef<number>(0);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -268,7 +269,11 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
   useEffect(() => {
     if (logradouroNumero && logradouroNumero.trim() && logradouroNome) {
       const timer = setTimeout(() => {
-        setTriggerGeocode(true);
+        // Só disparar se passou mais de 2 segundos desde o último geocode (evita double-trigger com CEP)
+        const timeSinceLastGeocode = Date.now() - lastGeocodeTimeRef.current;
+        if (timeSinceLastGeocode > 2000) {
+          setTriggerGeocode(true);
+        }
       }, 1500); // Aguardar 1.5 segundos após digitar
       
       return () => clearTimeout(timer);
@@ -436,6 +441,7 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
       });
 
       // Trigger automatic geocoding after successful CEP lookup
+      lastGeocodeTimeRef.current = Date.now();
       setTriggerGeocode(true);
 
     } catch (error) {
