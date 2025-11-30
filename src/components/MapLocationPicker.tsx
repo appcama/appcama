@@ -10,6 +10,8 @@ interface MapLocationPickerProps {
   longitude?: number | null;
   onLocationChange: (lat: number, lng: number) => void;
   height?: number; // Altura do mapa em pixels (opcional)
+  triggerGeocode?: boolean; // Disparar geocodificação externamente
+  onGeocodeComplete?: () => void; // Callback após geocodificação completa
 }
 
 export function MapLocationPicker({ 
@@ -18,6 +20,8 @@ export function MapLocationPicker({
   longitude, 
   onLocationChange,
   height = 320,
+  triggerGeocode = false,
+  onGeocodeComplete,
 }: MapLocationPickerProps) {
   const [map, setMap] = useState<any>(null);
   const [marker, setMarker] = useState<any>(null);
@@ -153,9 +157,19 @@ export function MapLocationPicker({
             variant: "destructive",
           });
         }
+        
+        // Notificar conclusão
+        onGeocodeComplete?.();
       }
     );
-  }, [address, map, marker, onLocationChange, toast]);
+  }, [address, map, marker, onLocationChange, onGeocodeComplete, toast]);
+
+  // Reagir ao trigger externo de geocodificação
+  useEffect(() => {
+    if (triggerGeocode && map && marker && address) {
+      geocodeAddress();
+    }
+  }, [triggerGeocode, map, marker, address, geocodeAddress]);
 
   if (loading) {
     return (
@@ -181,10 +195,11 @@ export function MapLocationPicker({
         </div>
         <Button
           type="button"
-          variant="outline"
+          variant="default"
           size="sm"
           onClick={geocodeAddress}
           disabled={geocoding || !address}
+          className="bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg transition-all"
         >
           {geocoding ? (
             <>
@@ -194,7 +209,7 @@ export function MapLocationPicker({
           ) : (
             <>
               <MapPin className="h-4 w-4 mr-2" />
-              Localizar Endereço
+              📍 Localizar Endereço
             </>
           )}
         </Button>
