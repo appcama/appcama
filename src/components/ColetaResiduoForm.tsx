@@ -53,9 +53,11 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
   const [openResiduoCombo, setOpenResiduoCombo] = useState(false);
   const { toast } = useToast();
 
-  // Usando as máscaras personalizadas
-  const quantidade = useDecimalMask();
-  const valorUnitario = useCurrencyMask();
+  // Usando as máscaras personalizadas com limites
+  // REGRA 001: Limitar Quantidade: 9999999999,99
+  // REGRA 002: Limitar Valor: 9.999,99
+  const quantidade = useDecimalMask('', 9999999999.99);
+  const valorUnitario = useCurrencyMask('', 9999.99);
   
   // Hook offline para manter consistência, mas neste caso é apenas local
   const { submitForm, isSubmitting } = useOfflineForm({
@@ -248,6 +250,7 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
     // Verificar se é Rejeito para permitir valor 0
     const isRejeito = selectedResiduo.nom_residuo.toLowerCase().includes('rejeito');
 
+    // REGRA 001: Validar limite de quantidade
     if (qtd <= 0) {
       toast({
         title: 'Erro',
@@ -257,10 +260,29 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
       return;
     }
 
+    if (qtd > 9999999999.99) {
+      toast({
+        title: 'Erro',
+        description: 'Quantidade não pode exceder 9.999.999.999,99 kg',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // REGRA 002: Validar limite de valor
     if (!isRejeito && valor <= 0) {
       toast({
         title: 'Erro',
         description: 'Valor deve ser maior que zero',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (valor > 9999.99) {
+      toast({
+        title: 'Erro',
+        description: 'Valor unitário não pode exceder R$ 9.999,99',
         variant: 'destructive',
       });
       return;
@@ -414,6 +436,9 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
 
                 <div>
                   <Label htmlFor="quantidade">Quantidade (kg) *</Label>
+                  <p className="text-xs text-gray-500 mb-1">
+                    Máximo: 9.999.999.999,99 kg
+                  </p>
                   <Input
                     id="quantidade"
                     type="text"
@@ -426,9 +451,13 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
 
                 <div>
                   <Label htmlFor="valor">Valor Unitário (R$) *</Label>
-                  {selectedResiduo?.nom_residuo.toLowerCase().includes('rejeito') && (
-                    <p className="text-sm text-amber-600 mb-2">
+                  {selectedResiduo?.nom_residuo.toLowerCase().includes('rejeito') ? (
+                    <p className="text-sm text-amber-600 mb-1">
                       Rejeito não possui valor comercial
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-500 mb-1">
+                      Máximo: R$ 9.999,99
                     </p>
                   )}
                   <div className="relative">
