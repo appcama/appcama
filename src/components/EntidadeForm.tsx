@@ -435,6 +435,9 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
         description: `Endereço localizado: ${data.localidade} - ${data.uf}. Os campos foram atualizados.`,
       });
 
+      // Trigger automatic geocoding after successful CEP lookup
+      setTriggerGeocode(true);
+
     } catch (error) {
       console.error('Erro ao consultar CEP:', error);
       toast({
