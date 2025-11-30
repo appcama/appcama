@@ -149,7 +149,7 @@ function DashboardContent() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Building2 className="h-5 w-5 text-recycle-green" />
-                  <CardTitle className="text-lg">Resumo Geral</CardTitle>
+                  <CardTitle className="text-lg">Resumo de Cadastro</CardTitle>
                 </div>
                 <ChevronDown className={cn(
                   "h-5 w-5 text-muted-foreground transition-transform duration-200",
