@@ -288,14 +288,28 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
       setExistingLogoUrl(editingEntidade.des_logo_url);
       setExistingLogoDate(editingEntidade.dat_atualizacao || null);
     }
-  }, [editingEntidade]);
+  }, [editingEntidade, user?.profileId]);
 
   const fetchSelectData = async () => {
     try {
+      // IDs de tipos de entidade permitidos para não-administradores
+      const tiposPermitidosNaoAdmin = [4, 5, 11]; // Jurídicas Geradoras, Físicas Geradoras, Compradora
+      
+      // Verificar se o usuário é administrador (perfil id = 2)
+      const isAdmin = user?.profileId === 2;
+      
       // Buscar tipos de entidade
-      const { data: tiposEntidadeData, error: tiposError } = await supabase
+      let tiposEntidadeQuery = supabase
         .from('tipo_entidade')
         .select('id_tipo_entidade, des_tipo_entidade')
+        .eq('des_status', 'A'); // Apenas tipos ativos
+      
+      // Se NÃO for admin, filtrar apenas os tipos permitidos
+      if (!isAdmin) {
+        tiposEntidadeQuery = tiposEntidadeQuery.in('id_tipo_entidade', tiposPermitidosNaoAdmin);
+      }
+      
+      const { data: tiposEntidadeData, error: tiposError } = await tiposEntidadeQuery
         .order('des_tipo_entidade');
 
       if (tiposError) throw tiposError;
