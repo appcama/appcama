@@ -33,11 +33,8 @@ export function useViaCep() {
       const data: ViaCepResponse = await response.json();
 
       if (data.erro) {
-        toast({
-          title: "CEP não encontrado",
-          description: "O CEP informado não foi encontrado",
-          variant: "destructive",
-        });
+        // CEP não encontrado na base do ViaCEP - retornar null silenciosamente
+        // O componente que usa o hook decide como tratar (permitir preenchimento manual)
         return null;
       }
 
