@@ -344,19 +344,18 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
     if (digits.length === 8) {
       const cepData = await searchCep(formattedCep);
       if (cepData) {
+        // CEP encontrado na ViaCEP - preencher campos automaticamente
         setLogradouroNome(cepData.logradouro || "");
         form.setValue('des_bairro', cepData.bairro || "", { shouldDirty: true });
         if (cepData.ibge) form.setValue('id_municipio', parseInt(cepData.ibge, 10), { shouldDirty: true });
         const ufCode = mapUfToCode(cepData.uf);
         if (ufCode) form.setValue('id_unidade_federativa', ufCode, { shouldDirty: true });
-        setCepValid(true);
-        setCepError('');
-      } else {
-        setCepValid(false);
-        setCepError('CEP não encontrado ou inválido');
-        setLogradouroNome("");
-        form.setValue('des_bairro', '', { shouldDirty: true });
       }
+      // Se cepData for null (CEP não encontrado na ViaCEP), NÃO invalidar
+      // O CEP tem formato válido (8 dígitos), apenas não está na base do ViaCEP
+      // Usuário pode preencher o endereço manualmente
+      setCepValid(true);
+      setCepError('');
     } else if (digits.length > 0) {
       setCepValid(false);
       setCepError('CEP deve ter 8 dígitos');
