@@ -499,6 +499,7 @@ export type Database = {
           dat_termino: string
           des_evento: string | null
           des_locked: string
+          des_logo_url: string | null
           des_status: string
           id_evento: number
           id_usuario_atualizador: number | null
@@ -512,6 +513,7 @@ export type Database = {
           dat_termino: string
           des_evento?: string | null
           des_locked?: string
+          des_logo_url?: string | null
           des_status?: string
           id_evento?: number
           id_usuario_atualizador?: number | null
@@ -525,6 +527,7 @@ export type Database = {
           dat_termino?: string
           des_evento?: string | null
           des_locked?: string
+          des_logo_url?: string | null
           des_status?: string
           id_evento?: number
           id_usuario_atualizador?: number | null

@@ -44,6 +44,7 @@ function MeusNumerosContent() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const { showFinancialValues } = useFinancialPrivacy();
   const { data: userEntity } = useUserEntity();
+  const [eventLogoUrl, setEventLogoUrl] = useState<string | null>(null);
   const [filters, setFilters] = useState<MyDashboardFilters>({
     dataInicial: new Date().getFullYear() + "-01-01",
     dataFinal: (() => {
@@ -118,7 +119,18 @@ function MeusNumerosContent() {
         <p className="text-muted-foreground">Visão geral dos números da sua entidade</p>
       </div>
 
-      <MeusNumeroFilters filters={filters} onFiltersChange={handleFiltersChange} />
+      {/* Event Logo Banner */}
+      {eventLogoUrl && (
+        <div className="flex justify-center mb-6">
+          <img
+            src={eventLogoUrl}
+            alt="Logo do evento"
+            className="max-h-24 w-auto object-contain rounded-lg shadow-sm"
+          />
+        </div>
+      )}
+
+      <MeusNumeroFilters filters={filters} onFiltersChange={handleFiltersChange} onEventLogoChange={setEventLogoUrl} />
 
       {/* Two column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
