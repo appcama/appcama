@@ -127,7 +127,7 @@ function DashboardContent() {
           </div>
           <div className="flex items-center gap-3">
             <img
-              src="/nova-logo.png"
+              src="/logo-white-bg.svg"
               alt="Logo RecyclaE"
               className="h-12 sm:h-14 md:h-16 w-auto object-contain"
             />
