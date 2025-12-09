@@ -125,17 +125,24 @@ function DashboardContent() {
               className="h-16 sm:h-20 md:h-24 w-auto object-contain shrink-0"
             />
           </div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={toggleFullscreen}
-            title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}
-          >
-            {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
-          </Button>
+          <div className="flex items-center gap-3">
+            <img
+              src="/nova-logo.png"
+              alt="Logo RecyclaE"
+              className="h-12 sm:h-14 md:h-16 w-auto object-contain"
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={toggleFullscreen}
+              title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}
+            >
+              {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+            </Button>
+          </div>
         </div>
         <p className="text-muted-foreground">
-          Visão geral do sistema de controle de reciclagem
+          3Rs dos catadores(as) de materiais recicláveis: Respeitar, Reconhecer e Remunerar.
         </p>
       </div>
 
@@ -277,7 +284,7 @@ function DashboardContent() {
                   <span className="text-3xl sm:text-4xl font-bold text-recycle-green">
                     {formatNumber((data?.totalResiduos || 0) * 1000, 2)}
                   </span>
-                  <span className="text-lg text-muted-foreground">quilos</span>
+                  <span className="text-lg text-muted-foreground">Kg</span>
                 </div>
               )}
             </CardContent>
@@ -288,7 +295,7 @@ function DashboardContent() {
               <CardHeader>
                 <CardTitle>Totais por Tipo de Resíduo</CardTitle>
                 <CardDescription>
-                  Quantidade coletada em quilos por tipo de material
+                  Quantidade coletada em Kg por tipo de material
                 </CardDescription>
               </CardHeader>
               <CardContent>
