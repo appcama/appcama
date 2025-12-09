@@ -26,14 +26,16 @@ interface TipoEntidade {
 interface Evento {
   id_evento: number;
   nom_evento: string;
+  des_logo_url: string | null;
 }
 
 interface DashboardFiltersProps {
   filters: DashboardFilters;
   onFiltersChange: (filters: DashboardFilters) => void;
+  onEventLogoChange?: (logoUrl: string | null) => void;
 }
 
-export function DashboardFiltersComponent({ filters, onFiltersChange }: DashboardFiltersProps) {
+export function DashboardFiltersComponent({ filters, onFiltersChange, onEventLogoChange }: DashboardFiltersProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [entidades, setEntidades] = useState<Entidade[]>([]);
   const [tiposEntidade, setTiposEntidade] = useState<TipoEntidade[]>([]);
@@ -110,7 +112,7 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
     try {
       const { data, error } = await supabase
         .from("evento")
-        .select("id_evento, nom_evento")
+        .select("id_evento, nom_evento, des_logo_url")
         .eq("des_status", "A")
         .order("nom_evento");
 
@@ -120,6 +122,14 @@ export function DashboardFiltersComponent({ filters, onFiltersChange }: Dashboar
       console.error("Erro ao carregar eventos:", error);
     }
   };
+
+  // Update event logo when filter changes
+  useEffect(() => {
+    if (onEventLogoChange) {
+      const selectedEvento = eventos.find(e => e.id_evento === filters.eventoId);
+      onEventLogoChange(selectedEvento?.des_logo_url || null);
+    }
+  }, [filters.eventoId, eventos, onEventLogoChange]);
 
   const getCurrentYearDates = () => ({
     dataInicial: `${new Date().getFullYear()}-01-01`,

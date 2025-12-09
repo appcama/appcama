@@ -16,6 +16,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { EventoLogoUploadArea } from "@/components/EventoLogoUploadArea";
 
 const eventoSchema = z.object({
   nom_evento: z.string().min(1, "Nome do evento é obrigatório").max(60, "Nome deve ter no máximo 60 caracteres"),
@@ -44,6 +45,7 @@ interface Evento {
   dat_inicio: string;
   dat_termino: string;
   des_status: string;
+  des_logo_url?: string | null;
 }
 
 interface EventoFormProps {
@@ -57,6 +59,12 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
   const isEditing = !!evento;
   const [openInicio, setOpenInicio] = useState(false);
   const [openTermino, setOpenTermino] = useState(false);
+  
+  // Logo states
+  const [existingLogoUrl, setExistingLogoUrl] = useState<string | null>(null);
+  const [newLogoFile, setNewLogoFile] = useState<File | null>(null);
+  const [newLogoPreview, setNewLogoPreview] = useState<string | null>(null);
+  const [logoRemoved, setLogoRemoved] = useState(false);
 
   const form = useForm<EventoFormData>({
     resolver: zodResolver(eventoSchema),
@@ -82,14 +90,54 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
         dat_inicio: formatDateForInput(evento.dat_inicio),
         dat_termino: formatDateForInput(evento.dat_termino),
       });
+      
+      // Set existing logo
+      if (evento.des_logo_url) {
+        setExistingLogoUrl(evento.des_logo_url);
+      }
     }
   }, [evento, form]);
+
+  const handleLogoChange = (file: File | null, preview: string | null) => {
+    setNewLogoFile(file);
+    setNewLogoPreview(preview);
+    setLogoRemoved(false);
+  };
+
+  const handleLogoRemove = () => {
+    setNewLogoFile(null);
+    setNewLogoPreview(null);
+    setExistingLogoUrl(null);
+    setLogoRemoved(true);
+  };
+
+  const uploadLogo = async (eventoId: number): Promise<string | null> => {
+    if (!newLogoFile) return null;
+    
+    const fileExt = newLogoFile.name.split('.').pop();
+    const fileName = `evento_${eventoId}_${Date.now()}.${fileExt}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from('logos-eventos')
+      .upload(fileName, newLogoFile, { upsert: true });
+    
+    if (uploadError) {
+      console.error('Erro ao fazer upload do logo:', uploadError);
+      throw uploadError;
+    }
+    
+    const { data: urlData } = supabase.storage
+      .from('logos-eventos')
+      .getPublicUrl(fileName);
+    
+    return urlData.publicUrl;
+  };
 
   const createMutation = useMutation({
     mutationFn: async (data: EventoFormData) => {
       console.log("Criando evento:", data);
       
-      const { error } = await supabase.from("evento").insert({
+      const { data: insertedEvento, error } = await supabase.from("evento").insert({
         nom_evento: data.nom_evento,
         des_evento: data.des_evento || null,
         dat_inicio: new Date(data.dat_inicio).toISOString(),
@@ -98,7 +146,7 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
         des_locked: "D",
         id_usuario_criador: 1,
         dat_criacao: new Date().toISOString(),
-      });
+      }).select('id_evento').single();
 
       if (error) {
         console.error("Erro ao criar evento:", error);
@@ -106,6 +154,17 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
           throw new Error("Já existe um evento com este nome. Por favor, escolha outro nome.");
         }
         throw error;
+      }
+
+      // Upload logo if selected
+      if (newLogoFile && insertedEvento) {
+        const logoUrl = await uploadLogo(insertedEvento.id_evento);
+        if (logoUrl) {
+          await supabase
+            .from("evento")
+            .update({ des_logo_url: logoUrl })
+            .eq("id_evento", insertedEvento.id_evento);
+        }
       }
     },
     onSuccess: () => {
@@ -131,6 +190,14 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
       if (!evento) return;
       
       console.log("Atualizando evento:", data);
+
+      // Handle logo update
+      let logoUrl = existingLogoUrl;
+      if (newLogoFile) {
+        logoUrl = await uploadLogo(evento.id_evento);
+      } else if (logoRemoved) {
+        logoUrl = null;
+      }
       
       const { error } = await supabase
         .from("evento")
@@ -139,6 +206,7 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
           des_evento: data.des_evento || null,
           dat_inicio: new Date(data.dat_inicio).toISOString(),
           dat_termino: new Date(data.dat_termino).toISOString(),
+          des_logo_url: logoUrl,
           dat_atualizacao: new Date().toISOString(),
           id_usuario_atualizador: 1,
         })
@@ -352,6 +420,15 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
                 }}
               />
             </div>
+
+            {/* Logo Upload */}
+            <EventoLogoUploadArea
+              existingLogoUrl={existingLogoUrl}
+              newLogoPreview={newLogoPreview}
+              newLogoFile={newLogoFile}
+              onLogoChange={handleLogoChange}
+              onLogoRemove={handleLogoRemove}
+            />
 
             <div className="flex justify-end space-x-4">
               <Button

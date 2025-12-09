@@ -11,6 +11,7 @@ import { FinancialPrivacyToggle } from "@/components/FinancialPrivacyToggle";
 interface Evento {
   id_evento: number;
   nom_evento: string;
+  des_logo_url: string | null;
 }
 
 interface MyDashboardFilters {
@@ -22,9 +23,10 @@ interface MyDashboardFilters {
 interface MeusNumeroFiltersProps {
   filters: MyDashboardFilters;
   onFiltersChange: (filters: MyDashboardFilters) => void;
+  onEventLogoChange?: (logoUrl: string | null) => void;
 }
 
-export function MeusNumeroFilters({ filters, onFiltersChange }: MeusNumeroFiltersProps) {
+export function MeusNumeroFilters({ filters, onFiltersChange, onEventLogoChange }: MeusNumeroFiltersProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [tempFilters, setTempFilters] = useState<MyDashboardFilters>(filters);
@@ -37,12 +39,20 @@ export function MeusNumeroFilters({ filters, onFiltersChange }: MeusNumeroFilter
     setTempFilters(filters);
   }, [filters]);
 
+  // Update event logo when filter changes
+  useEffect(() => {
+    if (onEventLogoChange) {
+      const selectedEvento = eventos.find(e => e.id_evento === filters.eventoId);
+      onEventLogoChange(selectedEvento?.des_logo_url || null);
+    }
+  }, [filters.eventoId, eventos, onEventLogoChange]);
+
   const fetchEventos = async () => {
     const today = new Date().toISOString().split('T')[0];
     
     const { data, error } = await supabase
       .from("evento")
-      .select("id_evento, nom_evento")
+      .select("id_evento, nom_evento, des_logo_url")
       .eq("des_status", "A")
       .gte("dat_termino", today)
       .order("nom_evento");

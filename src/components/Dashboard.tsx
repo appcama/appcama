@@ -67,6 +67,7 @@ function DashboardContent() {
   const dashboardRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isStatsExpanded, setIsStatsExpanded] = useState(true);
+  const [eventLogoUrl, setEventLogoUrl] = useState<string | null>(null);
   const [filters, setFilters] = useState<DashboardFilters>({
     dataInicial: new Date().getFullYear() + "-01-01",
     dataFinal: (() => {
@@ -146,7 +147,18 @@ function DashboardContent() {
         </p>
       </div>
 
-      <DashboardFiltersComponent filters={filters} onFiltersChange={setFilters} />
+      {/* Event Logo Banner */}
+      {eventLogoUrl && (
+        <div className="flex justify-center mb-6">
+          <img
+            src={eventLogoUrl}
+            alt="Logo do evento"
+            className="max-h-24 w-auto object-contain rounded-lg shadow-sm"
+          />
+        </div>
+      )}
+
+      <DashboardFiltersComponent filters={filters} onFiltersChange={setFilters} onEventLogoChange={setEventLogoUrl} />
 
       {/* KPIs - Collapsible */}
       <Collapsible open={isStatsExpanded} onOpenChange={setIsStatsExpanded}>
