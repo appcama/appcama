@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Power, PowerOff, RotateCcw, X, Users, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Edit, Power, PowerOff, RotateCcw, X, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatCpfCnpj } from "@/lib/cpf-cnpj-utils";
+import { PaginationControls } from "@/components/PaginationControls";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -367,44 +368,15 @@ export function UsuariosList({ onAddNew, onEdit, perfilFilter }: UsuariosListPro
 
         {/* Paginação */}
         {filteredUsuarios.length > itemsPerPage && (
-          <div className="flex items-center justify-between mt-6 pt-4 border-t">
-            <div className="text-sm text-gray-600">
-              Exibindo {startIndex + 1} a {Math.min(endIndex, filteredUsuarios.length)} de {filteredUsuarios.length} usuários
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Anterior
-              </Button>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <Button
-                    key={page}
-                    variant={currentPage === page ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentPage(page)}
-                    className={currentPage === page ? "bg-green-600 hover:bg-green-700" : ""}
-                  >
-                    {page}
-                  </Button>
-                ))}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Próxima
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredUsuarios.length}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            itemName="usuários"
+            onPageChange={setCurrentPage}
+          />
         )}
       </CardContent>
     </Card>

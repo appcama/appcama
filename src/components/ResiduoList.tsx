@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Edit, Power, Trash2, Plus, Package, ChevronLeft, ChevronRight } from "lucide-react";
+import { Edit, Power, Trash2, Plus, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { PaginationControls } from "@/components/PaginationControls";
 
 interface Residuo {
   id_residuo: number;
@@ -280,44 +281,15 @@ export function ResiduoList({ onAddNew, onEdit }: ResiduoListProps) {
 
           {/* Paginação */}
           {filteredResiduos.length > itemsPerPage && (
-            <div className="flex items-center justify-between mt-6 pt-4 border-t">
-              <div className="text-sm text-gray-600">
-                Exibindo {startIndex + 1} a {Math.min(endIndex, filteredResiduos.length)} de {filteredResiduos.length} resíduos
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Anterior
-                </Button>
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <Button
-                      key={page}
-                      variant={currentPage === page ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(page)}
-                      className={currentPage === page ? "bg-green-600 hover:bg-green-700" : ""}
-                    >
-                      {page}
-                    </Button>
-                  ))}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  Próxima
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredResiduos.length}
+              startIndex={startIndex}
+              endIndex={endIndex}
+              itemName="resíduos"
+              onPageChange={setCurrentPage}
+            />
           )}
         </CardContent>
       </Card>
