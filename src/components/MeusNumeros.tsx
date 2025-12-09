@@ -3,17 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import {
-  Leaf,
-  Droplets,
-  Wind,
-  Battery,
-  Trees,
-  Recycle,
-  Zap,
-  Maximize,
-  Minimize,
-} from "lucide-react";
+import { Leaf, Droplets, Wind, Battery, Trees, Recycle, Zap, Maximize, Minimize } from "lucide-react";
 import { toast } from "sonner";
 import { useMyDashboardData, type MyDashboardFilters } from "@/hooks/useMyDashboardData";
 import { MeusNumeroFilters } from "@/components/MeusNumeroFilters";
@@ -39,19 +29,14 @@ const getIndicatorIcon = (nomIndicador: string) => {
 // Helper function to get color classes for each indicator
 const getIndicatorColor = (nomIndicador: string) => {
   const nome = nomIndicador.toLowerCase();
-  if (nome.includes("água") || nome.includes("agua")) 
-    return "bg-blue-500/10 text-blue-600 dark:text-blue-400";
-  if (nome.includes("energia")) 
-    return "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400";
-  if (nome.includes("co2") || nome.includes("carbono")) 
-    return "bg-gray-500/10 text-gray-600 dark:text-gray-400";
-  if (nome.includes("petróleo") || nome.includes("petroleo")) 
+  if (nome.includes("água") || nome.includes("agua")) return "bg-blue-500/10 text-blue-600 dark:text-blue-400";
+  if (nome.includes("energia")) return "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400";
+  if (nome.includes("co2") || nome.includes("carbono")) return "bg-gray-500/10 text-gray-600 dark:text-gray-400";
+  if (nome.includes("petróleo") || nome.includes("petroleo"))
     return "bg-orange-500/10 text-orange-600 dark:text-orange-400";
-  if (nome.includes("árvore") || nome.includes("arvore")) 
-    return "bg-green-500/10 text-green-600 dark:text-green-400";
+  if (nome.includes("árvore") || nome.includes("arvore")) return "bg-green-500/10 text-green-600 dark:text-green-400";
   return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
 };
-
 
 function MeusNumerosContent() {
   const { user } = useAuth();
@@ -63,7 +48,7 @@ function MeusNumerosContent() {
     dataInicial: new Date().getFullYear() + "-01-01",
     dataFinal: (() => {
       const today = new Date();
-      return today.toISOString().split('T')[0];
+      return today.toISOString().split("T")[0];
     })(),
   });
 
@@ -95,9 +80,9 @@ function MeusNumerosContent() {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
     };
-    
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
   return (
@@ -130,9 +115,7 @@ function MeusNumerosContent() {
             </Button>
           </div>
         </div>
-        <p className="text-muted-foreground">
-          Visão geral dos números da sua entidade
-        </p>
+        <p className="text-muted-foreground">Visão geral dos números da sua entidade</p>
       </div>
 
       <MeusNumeroFilters filters={filters} onFiltersChange={handleFiltersChange} />
@@ -161,9 +144,7 @@ function MeusNumerosContent() {
                         maximumFractionDigits: 2,
                       }) || "0,00"}
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      quilos coletados
-                    </p>
+                    <p className="text-sm text-muted-foreground">Kg coletados</p>
                   </>
                 )}
               </div>
@@ -192,9 +173,7 @@ function MeusNumerosContent() {
                     <TableBody>
                       {data.residuosPorTipo.map((residuo) => (
                         <TableRow key={residuo.id_tipo_residuo}>
-                          <TableCell className="font-medium">
-                            {residuo.des_tipo_residuo}
-                          </TableCell>
+                          <TableCell className="font-medium">{residuo.des_tipo_residuo}</TableCell>
                           <TableCell className="text-right">
                             {residuo.total_quantidade.toLocaleString("pt-BR", {
                               minimumFractionDigits: 2,
@@ -219,7 +198,7 @@ function MeusNumerosContent() {
                         <TableCell className="text-right">
                           {formatFinancialValue(
                             data.residuosPorTipo.reduce((sum, r) => sum + r.total_valor, 0),
-                            showFinancialValues
+                            showFinancialValues,
                           )}
                         </TableCell>
                       </TableRow>
@@ -260,23 +239,19 @@ function MeusNumerosContent() {
                   {data.indicadores.map((indicador) => {
                     const IconComponent = getIndicatorIcon(indicador.nom_indicador);
                     const colorClass = getIndicatorColor(indicador.nom_indicador);
-                    
+
                     return (
                       <Card key={indicador.id_indicador} className={`${colorClass} border-2`}>
                         <CardContent className="pt-6">
                           <div className="flex items-center justify-between">
                             <div className="space-y-1">
-                              <p className="text-sm font-medium text-muted-foreground">
-                                {indicador.nom_indicador}
-                              </p>
+                              <p className="text-sm font-medium text-muted-foreground">{indicador.nom_indicador}</p>
                               <p className="text-2xl font-bold">
                                 {indicador.total.toLocaleString("pt-BR", {
                                   maximumFractionDigits: 2,
                                 })}
                               </p>
-                              <p className="text-xs text-muted-foreground">
-                                {indicador.des_unidade_medida}
-                              </p>
+                              <p className="text-xs text-muted-foreground">{indicador.des_unidade_medida}</p>
                             </div>
                             <IconComponent className="h-8 w-8 text-muted-foreground" />
                           </div>
@@ -299,11 +274,7 @@ function MeusNumerosContent() {
       <DashboardCharts residuosPorTipo={data?.residuosPorTipo || []} />
 
       {/* Map */}
-      <DashboardMap 
-        startDate={filters.dataInicial}
-        endDate={filters.dataFinal}
-        entityId={user?.entityId}
-      />
+      <DashboardMap startDate={filters.dataInicial} endDate={filters.dataFinal} entityId={user?.entityId} />
 
       {/* Infographic */}
       <DashboardInfographic filters={filters} entityId={user?.entityId} />
