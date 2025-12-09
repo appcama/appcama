@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Package, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { ColetaViewDialog } from './ColetaViewDialog';
+import { PaginationControls } from '@/components/PaginationControls';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -380,44 +381,15 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
 
           {/* Paginação */}
           {filteredColetas.length > itemsPerPage && (
-            <div className="flex items-center justify-between mt-6 pt-4 border-t">
-              <div className="text-sm text-gray-600">
-                Exibindo {startIndex + 1} a {Math.min(endIndex, filteredColetas.length)} de {filteredColetas.length} coletas
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Anterior
-                </Button>
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <Button
-                      key={page}
-                      variant={currentPage === page ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(page)}
-                      className={currentPage === page ? "bg-green-600 hover:bg-green-700" : ""}
-                    >
-                      {page}
-                    </Button>
-                  ))}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  Próxima
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredColetas.length}
+              startIndex={startIndex}
+              endIndex={endIndex}
+              itemName="coletas"
+              onPageChange={setCurrentPage}
+            />
           )}
         </CardContent>
       </Card>
