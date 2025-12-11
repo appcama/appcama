@@ -87,7 +87,7 @@ function MeusNumerosContent() {
   }, []);
 
   return (
-    <div ref={dashboardRef} className="p-4 sm:p-6 space-y-6 bg-background">
+    <div ref={dashboardRef} className={`p-4 sm:p-6 space-y-6 bg-background ${isFullscreen ? "h-screen overflow-y-auto" : ""}`}>
       <div>
         <div className="flex items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3 sm:gap-4 flex-nowrap">
