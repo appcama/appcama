@@ -194,7 +194,10 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
+    // Extrair apenas a parte da data (YYYY-MM-DD) sem conversão de timezone
+    const datePart = dateString.split('T')[0].split(' ')[0];
+    const [year, month, day] = datePart.split('-');
+    return `${day}/${month}/${year}`;
   };
 
   // Função para verificar se o usuário pode excluir uma coleta

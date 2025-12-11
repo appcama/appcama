@@ -312,9 +312,12 @@ export function GerarCertificado() {
   // Usar declaração de função para garantir hoisting dentro do componente
   function formatDate(dateString: string) {
     if (!dateString) return "";
-    const d = new Date(dateString);
-    if (isNaN(d.getTime())) return "";
-    return d.toLocaleDateString("pt-BR");
+    // Extrair apenas a parte da data (YYYY-MM-DD) sem conversão de timezone
+    const datePart = dateString.split('T')[0].split(' ')[0];
+    const parts = datePart.split('-');
+    if (parts.length !== 3) return "";
+    const [year, month, day] = parts;
+    return `${day}/${month}/${year}`;
   }
 
   const handleSelectColeta = (coletaId: number) => {
