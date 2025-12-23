@@ -140,6 +140,12 @@ export default function ValidarCertificado() {
   };
 
   const formatDate = (dateString: string) => {
+    // Para datas no formato YYYY-MM-DD, fazer parse manual para evitar problema de fuso horário
+    if (dateString && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [year, month, day] = dateString.split('-').map(Number);
+      return new Date(year, month - 1, day).toLocaleDateString("pt-BR");
+    }
+    // Para datetime, usar parse normal
     return new Date(dateString).toLocaleDateString("pt-BR");
   };
 

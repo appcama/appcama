@@ -6,6 +6,15 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import QRCode from 'qrcode';
 
+// Helper para parse seguro de datas YYYY-MM-DD (evita problema de fuso horário)
+const parseDateSafe = (dateString: string): Date => {
+  if (dateString && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+  return new Date(dateString);
+};
+
 export function useRelatorioExport() {
   const [isExporting, setIsExporting] = useState(false);
 
@@ -561,7 +570,7 @@ export function useRelatorioExport() {
         yPosition = contentTop;
       }
 
-      const periodoLabel = `Período: ${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`;
+      const periodoLabel = `Período: ${format(parseDateSafe(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(parseDateSafe(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`;
       doc.text(`RESÍDUOS COLETADOS - ${periodoLabel}`, leftMargin, yPosition);
       yPosition += 8;
 
@@ -1079,7 +1088,7 @@ doc.setFont('helvetica', 'normal');
 const geradoraData = [
   ['Entidade:', certificado.entidade?.nom_entidade || '-'],
   ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
-  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+  ['Período:', `${format(parseDateSafe(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(parseDateSafe(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
 ];
 geradoraData.forEach(([label, value]) => {
   doc.setFont('helvetica', 'bold');
@@ -1097,7 +1106,7 @@ doc.setFont('helvetica', 'normal');
 const geradoraData = [
   ['Entidade:', certificado.entidade?.nom_entidade || '-'],
   ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
-  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+  ['Período:', `${format(parseDateSafe(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(parseDateSafe(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
 ];
 geradoraData.forEach(([label, value]) => {
   doc.setFont('helvetica', 'bold');
@@ -1115,7 +1124,7 @@ doc.setFont('helvetica', 'normal');
 const geradoraData = [
   ['Entidade:', certificado.entidade?.nom_entidade || '-'],
   ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
-  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+  ['Período:', `${format(parseDateSafe(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(parseDateSafe(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
 ];
 geradoraData.forEach(([label, value]) => {
   doc.setFont('helvetica', 'bold');
@@ -1133,7 +1142,7 @@ doc.setFont('helvetica', 'normal');
 const geradoraData = [
   ['Entidade:', certificado.entidade?.nom_entidade || '-'],
   ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
-  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+  ['Período:', `${format(parseDateSafe(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(parseDateSafe(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
 ];
 geradoraData.forEach(([label, value]) => {
   doc.setFont('helvetica', 'bold');
@@ -1151,7 +1160,7 @@ doc.setFont('helvetica', 'normal');
 const geradoraData = [
   ['Entidade:', certificado.entidade?.nom_entidade || '-'],
   ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
-  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+  ['Período:', `${format(parseDateSafe(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(parseDateSafe(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
 ];
 geradoraData.forEach(([label, value]) => {
   doc.setFont('helvetica', 'bold');
@@ -1169,7 +1178,7 @@ doc.setFont('helvetica', 'normal');
 const geradoraData = [
   ['Entidade:', certificado.entidade?.nom_entidade || '-'],
   ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
-  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+  ['Período:', `${format(parseDateSafe(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(parseDateSafe(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
 ];
 geradoraData.forEach(([label, value]) => {
   doc.setFont('helvetica', 'bold');
@@ -1187,7 +1196,7 @@ doc.setFont('helvetica', 'normal');
 const geradoraData = [
   ['Entidade:', certificado.entidade?.nom_entidade || '-'],
   ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
-  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+  ['Período:', `${format(parseDateSafe(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(parseDateSafe(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
 ];
 geradoraData.forEach(([label, value]) => {
   doc.setFont('helvetica', 'bold');
@@ -1205,7 +1214,7 @@ doc.setFont('helvetica', 'normal');
 const geradoraData = [
   ['Entidade:', certificado.entidade?.nom_entidade || '-'],
   ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
-  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+  ['Período:', `${format(parseDateSafe(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(parseDateSafe(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
 ];
 geradoraData.forEach(([label, value]) => {
   doc.setFont('helvetica', 'bold');
@@ -1223,7 +1232,7 @@ doc.setFont('helvetica', 'normal');
 const geradoraData = [
   ['Entidade:', certificado.entidade?.nom_entidade || '-'],
   ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
-  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+  ['Período:', `${format(parseDateSafe(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(parseDateSafe(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
 ];
 geradoraData.forEach(([label, value]) => {
   doc.setFont('helvetica', 'bold');
@@ -1241,7 +1250,7 @@ doc.setFont('helvetica', 'normal');
 const geradoraData = [
   ['Entidade:', certificado.entidade?.nom_entidade || '-'],
   ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
-  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+  ['Período:', `${format(parseDateSafe(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(parseDateSafe(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
 ];
 geradoraData.forEach(([label, value]) => {
   doc.setFont('helvetica', 'bold');
@@ -1259,7 +1268,7 @@ doc.setFont('helvetica', 'normal');
 const geradoraData = [
   ['Entidade:', certificado.entidade?.nom_entidade || '-'],
   ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
-  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+  ['Período:', `${format(parseDateSafe(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(parseDateSafe(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
 ];
 geradoraData.forEach(([label, value]) => {
   doc.setFont('helvetica', 'bold');
@@ -1277,7 +1286,7 @@ doc.setFont('helvetica', 'normal');
 const geradoraData = [
   ['Entidade:', certificado.entidade?.nom_entidade || '-'],
   ['CPF/CNPJ:', certificado.entidade?.num_cpf_cnpj || certificado.num_cpf_cnpj_gerador || '-'],
-  ['Período:', `${format(new Date(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(new Date(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
+  ['Período:', `${format(parseDateSafe(certificado.dat_periodo_inicio), 'dd/MM/yyyy')} - ${format(parseDateSafe(certificado.dat_periodo_fim), 'dd/MM/yyyy')}`]
 ];
 geradoraData.forEach(([label, value]) => {
   doc.setFont('helvetica', 'bold');
