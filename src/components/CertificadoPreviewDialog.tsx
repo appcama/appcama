@@ -252,8 +252,15 @@ export function CertificadoPreviewDialog({
     }).format(value);
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('pt-BR');
+  const formatDate = (date: Date | string) => {
+    // Se for string no formato YYYY-MM-DD, fazer parse manual para evitar problema de fuso horário
+    if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [year, month, day] = date.split('-').map(Number);
+      return new Date(year, month - 1, day).toLocaleDateString('pt-BR');
+    }
+    // Para Date ou datetime string, usar parse normal
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return dateObj.toLocaleDateString('pt-BR');
   };
 
   return (
