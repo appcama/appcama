@@ -233,7 +233,7 @@ export default function ValidarCertificado() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="text-center p-4 bg-muted rounded-lg">
                 <p className="text-sm text-muted-foreground mb-1">Data Início</p>
                 <p className="text-lg font-bold">{formatDate(certificado.dat_periodo_inicio)}</p>
@@ -245,10 +245,6 @@ export default function ValidarCertificado() {
               <div className="text-center p-4 bg-muted rounded-lg">
                 <p className="text-sm text-muted-foreground mb-1">Quantidade Total</p>
                 <p className="text-lg font-bold">{certificado.qtd_total_certificado.toFixed(2)} kg</p>
-              </div>
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground mb-1">Valor Total</p>
-                <p className="text-lg font-bold">{formatCurrency(certificado.vlr_total_certificado)}</p>
               </div>
             </div>
           </CardContent>
@@ -268,7 +264,6 @@ export default function ValidarCertificado() {
                 <TableRow>
                   <TableHead>Tipo de Resíduo</TableHead>
                   <TableHead className="text-right">Quantidade (kg)</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -276,13 +271,11 @@ export default function ValidarCertificado() {
                   <TableRow key={index}>
                     <TableCell className="font-medium">{residuo.nom_residuo}</TableCell>
                     <TableCell className="text-right">{residuo.qtd_total.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(residuo.vlr_total)}</TableCell>
                   </TableRow>
                 ))}
                 <TableRow className="font-bold bg-muted">
                   <TableCell>TOTAL</TableCell>
                   <TableCell className="text-right">{certificado.qtd_total_certificado.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(certificado.vlr_total_certificado)}</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
