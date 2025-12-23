@@ -515,12 +515,21 @@ export function useRelatorioExport() {
       // Atualizar yPosition abaixo do bloco mais alto
       yPosition = Math.max(yLeft, yRight) + 6;
 
-      // Buscar resíduos do certificado
+      // Buscar resíduos do certificado com tipo
       const { data: residuos } = await supabase
         .from('certificado_residuo')
-        .select('nom_residuo, qtd_total, vlr_total')
-        .eq('id_certificado', certificado.id_certificado)
-        .order('qtd_total', { ascending: false });
+        .select('id_tipo_residuo, qtd_total, tipo_residuo:id_tipo_residuo(des_tipo_residuo)')
+        .eq('id_certificado', certificado.id_certificado);
+
+      // Agrupar resíduos por tipo
+      const residuosAgrupados = (residuos || []).reduce((acc: Record<string, { nome: string; qtd_total: number }>, r: any) => {
+        const tipoNome = r.tipo_residuo?.des_tipo_residuo || 'Outros';
+        if (!acc[tipoNome]) {
+          acc[tipoNome] = { nome: tipoNome, qtd_total: 0 };
+        }
+        acc[tipoNome].qtd_total += Number(r.qtd_total) || 0;
+        return acc;
+      }, {});
 
       // Tabela de Resíduos
       // Texto explicativo entre o bloco das entidades e a tabela
@@ -546,10 +555,12 @@ export function useRelatorioExport() {
       doc.text(`RESÍDUOS COLETADOS - ${periodoLabel}`, leftMargin, yPosition);
       yPosition += 8;
 
-      const residuosData = (residuos || []).map((r: any) => [
-        r.nom_residuo,
-        `${r.qtd_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} kg`
-      ]);
+      const residuosData = Object.values(residuosAgrupados)
+        .sort((a, b) => b.qtd_total - a.qtd_total)
+        .map((r) => [
+          r.nome,
+          `${r.qtd_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} kg`
+        ]);
 
       residuosData.push([
         'TOTAL',

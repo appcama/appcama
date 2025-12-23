@@ -23,9 +23,8 @@ interface CertificadoData {
     des_logo_url: string | null;
   };
   residuos: Array<{
-    nom_residuo: string;
+    tipo_residuo: string;
     qtd_total: number;
-    vlr_total: number;
   }>;
   coletas: Array<{
     cod_coleta: string;
@@ -82,11 +81,24 @@ export default function ValidarCertificado() {
         return;
       }
 
-      // Buscar resíduos
+      // Buscar resíduos com tipo
       const { data: residuosData } = await supabase
         .from("certificado_residuo")
-        .select("nom_residuo, qtd_total, vlr_total")
+        .select("id_tipo_residuo, qtd_total, tipo_residuo:id_tipo_residuo(des_tipo_residuo)")
         .eq("id_certificado", certData.id_certificado);
+
+      // Agrupar resíduos por tipo
+      const residuosAgrupados = (residuosData || []).reduce((acc: Record<string, { tipo_residuo: string; qtd_total: number }>, r: any) => {
+        const tipoNome = r.tipo_residuo?.des_tipo_residuo || 'Outros';
+        if (!acc[tipoNome]) {
+          acc[tipoNome] = { tipo_residuo: tipoNome, qtd_total: 0 };
+        }
+        acc[tipoNome].qtd_total += Number(r.qtd_total) || 0;
+        return acc;
+      }, {});
+
+      const residuosArray = Object.values(residuosAgrupados)
+        .sort((a, b) => b.qtd_total - a.qtd_total);
 
       // Buscar coletas
       const { data: coletasData } = await supabase
@@ -98,7 +110,7 @@ export default function ValidarCertificado() {
       setCertificado({
         ...certData,
         entidade: Array.isArray(certData.entidade) ? certData.entidade[0] : certData.entidade,
-        residuos: residuosData || [],
+        residuos: residuosArray,
         coletas: coletasData || [],
       });
       setValido(true);
@@ -269,7 +281,7 @@ export default function ValidarCertificado() {
               <TableBody>
                 {certificado.residuos.map((residuo, index) => (
                   <TableRow key={index}>
-                    <TableCell className="font-medium">{residuo.nom_residuo}</TableCell>
+                    <TableCell className="font-medium">{residuo.tipo_residuo}</TableCell>
                     <TableCell className="text-right">{residuo.qtd_total.toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
