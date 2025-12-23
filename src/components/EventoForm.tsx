@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,26 +10,31 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Calendar as CalendarIcon } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ArrowLeft, Calendar as CalendarIcon, Globe, Lock, X, AlertTriangle, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { EventoLogoUploadArea } from "@/components/EventoLogoUploadArea";
+import { useAuth } from "@/hooks/useAuth";
 
 const eventoSchema = z.object({
   nom_evento: z.string().min(1, "Nome do evento é obrigatório").max(60, "Nome deve ter no máximo 60 caracteres"),
   des_evento: z.string().max(250, "Descrição deve ter no máximo 250 caracteres").optional(),
   dat_inicio: z.string().min(1, "Data de início é obrigatória"),
   dat_termino: z.string().min(1, "Data de término é obrigatória"),
+  des_visibilidade: z.enum(['P', 'R']),
 }).refine((data) => {
-  // Comparar datas como locais YYYY-MM-DD para evitar offset de timezone
   const [yi, mi, di] = data.dat_inicio.split('-').map(Number);
   const [yt, mt, dt] = data.dat_termino.split('-').map(Number);
   const inicio = new Date(yi, mi - 1, di);
   const termino = new Date(yt, mt - 1, dt);
-  // Permitir mesmo dia: término >= início
   return termino >= inicio;
 }, {
   message: "Data de término não pode ser anterior à data de início",
@@ -46,6 +51,18 @@ interface Evento {
   dat_termino: string;
   des_status: string;
   des_logo_url?: string | null;
+  des_visibilidade?: string;
+  id_usuario_criador?: number;
+}
+
+interface Entidade {
+  id_entidade: number;
+  nom_entidade: string;
+}
+
+interface EventoEntidade {
+  id_entidade: number;
+  hasColetas: boolean;
 }
 
 interface EventoFormProps {
@@ -53,7 +70,10 @@ interface EventoFormProps {
   onBack: () => void;
 }
 
+const MAX_ENTIDADES_PRIVADO = 15;
+
 export function EventoForm({ evento, onBack }: EventoFormProps) {
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isEditing = !!evento;
@@ -66,6 +86,14 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
   const [newLogoPreview, setNewLogoPreview] = useState<string | null>(null);
   const [logoRemoved, setLogoRemoved] = useState(false);
 
+  // Visibility and access control states
+  const [entidades, setEntidades] = useState<Entidade[]>([]);
+  const [selectedEntidades, setSelectedEntidades] = useState<EventoEntidade[]>([]);
+  const [similarEvents, setSimilarEvents] = useState<string[]>([]);
+  const [loadingEntidades, setLoadingEntidades] = useState(false);
+
+  const isAdmin = user?.isAdmin || user?.entityId === 1;
+
   const form = useForm<EventoFormData>({
     resolver: zodResolver(eventoSchema),
     defaultValues: {
@@ -73,12 +101,104 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
       des_evento: "",
       dat_inicio: "",
       dat_termino: "",
+      des_visibilidade: isAdmin ? "P" : "R", // Não-admin default = Privado
     },
   });
 
+  const visibilidade = form.watch("des_visibilidade");
+  const nomEvento = form.watch("nom_evento");
+
+  // Load entidades for access control
+  useEffect(() => {
+    const loadEntidades = async () => {
+      setLoadingEntidades(true);
+      try {
+        const { data, error } = await supabase
+          .from('entidade')
+          .select('id_entidade, nom_entidade')
+          .eq('des_status', 'A')
+          .order('nom_entidade');
+
+        if (error) throw error;
+        setEntidades(data || []);
+      } catch (error) {
+        console.error('Erro ao carregar entidades:', error);
+      } finally {
+        setLoadingEntidades(false);
+      }
+    };
+
+    loadEntidades();
+  }, []);
+
+  // Load existing access control when editing
+  useEffect(() => {
+    const loadEventoEntidades = async () => {
+      if (!evento?.id_evento) return;
+
+      try {
+        // Load entidades with access
+        const { data: eventoEntidades, error } = await supabase
+          .from('evento_entidade')
+          .select('id_entidade')
+          .eq('id_evento', evento.id_evento);
+
+        if (error) throw error;
+
+        // Check which entidades have coletas associated
+        const entidadesWithColetas: EventoEntidade[] = [];
+        
+        for (const ee of eventoEntidades || []) {
+          const { count } = await supabase
+            .from('coleta')
+            .select('id_coleta', { count: 'exact', head: true })
+            .eq('id_evento', evento.id_evento)
+            .eq('id_entidade_geradora', ee.id_entidade);
+
+          entidadesWithColetas.push({
+            id_entidade: ee.id_entidade,
+            hasColetas: (count || 0) > 0
+          });
+        }
+
+        setSelectedEntidades(entidadesWithColetas);
+      } catch (error) {
+        console.error('Erro ao carregar entidades do evento:', error);
+      }
+    };
+
+    loadEventoEntidades();
+  }, [evento?.id_evento]);
+
+  // Check for similar event names (debounced)
+  useEffect(() => {
+    const checkSimilarEvents = async () => {
+      if (!nomEvento || nomEvento.length < 3) {
+        setSimilarEvents([]);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('evento')
+          .select('nom_evento')
+          .ilike('nom_evento', `%${nomEvento}%`)
+          .neq('id_evento', evento?.id_evento || 0)
+          .limit(5);
+
+        if (error) throw error;
+        setSimilarEvents((data || []).map(e => e.nom_evento || '').filter(Boolean));
+      } catch (error) {
+        console.error('Erro ao verificar eventos similares:', error);
+      }
+    };
+
+    const debounceTimer = setTimeout(checkSimilarEvents, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [nomEvento, evento?.id_evento]);
+
   useEffect(() => {
     if (evento) {
-      // Converter datas do formato ISO para formato de input date
       const formatDateForInput = (dateString: string) => {
         const date = new Date(dateString);
         return date.toISOString().split('T')[0];
@@ -89,9 +209,9 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
         des_evento: evento.des_evento || "",
         dat_inicio: formatDateForInput(evento.dat_inicio),
         dat_termino: formatDateForInput(evento.dat_termino),
+        des_visibilidade: (evento.des_visibilidade as 'P' | 'R') || 'R',
       });
       
-      // Set existing logo
       if (evento.des_logo_url) {
         setExistingLogoUrl(evento.des_logo_url);
       }
@@ -109,6 +229,36 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
     setNewLogoPreview(null);
     setExistingLogoUrl(null);
     setLogoRemoved(true);
+  };
+
+  const handleAddEntidade = (entidadeId: string) => {
+    if (entidadeId === "all" || !entidadeId) return;
+    
+    const id = parseInt(entidadeId);
+    if (selectedEntidades.some(e => e.id_entidade === id)) return;
+    if (selectedEntidades.length >= MAX_ENTIDADES_PRIVADO) {
+      toast({
+        title: "Limite atingido",
+        description: `Máximo de ${MAX_ENTIDADES_PRIVADO} entidades permitidas.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedEntidades(prev => [...prev, { id_entidade: id, hasColetas: false }]);
+  };
+
+  const handleRemoveEntidade = (entidadeId: number) => {
+    const entidade = selectedEntidades.find(e => e.id_entidade === entidadeId);
+    if (entidade?.hasColetas) {
+      toast({
+        title: "Não é possível remover",
+        description: "Esta entidade possui coletas associadas a este evento.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSelectedEntidades(prev => prev.filter(e => e.id_entidade !== entidadeId));
   };
 
   const uploadLogo = async (eventoId: number): Promise<string | null> => {
@@ -133,6 +283,31 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
     return urlData.publicUrl;
   };
 
+  const saveEventoEntidades = async (eventoId: number) => {
+    // Delete existing and insert new
+    await supabase
+      .from('evento_entidade')
+      .delete()
+      .eq('id_evento', eventoId);
+
+    if (selectedEntidades.length > 0 && visibilidade === 'R') {
+      const inserts = selectedEntidades.map(e => ({
+        id_evento: eventoId,
+        id_entidade: e.id_entidade,
+        id_usuario_criador: user?.id || 1,
+      }));
+
+      const { error } = await supabase
+        .from('evento_entidade')
+        .insert(inserts);
+
+      if (error) {
+        console.error('Erro ao salvar entidades do evento:', error);
+        throw error;
+      }
+    }
+  };
+
   const createMutation = useMutation({
     mutationFn: async (data: EventoFormData) => {
       console.log("Criando evento:", data);
@@ -142,9 +317,10 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
         des_evento: data.des_evento || null,
         dat_inicio: new Date(data.dat_inicio).toISOString(),
         dat_termino: new Date(data.dat_termino).toISOString(),
+        des_visibilidade: data.des_visibilidade,
         des_status: "A",
         des_locked: "D",
-        id_usuario_criador: 1,
+        id_usuario_criador: user?.id || 1,
         dat_criacao: new Date().toISOString(),
       }).select('id_evento').single();
 
@@ -165,6 +341,11 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
             .update({ des_logo_url: logoUrl })
             .eq("id_evento", insertedEvento.id_evento);
         }
+      }
+
+      // Save entidades for private events
+      if (insertedEvento && data.des_visibilidade === 'R') {
+        await saveEventoEntidades(insertedEvento.id_evento);
       }
     },
     onSuccess: () => {
@@ -191,7 +372,6 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
       
       console.log("Atualizando evento:", data);
 
-      // Handle logo update
       let logoUrl = existingLogoUrl;
       if (newLogoFile) {
         logoUrl = await uploadLogo(evento.id_evento);
@@ -206,9 +386,10 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
           des_evento: data.des_evento || null,
           dat_inicio: new Date(data.dat_inicio).toISOString(),
           dat_termino: new Date(data.dat_termino).toISOString(),
+          des_visibilidade: data.des_visibilidade,
           des_logo_url: logoUrl,
           dat_atualizacao: new Date().toISOString(),
-          id_usuario_atualizador: 1,
+          id_usuario_atualizador: user?.id || 1,
         })
         .eq("id_evento", evento.id_evento);
 
@@ -219,6 +400,9 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
         }
         throw error;
       }
+
+      // Update entidades for private events
+      await saveEventoEntidades(evento.id_evento);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["eventos"] });
@@ -247,6 +431,14 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
   };
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
+
+  const getEntidadeNome = (id: number) => {
+    return entidades.find(e => e.id_entidade === id)?.nom_entidade || `Entidade ${id}`;
+  };
+
+  const availableEntidades = entidades.filter(
+    e => !selectedEntidades.some(se => se.id_entidade === e.id_entidade)
+  );
 
   return (
     <Card>
@@ -288,6 +480,16 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
               )}
             />
 
+            {/* Similar events alert */}
+            {similarEvents.length > 0 && (
+              <Alert className="border-amber-500 bg-amber-50">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-800">
+                  <strong>Atenção:</strong> Existem eventos com nomes similares: {similarEvents.join(", ")}
+                </AlertDescription>
+              </Alert>
+            )}
+
             <FormField
               control={form.control}
               name="des_evento"
@@ -313,7 +515,6 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
                 control={form.control}
                 name="dat_inicio"
                 render={({ field }) => {
-                  // Converter valor do campo (YYYY-MM-DD) em Date local para seleção
                   const selectedDate = field.value
                     ? (() => {
                         const [y, m, d] = field.value.split('-').map(Number);
@@ -323,7 +524,6 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
 
                   const handleSelect = (date?: Date) => {
                     if (!date) return;
-                    // Formatar para YYYY-MM-DD sem depender de timezone
                     const isoDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                     field.onChange(isoDate);
                     setOpenInicio(false);
@@ -373,7 +573,6 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
                   const handleSelect = (date?: Date) => {
                     if (!date) return;
                     const isoDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-                    // Se já há data de início, impedir seleção anterior a ela, mas permitir igual
                     const inicioStr = form.getValues('dat_inicio');
                     if (inicioStr) {
                       const [yi, mi, di] = inicioStr.split('-').map(Number);
@@ -420,6 +619,97 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
                 }}
               />
             </div>
+
+            {/* Visibility Toggle */}
+            <FormField
+              control={form.control}
+              name="des_visibilidade"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+                    <div className="flex items-center gap-3">
+                      {field.value === 'P' ? (
+                        <Globe className="h-5 w-5 text-green-600" />
+                      ) : (
+                        <Lock className="h-5 w-5 text-amber-600" />
+                      )}
+                      <div>
+                        <Label className="text-base font-medium">
+                          {field.value === 'P' ? 'Evento Público' : 'Evento Privado'}
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          {field.value === 'P' 
+                            ? 'Visível para todas as entidades e pode ser associado a qualquer coleta'
+                            : 'Visível apenas para entidades autorizadas'
+                          }
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={field.value === 'P'}
+                      onCheckedChange={(checked) => field.onChange(checked ? 'P' : 'R')}
+                    />
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Access Control Section - Only for private events */}
+            {visibilidade === 'R' && (
+              <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-muted-foreground" />
+                  <h3 className="font-medium">Controle de Acesso</h3>
+                  <Badge variant="secondary" className="ml-auto">
+                    {selectedEntidades.length}/{MAX_ENTIDADES_PRIVADO}
+                  </Badge>
+                </div>
+
+                <p className="text-sm text-muted-foreground">
+                  Selecione as entidades que terão acesso a este evento privado. 
+                  Se nenhuma for selecionada, apenas a entidade criadora terá acesso.
+                </p>
+
+                <Select onValueChange={handleAddEntidade} value="">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Adicionar entidade..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableEntidades.map((entidade) => (
+                      <SelectItem key={entidade.id_entidade} value={entidade.id_entidade.toString()}>
+                        {entidade.nom_entidade}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {selectedEntidades.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedEntidades.map((entidade) => (
+                      <Badge 
+                        key={entidade.id_entidade} 
+                        variant={entidade.hasColetas ? "secondary" : "outline"}
+                        className="flex items-center gap-1 py-1 px-2"
+                      >
+                        {getEntidadeNome(entidade.id_entidade)}
+                        {entidade.hasColetas ? (
+                          <span className="text-xs text-muted-foreground ml-1">(possui coletas)</span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveEntidade(entidade.id_entidade)}
+                            className="ml-1 hover:text-destructive"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Logo Upload */}
             <EventoLogoUploadArea

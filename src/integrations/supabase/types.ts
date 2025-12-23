@@ -501,6 +501,7 @@ export type Database = {
           des_locked: string
           des_logo_url: string | null
           des_status: string
+          des_visibilidade: string
           id_evento: number
           id_usuario_atualizador: number | null
           id_usuario_criador: number
@@ -515,6 +516,7 @@ export type Database = {
           des_locked?: string
           des_logo_url?: string | null
           des_status?: string
+          des_visibilidade?: string
           id_evento?: number
           id_usuario_atualizador?: number | null
           id_usuario_criador: number
@@ -529,6 +531,7 @@ export type Database = {
           des_locked?: string
           des_logo_url?: string | null
           des_status?: string
+          des_visibilidade?: string
           id_evento?: number
           id_usuario_atualizador?: number | null
           id_usuario_criador?: number
@@ -544,6 +547,52 @@ export type Database = {
           },
           {
             foreignKeyName: "evento_id_usuario_criador_fkey"
+            columns: ["id_usuario_criador"]
+            isOneToOne: false
+            referencedRelation: "usuario"
+            referencedColumns: ["id_usuario"]
+          },
+        ]
+      }
+      evento_entidade: {
+        Row: {
+          dat_criacao: string
+          id_entidade: number
+          id_evento: number
+          id_evento_entidade: number
+          id_usuario_criador: number
+        }
+        Insert: {
+          dat_criacao?: string
+          id_entidade: number
+          id_evento: number
+          id_evento_entidade?: number
+          id_usuario_criador: number
+        }
+        Update: {
+          dat_criacao?: string
+          id_entidade?: number
+          id_evento?: number
+          id_evento_entidade?: number
+          id_usuario_criador?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evento_entidade_id_entidade_fkey"
+            columns: ["id_entidade"]
+            isOneToOne: false
+            referencedRelation: "entidade"
+            referencedColumns: ["id_entidade"]
+          },
+          {
+            foreignKeyName: "evento_entidade_id_evento_fkey"
+            columns: ["id_evento"]
+            isOneToOne: false
+            referencedRelation: "evento"
+            referencedColumns: ["id_evento"]
+          },
+          {
+            foreignKeyName: "evento_entidade_id_usuario_criador_fkey"
             columns: ["id_usuario_criador"]
             isOneToOne: false
             referencedRelation: "usuario"
