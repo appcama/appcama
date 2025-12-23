@@ -7,12 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ChevronDown, Filter, RotateCcw } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { FinancialPrivacyToggle } from "@/components/FinancialPrivacyToggle";
-
-interface Evento {
-  id_evento: number;
-  nom_evento: string;
-  des_logo_url: string | null;
-}
+import { useEventosVisiveis } from "@/hooks/useEventosVisiveis";
 
 interface MyDashboardFilters {
   eventoId?: number;
@@ -28,12 +23,8 @@ interface MeusNumeroFiltersProps {
 
 export function MeusNumeroFilters({ filters, onFiltersChange, onEventLogoChange }: MeusNumeroFiltersProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [eventos, setEventos] = useState<Evento[]>([]);
+  const { eventos } = useEventosVisiveis();
   const [tempFilters, setTempFilters] = useState<MyDashboardFilters>(filters);
-
-  useEffect(() => {
-    fetchEventos();
-  }, []);
 
   useEffect(() => {
     setTempFilters(filters);
@@ -46,21 +37,6 @@ export function MeusNumeroFilters({ filters, onFiltersChange, onEventLogoChange 
       onEventLogoChange(selectedEvento?.des_logo_url || null);
     }
   }, [filters.eventoId, eventos, onEventLogoChange]);
-
-  const fetchEventos = async () => {
-    const today = new Date().toISOString().split('T')[0];
-    
-    const { data, error } = await supabase
-      .from("evento")
-      .select("id_evento, nom_evento, des_logo_url")
-      .eq("des_status", "A")
-      .gte("dat_termino", today)
-      .order("nom_evento");
-
-    if (!error && data) {
-      setEventos(data);
-    }
-  };
 
   const handleFilterChange = (key: keyof MyDashboardFilters, value: any) => {
     setTempFilters({

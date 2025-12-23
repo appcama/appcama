@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useOfflineForm } from '@/hooks/useOfflineForm';
 import { ColetaResiduoForm } from './ColetaResiduoForm';
 import { useAuth } from '@/hooks/useAuth';
+import { useEventosVisiveis } from '@/hooks/useEventosVisiveis';
 import { ptBR } from 'date-fns/locale';
 
 interface PontoColeta {
@@ -23,11 +24,6 @@ interface PontoColeta {
 interface Entidade {
   id_entidade: number;
   nom_entidade: string;
-}
-
-interface Evento {
-  id_evento: number;
-  nom_evento: string;
 }
 
 interface ColetaResiduo {
@@ -48,9 +44,10 @@ interface ColetaFormProps {
 
 export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps) {
   const { user } = useAuth();
+  const { eventos: eventosVisiveis } = useEventosVisiveis();
   const [pontosColeta, setPontosColeta] = useState<PontoColeta[]>([]);
   const [entidades, setEntidades] = useState<Entidade[]>([]);
-  const [eventos, setEventos] = useState<Evento[]>([]);
+  const [eventos, setEventos] = useState<{ id_evento: number; nom_evento: string }[]>([]);
   const [coletaResiduos, setColetaResiduos] = useState<ColetaResiduo[]>([]);
   const [loading, setLoading] = useState(false);
   const [showResiduoForm, setShowResiduoForm] = useState(false);
@@ -287,41 +284,30 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         }
       }
 
-      // Processar eventos
-      if (eventosResult.error) {
-        console.error('[ColetaForm] Error loading eventos:', eventosResult.error);
-        toast({
-          title: "Erro",
-          description: "Erro ao carregar eventos: " + eventosResult.error.message,
-          variant: "destructive"
-        });
-        setEventos([]);
-      } else {
-        let eventosData = eventosResult.data || [];
-        console.log('[ColetaForm] Eventos vigentes loaded:', eventosData.length);
+      // Processar eventos - usar eventos visíveis do hook
+      let eventosData = eventosVisiveis.map(e => ({ id_evento: e.id_evento, nom_evento: e.nom_evento }));
+      
+      // Se estiver editando e tiver um id_evento, verificar se esse evento está na lista
+      if (editingColeta?.id_evento) {
+        const eventoExists = eventosData.some((e: any) => e.id_evento === editingColeta.id_evento);
         
-        // Se estiver editando e tiver um id_evento, verificar se esse evento está na lista
-        if (editingColeta?.id_evento) {
-          const eventoExists = eventosData.some((e: any) => e.id_evento === editingColeta.id_evento);
+        // Se o evento não está na lista (é um evento passado), buscar esse evento específico
+        if (!eventoExists) {
+          console.log('[ColetaForm] Evento associado não está na lista vigente, buscando evento passado:', editingColeta.id_evento);
+          const { data: eventoPassado } = await supabase
+            .from('evento')
+            .select('id_evento, nom_evento')
+            .eq('id_evento', editingColeta.id_evento)
+            .single();
           
-          // Se o evento não está na lista (é um evento passado), buscar esse evento específico
-          if (!eventoExists) {
-            console.log('[ColetaForm] Evento associado não está na lista vigente, buscando evento passado:', editingColeta.id_evento);
-            const { data: eventoPassado } = await supabase
-              .from('evento')
-              .select('id_evento, nom_evento, dat_inicio, dat_termino')
-              .eq('id_evento', editingColeta.id_evento)
-              .single();
-            
-            if (eventoPassado) {
-              console.log('[ColetaForm] Evento passado adicionado à lista:', eventoPassado.nom_evento);
-              eventosData = [...eventosData, eventoPassado];
-            }
+          if (eventoPassado) {
+            console.log('[ColetaForm] Evento passado adicionado à lista:', eventoPassado.nom_evento);
+            eventosData = [...eventosData, eventoPassado];
           }
         }
-        
-        setEventos(eventosData);
       }
+      
+      setEventos(eventosData);
 
       console.log('[ColetaForm] All form data loaded successfully');
     } catch (error) {

@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import type { DashboardFilters } from "@/hooks/useDashboardData";
 import { FinancialPrivacyToggle } from "@/components/FinancialPrivacyToggle";
+import { useEventosVisiveis } from "@/hooks/useEventosVisiveis";
 
 interface Entidade {
   id_entidade: number;
@@ -21,12 +22,6 @@ interface Entidade {
 interface TipoEntidade {
   id_tipo_entidade: number;
   des_tipo_entidade: string;
-}
-
-interface Evento {
-  id_evento: number;
-  nom_evento: string;
-  des_logo_url: string | null;
 }
 
 interface DashboardFiltersProps {
@@ -39,7 +34,7 @@ export function DashboardFiltersComponent({ filters, onFiltersChange, onEventLog
   const [isExpanded, setIsExpanded] = useState(false);
   const [entidades, setEntidades] = useState<Entidade[]>([]);
   const [tiposEntidade, setTiposEntidade] = useState<TipoEntidade[]>([]);
-  const [eventos, setEventos] = useState<Evento[]>([]);
+  const { eventos } = useEventosVisiveis();
   const [dataInicial, setDataInicial] = useState<Date | undefined>(() => {
     if (filters.dataInicial) {
       const [year, month, day] = filters.dataInicial.split('-').map(Number);
@@ -61,18 +56,15 @@ export function DashboardFiltersComponent({ filters, onFiltersChange, onEventLog
   useEffect(() => {
     fetchEntidades();
     fetchTiposEntidade();
-    fetchEventos();
   }, []);
 
   // Sync local date states with filters from parent component
   useEffect(() => {
     if (filters.dataInicial) {
-      // Parse date string as local date to avoid timezone issues
       const [year, month, day] = filters.dataInicial.split('-').map(Number);
       setDataInicial(new Date(year, month - 1, day));
     }
     if (filters.dataFinal) {
-      // Parse date string as local date to avoid timezone issues
       const [year, month, day] = filters.dataFinal.split('-').map(Number);
       setDataFinal(new Date(year, month - 1, day));
     }
@@ -108,21 +100,6 @@ export function DashboardFiltersComponent({ filters, onFiltersChange, onEventLog
     }
   };
 
-  const fetchEventos = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("evento")
-        .select("id_evento, nom_evento, des_logo_url")
-        .eq("des_status", "A")
-        .order("nom_evento");
-
-      if (error) throw error;
-      setEventos(data || []);
-    } catch (error) {
-      console.error("Erro ao carregar eventos:", error);
-    }
-  };
-
   // Update event logo when filter changes
   useEffect(() => {
     if (onEventLogoChange) {
@@ -141,6 +118,8 @@ export function DashboardFiltersComponent({ filters, onFiltersChange, onEventLog
       return `${yyyy}-${mm}-${dd}`;
     })(),
   });
+
+
 
   const validateDates = (inicial: Date | undefined, final: Date | undefined): boolean => {
     if (inicial && final && final < inicial) {
