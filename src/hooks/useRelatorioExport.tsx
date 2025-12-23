@@ -548,18 +548,16 @@ export function useRelatorioExport() {
 
       const residuosData = (residuos || []).map((r: any) => [
         r.nom_residuo,
-        `${r.qtd_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} kg`,
-        `R$ ${r.vlr_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+        `${r.qtd_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} kg`
       ]);
 
       residuosData.push([
         'TOTAL',
-        `${certificado.qtd_total_certificado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} kg`,
-        `R$ ${certificado.vlr_total_certificado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+        `${certificado.qtd_total_certificado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} kg`
       ]);
 
       autoTable(doc, {
-        head: [['Tipo de Resíduo', 'Quantidade', 'Valor']],
+        head: [['Tipo de Resíduo', 'Quantidade']],
         body: residuosData,
         startY: yPosition,
         theme: 'striped',
