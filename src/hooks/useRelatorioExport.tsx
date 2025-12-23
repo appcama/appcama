@@ -586,7 +586,7 @@ export function useRelatorioExport() {
         yPosition = contentTop;
       }
 
-      // Coletas incluídas
+      // Coletas incluídas (limitado a 2 linhas)
       if (certificado.coletas && certificado.coletas.length > 0) {
         if (yPosition > safeContentBottom) {
           doc.addPage();
@@ -602,9 +602,36 @@ export function useRelatorioExport() {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
         const coletasCodes = certificado.coletas.map((c: any) => c.cod_coleta).join(', ');
-        const splitText = doc.splitTextToSize(coletasCodes, pageWidth - (leftMargin * 2));
-        doc.text(splitText, leftMargin, yPosition);
-        yPosition += splitText.length * 5 + 10;
+        const maxWidth = pageWidth - (leftMargin * 2);
+        const splitText = doc.splitTextToSize(coletasCodes, maxWidth);
+        
+        // Limitar a 2 linhas
+        const maxLines = 2;
+        if (splitText.length > maxLines) {
+          // Mostrar apenas as 2 primeiras linhas
+          const truncatedText = splitText.slice(0, maxLines);
+          doc.text(truncatedText, leftMargin, yPosition);
+          yPosition += maxLines * 5;
+          
+          // Calcular quantas coletas restaram
+          const textoExibido = truncatedText.join(' ');
+          const coletasExibidas = textoExibido.split(',').filter((c: string) => c.trim()).length;
+          const coletasRestantes = certificado.coletas.length - coletasExibidas;
+          
+          // Adicionar mensagem de aviso
+          doc.setFont('helvetica', 'italic');
+          doc.setFontSize(9);
+          doc.setTextColor(100, 100, 100);
+          const avisoText = `... e mais ${coletasRestantes} coleta${coletasRestantes > 1 ? 's' : ''}. Para lista completa, acesse o link de validação pública ou solicite um relatório de coletas.`;
+          const avisoSplit = doc.splitTextToSize(avisoText, maxWidth);
+          doc.text(avisoSplit, leftMargin, yPosition);
+          doc.setTextColor(0, 0, 0);
+          yPosition += avisoSplit.length * 4 + 10;
+        } else {
+          // Cabe em 2 linhas, mostrar normalmente
+          doc.text(splitText, leftMargin, yPosition);
+          yPosition += splitText.length * 5 + 10;
+        }
       }
 
       // Observações (somente se existir conteúdo)
