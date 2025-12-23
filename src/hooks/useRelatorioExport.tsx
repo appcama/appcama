@@ -515,15 +515,25 @@ export function useRelatorioExport() {
       // Atualizar yPosition abaixo do bloco mais alto
       yPosition = Math.max(yLeft, yRight) + 6;
 
-      // Buscar resíduos do certificado com tipo
+      // Buscar resíduos do certificado
       const { data: residuos } = await supabase
         .from('certificado_residuo')
-        .select('id_tipo_residuo, qtd_total, tipo_residuo:id_tipo_residuo(des_tipo_residuo)')
+        .select('id_tipo_residuo, qtd_total')
         .eq('id_certificado', certificado.id_certificado);
+
+      // Buscar tipos de resíduos para fazer o join manual
+      const { data: tiposResiduos } = await supabase
+        .from('tipo_residuo')
+        .select('id_tipo_residuo, des_tipo_residuo');
+
+      // Criar mapa de tipos para lookup rápido
+      const tiposMap = new Map(
+        (tiposResiduos || []).map((t: any) => [t.id_tipo_residuo, t.des_tipo_residuo])
+      );
 
       // Agrupar resíduos por tipo
       const residuosAgrupados = (residuos || []).reduce((acc: Record<string, { nome: string; qtd_total: number }>, r: any) => {
-        const tipoNome = r.tipo_residuo?.des_tipo_residuo || 'Outros';
+        const tipoNome = tiposMap.get(r.id_tipo_residuo) || 'Outros';
         if (!acc[tipoNome]) {
           acc[tipoNome] = { nome: tipoNome, qtd_total: 0 };
         }
