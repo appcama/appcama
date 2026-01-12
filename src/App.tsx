@@ -27,14 +27,14 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <PermissionsProvider>
-          <BrowserRouter
-            future={{
-              v7_startTransition: true,
-              v7_relativeSplatPath: true,
-            }}
-          >
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
+        <AuthProvider>
+          <PermissionsProvider>
             <Toaster />
             <Sonner />
             <div className="relative">
@@ -54,9 +54,9 @@ const App = () => {
               <Route path="*" element={<NotFound />} />
               </Routes>
             </div>
-          </BrowserRouter>
-        </PermissionsProvider>
-      </AuthProvider>
+          </PermissionsProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </QueryClientProvider>
   );
 };
