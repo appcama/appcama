@@ -44,7 +44,7 @@ interface ColetaFormProps {
 
 export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps) {
   const { user } = useAuth();
-  const { eventos: eventosVisiveis } = useEventosVisiveis();
+  const { eventos: eventosVisiveis, loading: eventosLoading } = useEventosVisiveis();
   const [pontosColeta, setPontosColeta] = useState<PontoColeta[]>([]);
   const [entidades, setEntidades] = useState<Entidade[]>([]);
   const [eventos, setEventos] = useState<{ id_evento: number; nom_evento: string }[]>([]);
@@ -140,9 +140,14 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
   };
 
   useEffect(() => {
-    console.log('[ColetaForm] useEffect triggered with editingColeta:', editingColeta);
+    // Aguarda os eventos visíveis serem carregados antes de inicializar o formulário
+    if (eventosLoading) {
+      console.log('[ColetaForm] Aguardando carregamento dos eventos visíveis...');
+      return;
+    }
+    console.log('[ColetaForm] useEffect triggered, eventos carregados:', eventosVisiveis.length);
     initializeForm();
-  }, [editingColeta]);
+  }, [editingColeta, eventosVisiveis, eventosLoading]);
 
   const initializeForm = async () => {
     try {
