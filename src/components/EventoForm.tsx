@@ -423,6 +423,11 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
   });
 
   const onSubmit = (data: EventoFormData) => {
+    // Força visibilidade privada para não-admins
+    if (!isAdmin && data.des_visibilidade === 'P') {
+      data.des_visibilidade = 'R';
+    }
+    
     if (isEditing) {
       updateMutation.mutate(data);
     } else {
@@ -648,8 +653,14 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
                     <Switch
                       checked={field.value === 'P'}
                       onCheckedChange={(checked) => field.onChange(checked ? 'P' : 'R')}
+                      disabled={!isAdmin}
                     />
                   </div>
+                  {!isAdmin && (
+                    <p className="text-xs text-muted-foreground">
+                      Apenas administradores podem criar eventos públicos.
+                    </p>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
