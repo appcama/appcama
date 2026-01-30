@@ -34,7 +34,7 @@ export function DashboardFiltersComponent({ filters, onFiltersChange, onEventLog
   const [isExpanded, setIsExpanded] = useState(false);
   const [entidades, setEntidades] = useState<Entidade[]>([]);
   const [tiposEntidade, setTiposEntidade] = useState<TipoEntidade[]>([]);
-  const { eventos } = useEventosVisiveis();
+  const { eventos } = useEventosVisiveis({ includeExpired: true });
   const [dataInicial, setDataInicial] = useState<Date | undefined>(() => {
     if (filters.dataInicial) {
       const [year, month, day] = filters.dataInicial.split('-').map(Number);
