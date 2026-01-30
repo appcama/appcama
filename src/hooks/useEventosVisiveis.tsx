@@ -8,11 +8,16 @@ interface Evento {
   des_logo_url: string | null;
 }
 
+interface UseEventosVisiveisOptions {
+  includeExpired?: boolean; // Se true, inclui eventos com data de término passada
+}
+
 /**
  * Hook para buscar eventos visíveis para o usuário logado
  * Considera as regras de visibilidade (público/privado)
  */
-export function useEventosVisiveis() {
+export function useEventosVisiveis(options: UseEventosVisiveisOptions = {}) {
+  const { includeExpired = false } = options;
   const { user } = useAuth();
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,8 +35,8 @@ export function useEventosVisiveis() {
       try {
         const today = new Date().toISOString().split('T')[0];
 
-        // Fetch all active events with creator info
-        const { data: allEventos, error } = await supabase
+        // Base query - fetch all active events with creator info
+        let query = supabase
           .from('evento')
           .select(`
             id_evento, 
@@ -41,8 +46,14 @@ export function useEventosVisiveis() {
             usuario_criador:usuario!id_usuario_criador(id_entidade)
           `)
           .eq('des_status', 'A')
-          .gte('dat_termino', today)
           .order('nom_evento');
+
+        // Só filtra por data de término se não quiser incluir expirados
+        if (!includeExpired) {
+          query = query.gte('dat_termino', today);
+        }
+
+        const { data: allEventos, error } = await query;
 
         if (error) throw error;
 
@@ -87,7 +98,7 @@ export function useEventosVisiveis() {
     };
 
     fetchEventos();
-  }, [user, isAdmin]);
+  }, [user, isAdmin, includeExpired]);
 
   return { eventos, loading, isAdmin };
 }

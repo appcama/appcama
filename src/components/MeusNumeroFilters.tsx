@@ -23,7 +23,7 @@ interface MeusNumeroFiltersProps {
 
 export function MeusNumeroFilters({ filters, onFiltersChange, onEventLogoChange }: MeusNumeroFiltersProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const { eventos } = useEventosVisiveis();
+  const { eventos } = useEventosVisiveis({ includeExpired: true });
   const [tempFilters, setTempFilters] = useState<MyDashboardFilters>(filters);
 
   useEffect(() => {
