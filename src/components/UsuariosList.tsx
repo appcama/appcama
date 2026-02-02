@@ -159,24 +159,47 @@ export function UsuariosList({ onAddNew, onEdit, perfilFilter }: UsuariosListPro
   }, [searchTerm, perfilFilter]);
 
   const resetPasswordMutation = useMutation({
-    mutationFn: async (userId: number) => {
+    mutationFn: async (usuario: Usuario) => {
+      // 1. Resetar senha no banco
       const { error } = await supabase.rpc('reset_user_password', {
-        user_id_param: userId
+        user_id_param: usuario.id_usuario
       });
 
       if (error) throw error;
+
+      // 2. Enviar email de validação com novo token
+      const { data, error: emailError } = await supabase.functions.invoke('send-validation-email', {
+        body: {
+          userId: usuario.id_usuario,
+          email: usuario.des_email,
+          userName: usuario.des_email?.split('@')[0] || 'Usuário'
+        }
+      });
+
+      if (emailError) {
+        console.error('Erro ao enviar email:', emailError);
+        throw new Error(`Senha resetada, mas erro ao enviar email: ${emailError.message}`);
+      }
+
+      if (data && !data.success) {
+        console.error('Edge function retornou erro:', data);
+        throw new Error(`Senha resetada, mas erro ao enviar email: ${data.error}`);
+      }
+
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
       toast({
         title: "Sucesso",
-        description: "Senha do usuário foi resetada para '123456789'",
+        description: `Senha resetada e email de validação enviado para ${data?.sentTo || 'o usuário'}`,
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
       toast({
-        title: "Erro",
-        description: "Erro ao resetar senha do usuário",
+        title: "Atenção",
+        description: error.message || "Erro ao resetar senha do usuário",
         variant: "destructive",
       });
       console.error('Erro ao resetar senha:', error);
@@ -197,8 +220,8 @@ export function UsuariosList({ onAddNew, onEdit, perfilFilter }: UsuariosListPro
     toggleStatusMutation.mutate({ id: usuario.id_usuario, newStatus });
   };
 
-  const handleResetPassword = (userId: number) => {
-    resetPasswordMutation.mutate(userId);
+  const handleResetPassword = (usuario: Usuario) => {
+    resetPasswordMutation.mutate(usuario);
   };
 
   if (isLoading) {
@@ -326,12 +349,12 @@ export function UsuariosList({ onAddNew, onEdit, perfilFilter }: UsuariosListPro
                               <AlertDialogTitle>Resetar Senha</AlertDialogTitle>
                               <AlertDialogDescription>
                                 Tem certeza que deseja resetar a senha deste usuário? 
-                                A nova senha será "123456789" e o usuário precisará validá-la no próximo login.
+                                A nova senha será "123456789" e um email de validação será enviado.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleResetPassword(usuario.id_usuario)}>
+                              <AlertDialogAction onClick={() => handleResetPassword(usuario)}>
                                 Resetar
                               </AlertDialogAction>
                             </AlertDialogFooter>
