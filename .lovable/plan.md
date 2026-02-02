@@ -1,130 +1,124 @@
 
-## Plano: Corrigir Filtro de Eventos no Dashboard
+## Plano: Enviar Email de Validação ao Resetar Senha
 
 ### Problema Identificado
 
-O hook `useEventosVisiveis` filtra eventos pela data de término (`dat_termino >= hoje`), mostrando apenas eventos **vigentes**. 
+Ao clicar em "Resetar Senha" no `UsuariosList.tsx`:
+1. A função `reset_user_password` no banco apenas atualiza a senha para '123456789' e marca como não validada
+2. **Nenhum email ou token é gerado/enviado**
+3. O usuário não tem como saber seu código de validação
 
-No banco de dados, todos os eventos ativos têm data de término anterior a 30/01/2026:
-- Carnaval de Juazeiro: término 01/01/2026
-- Festival Verão 26: término 26/01/2026
-- Festival da virada 2026: término 17/01/2026
+### Fluxo Atual vs Esperado
 
-Por isso, **nenhum evento aparece** no filtro do Dashboard.
-
-### Diferença de Comportamento Esperado
-
-| Tela | Comportamento Esperado |
-|------|------------------------|
-| Formulário de Coleta | Apenas eventos vigentes (data término >= hoje) |
-| Dashboard (filtros) | **Todos os eventos ativos** (inclui passados para histórico) |
-| Meus Números (filtros) | **Todos os eventos ativos** (inclui passados para histórico) |
+| Etapa | Atual | Esperado |
+|-------|-------|----------|
+| 1. Clica em Resetar | Apenas atualiza banco | Atualiza banco |
+| 2. Token | Não gera | Gera novo token |
+| 3. Email | Não envia | Envia email com token |
+| 4. Feedback | "Senha resetada para 123456789" | Mostra sucesso ou erro do email |
 
 ### Solução
 
-Adicionar parâmetro `includeExpired` ao hook `useEventosVisiveis` para permitir incluir eventos passados.
+Modificar a função `resetPasswordMutation` no `UsuariosList.tsx` para:
+1. Primeiro chamar a RPC `reset_user_password` (já existente)
+2. Depois chamar a edge function `send-validation-email` para enviar o email
 
-### Arquivos a Modificar
+### Arquivo a Modificar
 
-#### 1. `src/hooks/useEventosVisiveis.tsx`
+#### `src/components/UsuariosList.tsx`
 
-**Adicionar parâmetro opcional:**
+**1. Modificar `resetPasswordMutation` (linhas 161-184):**
+
 ```typescript
-interface UseEventosVisiveisOptions {
-  includeExpired?: boolean; // Se true, inclui eventos com data de término passada
-}
+const resetPasswordMutation = useMutation({
+  mutationFn: async (usuario: Usuario) => {
+    // 1. Resetar senha no banco
+    const { error } = await supabase.rpc('reset_user_password', {
+      user_id_param: usuario.id_usuario
+    });
 
-export function useEventosVisiveis(options: UseEventosVisiveisOptions = {}) {
-  const { includeExpired = false } = options;
+    if (error) throw error;
+
+    // 2. Enviar email de validação com novo token
+    const { data, error: emailError } = await supabase.functions.invoke('send-validation-email', {
+      body: {
+        userId: usuario.id_usuario,
+        email: usuario.des_email,
+        userName: usuario.des_email.split('@')[0]
+      }
+    });
+
+    if (emailError) {
+      console.error('Erro ao enviar email:', emailError);
+      throw new Error(`Senha resetada, mas erro ao enviar email: ${emailError.message}`);
+    }
+
+    if (data && !data.success) {
+      console.error('Edge function retornou erro:', data);
+      throw new Error(`Senha resetada, mas erro ao enviar email: ${data.error}`);
+    }
+
+    return data;
+  },
+  onSuccess: (data) => {
+    queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+    toast({
+      title: "Sucesso",
+      description: `Senha resetada e email de validação enviado para ${data?.sentTo || 'o usuário'}`,
+    });
+  },
+  onError: (error: any) => {
+    queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+    toast({
+      title: "Atenção",
+      description: error.message || "Erro ao resetar senha do usuário",
+      variant: "destructive",
+    });
+    console.error('Erro ao resetar senha:', error);
+  },
+});
 ```
 
-**Condicionar o filtro por data (linha 44):**
+**2. Modificar `handleResetPassword` (linha 200-202):**
+
 ```typescript
-// Apenas filtrar por data se não quiser incluir expirados
-if (!includeExpired) {
-  query = query.gte('dat_termino', today);
-}
+const handleResetPassword = (usuario: Usuario) => {
+  resetPasswordMutation.mutate(usuario);
+};
 ```
 
-#### 2. `src/components/DashboardFilters.tsx` (linha 37)
+**3. Atualizar chamada no AlertDialog (linha ~280):**
 
-**Passar parâmetro para incluir todos eventos:**
 ```typescript
-const { eventos } = useEventosVisiveis({ includeExpired: true });
+<AlertDialogAction onClick={() => handleResetPassword(usuario)}>
+  Resetar
+</AlertDialogAction>
 ```
 
-#### 3. `src/components/MeusNumeroFilters.tsx` (linha 26)
+**4. Atualizar mensagem do AlertDialog (linha ~272):**
 
-**Passar parâmetro para incluir todos eventos:**
 ```typescript
-const { eventos } = useEventosVisiveis({ includeExpired: true });
-```
-
-#### 4. `src/components/ColetaForm.tsx` (linha 47)
-
-**Manter comportamento atual (sem parâmetro = apenas vigentes):**
-```typescript
-const { eventos: eventosVisiveis, loading: eventosLoading } = useEventosVisiveis();
-// Sem parâmetro, mantém o padrão: apenas eventos vigentes
+<AlertDialogDescription>
+  Tem certeza que deseja resetar a senha deste usuário? 
+  A nova senha será "123456789" e um email de validação será enviado.
+</AlertDialogDescription>
 ```
 
 ### Resultado Esperado
 
-| Local | Antes | Depois |
-|-------|-------|--------|
-| Dashboard | 0 eventos | Todos eventos ativos visíveis |
-| Meus Números | 0 eventos | Todos eventos ativos visíveis |
-| Formulário Coleta | 0 eventos vigentes | 0 eventos vigentes (correto) |
+| Etapa | Comportamento |
+|-------|---------------|
+| Clique em Resetar | Abre diálogo de confirmação |
+| Confirmar | Reseta senha + Gera token + Envia email |
+| Sucesso | Toast: "Senha resetada e email enviado para X" |
+| Erro no email | Toast: "Senha resetada, mas erro ao enviar email: [motivo]" |
 
-### Código Final do Hook
+### Dependências
+- Edge function `send-validation-email` já existe e funciona
+- Função RPC `reset_user_password` já existe
+- Função RPC `generate_user_token` já existe (usada pela edge function)
 
-```typescript
-interface UseEventosVisiveisOptions {
-  includeExpired?: boolean;
-}
-
-export function useEventosVisiveis(options: UseEventosVisiveisOptions = {}) {
-  const { includeExpired = false } = options;
-  const { user } = useAuth();
-  const [eventos, setEventos] = useState<Evento[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const isAdmin = user?.isAdmin || user?.entityId === 1;
-
-  useEffect(() => {
-    const fetchEventos = async () => {
-      if (!user) {
-        setEventos([]);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const today = new Date().toISOString().split('T')[0];
-
-        // Base query
-        let query = supabase
-          .from('evento')
-          .select(`
-            id_evento, 
-            nom_evento, 
-            des_logo_url, 
-            des_visibilidade,
-            usuario_criador:usuario!id_usuario_criador(id_entidade)
-          `)
-          .eq('des_status', 'A')
-          .order('nom_evento');
-
-        // Só filtra por data de término se não quiser incluir expirados
-        if (!includeExpired) {
-          query = query.gte('dat_termino', today);
-        }
-
-        const { data: allEventos, error } = await query;
-        // ... resto do código continua igual
-      }
-    };
-    // ...
-  }, [user, isAdmin, includeExpired]);
-}
-```
+### Considerações
+- Se o email falhar, a senha ainda foi resetada - o usuário pode usar 123456789
+- O token será exibido na tela de confirmação para casos de teste (igual ao criar usuário)
+- Mantém compatibilidade com o fluxo atual
