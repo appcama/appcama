@@ -55,12 +55,12 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
     queryFn: async () => {
       const { data, error } = await supabase
         .from('entidade')
-        .select('id_entidade, nom_entidade')
+        .select('id_entidade, nom_entidade, num_cpf_cnpj')
         .eq('des_status', 'A')
         .order('nom_entidade');
 
       if (error) throw error;
-      return data as Entidade[];
+      return data as (Entidade & { num_cpf_cnpj?: string })[];
     },
   });
 
@@ -98,15 +98,16 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
     }
   }, [editingUsuario]);
 
-  const sendValidationEmail = async (userId: number, userEmail: string) => {
+  const sendValidationEmail = async (userId: number, userEmail: string, cpfCnpj?: string) => {
     try {
-      console.log('Sending validation email for user:', { userId, userEmail });
+      console.log('Sending validation email for user:', { userId, userEmail, cpfCnpj });
       
       const { data, error } = await supabase.functions.invoke('send-validation-email', {
         body: {
           userId: userId,
           email: userEmail,
-          userName: userEmail.split('@')[0]
+          userName: userEmail.split('@')[0],
+          cpfCnpj: cpfCnpj || ''
         }
       });
 
@@ -209,7 +210,15 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
           .single();
 
         if (error) throw error;
-        return { isNew: true, userId: data.id_usuario, emailToSend: normalizedEmail };
+        
+        // Buscar o CPF/CNPJ da entidade selecionada
+        const selectedEntidade = entidades?.find(e => e.id_entidade === idEntidade);
+        return { 
+          isNew: true, 
+          userId: data.id_usuario, 
+          emailToSend: normalizedEmail,
+          cpfCnpj: selectedEntidade?.num_cpf_cnpj || ''
+        };
       }
     },
     onSuccess: async (result) => {
@@ -217,7 +226,7 @@ export function UsuarioForm({ onBack, onSuccess, editingUsuario }: UsuarioFormPr
       
       if (result.isNew) {
         try {
-          const emailResult = await sendValidationEmail(result.userId, result.emailToSend || email.trim().toLowerCase());
+          const emailResult = await sendValidationEmail(result.userId, result.emailToSend || email.trim().toLowerCase(), result.cpfCnpj);
           setEmailResponse(emailResult);
           setEmailSent(true);
           
