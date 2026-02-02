@@ -1,124 +1,115 @@
 
-## Plano: Enviar Email de Validação ao Resetar Senha
+## Plano: Atualizar Template do Email de Validação
 
-### Problema Identificado
+### Alterações Solicitadas
 
-Ao clicar em "Resetar Senha" no `UsuariosList.tsx`:
-1. A função `reset_user_password` no banco apenas atualiza a senha para '123456789' e marca como não validada
-2. **Nenhum email ou token é gerado/enviado**
-3. O usuário não tem como saber seu código de validação
+| Item | Atual | Novo |
+|------|-------|------|
+| Nome do sistema | ReciclaSystem | ReCiclaÊ |
+| Subtítulo | Sistema de Gestão de Reciclagem | Sistema de Gestão de Reciclagem |
+| Logo | Não tem | Adicionar logo ReCiclaÊ |
+| Login | "Faça login com o email: X" | "Faça login com o CPF/CNPJ: X" |
 
-### Fluxo Atual vs Esperado
+### Arquivos a Modificar
 
-| Etapa | Atual | Esperado |
-|-------|-------|----------|
-| 1. Clica em Resetar | Apenas atualiza banco | Atualiza banco |
-| 2. Token | Não gera | Gera novo token |
-| 3. Email | Não envia | Envia email com token |
-| 4. Feedback | "Senha resetada para 123456789" | Mostra sucesso ou erro do email |
+#### 1. Edge Function: `supabase/functions/send-validation-email/index.ts`
 
-### Solução
-
-Modificar a função `resetPasswordMutation` no `UsuariosList.tsx` para:
-1. Primeiro chamar a RPC `reset_user_password` (já existente)
-2. Depois chamar a edge function `send-validation-email` para enviar o email
-
-### Arquivo a Modificar
-
-#### `src/components/UsuariosList.tsx`
-
-**1. Modificar `resetPasswordMutation` (linhas 161-184):**
-
+**Mudanças na interface (linha 12-16):**
 ```typescript
-const resetPasswordMutation = useMutation({
-  mutationFn: async (usuario: Usuario) => {
-    // 1. Resetar senha no banco
-    const { error } = await supabase.rpc('reset_user_password', {
-      user_id_param: usuario.id_usuario
-    });
+interface ValidationEmailRequest {
+  userId: number;
+  email: string;
+  userName: string;
+  cpfCnpj?: string; // Novo campo para CPF/CNPJ
+}
+```
 
-    if (error) throw error;
+**Mudanças no template do email (linhas 117-164):**
 
-    // 2. Enviar email de validação com novo token
-    const { data, error: emailError } = await supabase.functions.invoke('send-validation-email', {
-      body: {
-        userId: usuario.id_usuario,
-        email: usuario.des_email,
-        userName: usuario.des_email.split('@')[0]
-      }
-    });
+1. **Remetente (linha 118):**
+   - De: `"ReciclaSystem <noreply@rcyclae.com.br>"`
+   - Para: `"ReCiclaÊ <noreply@rcyclae.com.br>"`
 
-    if (emailError) {
-      console.error('Erro ao enviar email:', emailError);
-      throw new Error(`Senha resetada, mas erro ao enviar email: ${emailError.message}`);
-    }
+2. **Assunto (linha 120):**
+   - De: `Validação de Conta - ReciclaSystem`
+   - Para: `Validação de Conta - ReCiclaÊ`
 
-    if (data && !data.success) {
-      console.error('Edge function retornou erro:', data);
-      throw new Error(`Senha resetada, mas erro ao enviar email: ${data.error}`);
-    }
+3. **Header com logo (linhas 122-126):**
+   ```html
+   <div style="text-align: center; margin-bottom: 30px;">
+     <img src="https://appcama.lovable.app/reciclae-logo.png" 
+          alt="ReCiclaÊ" 
+          style="max-width: 180px; height: auto; margin-bottom: 10px;" />
+     <h1 style="color: #059669; margin: 0;">ReCiclaÊ</h1>
+     <p style="color: #6b7280; margin: 5px 0;">Sistema de Gestão de Reciclagem</p>
+   </div>
+   ```
 
-    return data;
-  },
-  onSuccess: (data) => {
-    queryClient.invalidateQueries({ queryKey: ['usuarios'] });
-    toast({
-      title: "Sucesso",
-      description: `Senha resetada e email de validação enviado para ${data?.sentTo || 'o usuário'}`,
-    });
-  },
-  onError: (error: any) => {
-    queryClient.invalidateQueries({ queryKey: ['usuarios'] });
-    toast({
-      title: "Atenção",
-      description: error.message || "Erro ao resetar senha do usuário",
-      variant: "destructive",
-    });
-    console.error('Erro ao resetar senha:', error);
-  },
+4. **Instruções de login (linha 144-145):**
+   - De: `Faça login com o email: <strong>${email}</strong>`
+   - Para: `Faça login com o CPF/CNPJ: <strong>${cpfCnpj || 'não informado'}</strong>`
+
+5. **Nome do sistema nas instruções (linha 143):**
+   - De: `Acesse o sistema ReciclaSystem`
+   - Para: `Acesse o sistema ReCiclaÊ`
+
+#### 2. Frontend: `src/components/UsuariosList.tsx`
+
+**Adicionar CPF/CNPJ na chamada da edge function (linhas 171-177):**
+```typescript
+const { data, error: emailError } = await supabase.functions.invoke('send-validation-email', {
+  body: {
+    userId: usuario.id_usuario,
+    email: usuario.des_email,
+    userName: usuario.des_email?.split('@')[0] || 'Usuário',
+    cpfCnpj: usuario.entidade?.num_cpf_cnpj || '' // Novo campo
+  }
 });
 ```
 
-**2. Modificar `handleResetPassword` (linha 200-202):**
+#### 3. Frontend: `src/components/UsuarioForm.tsx`
 
-```typescript
-const handleResetPassword = (usuario: Usuario) => {
-  resetPasswordMutation.mutate(usuario);
-};
+**Buscar CPF/CNPJ da entidade selecionada ao criar usuário (linha 105-111):**
+
+Precisa buscar o CPF/CNPJ da entidade para enviar junto com o email de validação ao criar um novo usuário.
+
+### Verificação da Logo
+
+A logo `reciclae-logo.png` já existe em `public/reciclae-logo.png` e estará disponível na URL publicada.
+
+### Resultado Final do Email
+
+```text
+┌─────────────────────────────────────────────┐
+│          [LOGO ReCiclaÊ]                    │
+│                                             │
+│            ReCiclaÊ                         │
+│    Sistema de Gestão de Reciclagem          │
+├─────────────────────────────────────────────┤
+│                                             │
+│  Bem-vindo, [nome]!                         │
+│                                             │
+│  Sua conta foi criada com sucesso...        │
+│                                             │
+│  ┌────────────────────────────┐            │
+│  │   Código de Validação:     │            │
+│  │        161861              │            │
+│  └────────────────────────────┘            │
+│                                             │
+│  Instruções:                                │
+│  1. Acesse o sistema ReCiclaÊ              │
+│  2. Faça login com o CPF/CNPJ: 123.456.789-00 │
+│     e a senha temporária: 123456789         │
+│  3. Digite o código de validação acima      │
+│  4. Defina sua nova senha                   │
+│                                             │
+└─────────────────────────────────────────────┘
 ```
 
-**3. Atualizar chamada no AlertDialog (linha ~280):**
+### Resumo das Mudanças
 
-```typescript
-<AlertDialogAction onClick={() => handleResetPassword(usuario)}>
-  Resetar
-</AlertDialogAction>
-```
-
-**4. Atualizar mensagem do AlertDialog (linha ~272):**
-
-```typescript
-<AlertDialogDescription>
-  Tem certeza que deseja resetar a senha deste usuário? 
-  A nova senha será "123456789" e um email de validação será enviado.
-</AlertDialogDescription>
-```
-
-### Resultado Esperado
-
-| Etapa | Comportamento |
-|-------|---------------|
-| Clique em Resetar | Abre diálogo de confirmação |
-| Confirmar | Reseta senha + Gera token + Envia email |
-| Sucesso | Toast: "Senha resetada e email enviado para X" |
-| Erro no email | Toast: "Senha resetada, mas erro ao enviar email: [motivo]" |
-
-### Dependências
-- Edge function `send-validation-email` já existe e funciona
-- Função RPC `reset_user_password` já existe
-- Função RPC `generate_user_token` já existe (usada pela edge function)
-
-### Considerações
-- Se o email falhar, a senha ainda foi resetada - o usuário pode usar 123456789
-- O token será exibido na tela de confirmação para casos de teste (igual ao criar usuário)
-- Mantém compatibilidade com o fluxo atual
+| Arquivo | Alteração |
+|---------|-----------|
+| `send-validation-email/index.ts` | Atualizar nome, logo e trocar email por CPF/CNPJ |
+| `UsuariosList.tsx` | Passar CPF/CNPJ para a edge function |
+| `UsuarioForm.tsx` | Buscar e passar CPF/CNPJ ao criar usuário |
