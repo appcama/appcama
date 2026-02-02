@@ -13,6 +13,7 @@ interface ValidationEmailRequest {
   userId: number;
   email: string;
   userName: string;
+  cpfCnpj?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -68,7 +69,7 @@ const handler = async (req: Request): Promise<Response> => {
     const resend = new Resend(resendApiKey);
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { userId, email, userName }: ValidationEmailRequest = await req.json();
+    const { userId, email, userName, cpfCnpj }: ValidationEmailRequest = await req.json();
     
     console.log("Processing request for:", { userId, email, userName });
 
@@ -115,13 +116,14 @@ const handler = async (req: Request): Promise<Response> => {
     
     try {
       const emailResponse = await resend.emails.send({
-        from: "ReciclaSystem <noreply@rcyclae.com.br>",
+        from: "ReCiclaÊ <noreply@rcyclae.com.br>",
         to: [email],
-        subject: `Validação de Conta - ReciclaSystem`,
+        subject: `Validação de Conta - ReCiclaÊ`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
             <div style="text-align: center; margin-bottom: 30px;">
-              <h1 style="color: #059669; margin: 0;">ReciclaSystem</h1>
+              <img src="https://appcama.lovable.app/reciclae-logo.png" alt="ReCiclaÊ" style="max-width: 180px; height: auto; margin-bottom: 10px;" />
+              <h1 style="color: #059669; margin: 0;">ReCiclaÊ</h1>
               <p style="color: #6b7280; margin: 5px 0;">Sistema de Gestão de Reciclagem</p>
             </div>
             
@@ -141,8 +143,8 @@ const handler = async (req: Request): Promise<Response> => {
               
               <p style="color: #374151; line-height: 1.6; margin: 20px 0 0 0;">
                 <strong>Instruções:</strong><br>
-                1. Acesse o sistema ReciclaSystem<br>
-                2. Faça login com o email: <strong>${email}</strong> e a senha temporária: <code style="background-color: #f3f4f6; padding: 2px 4px; border-radius: 4px;">123456789</code><br>
+                1. Acesse o sistema ReCiclaÊ<br>
+                2. Faça login com o CPF/CNPJ: <strong>${cpfCnpj || 'não informado'}</strong> e a senha temporária: <code style="background-color: #f3f4f6; padding: 2px 4px; border-radius: 4px;">123456789</code><br>
                 3. Digite o código de validação acima<br>
                 4. Defina sua nova senha
               </p>

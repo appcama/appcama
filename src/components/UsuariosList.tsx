@@ -172,7 +172,8 @@ export function UsuariosList({ onAddNew, onEdit, perfilFilter }: UsuariosListPro
         body: {
           userId: usuario.id_usuario,
           email: usuario.des_email,
-          userName: usuario.des_email?.split('@')[0] || 'Usuário'
+          userName: usuario.des_email?.split('@')[0] || 'Usuário',
+          cpfCnpj: usuario.entidade?.num_cpf_cnpj || ''
         }
       });
 
