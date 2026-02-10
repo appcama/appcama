@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, Calendar as CalendarIcon, Globe, Lock, X, AlertTriangle, Users } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Globe, Lock, X, AlertTriangle, Users, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -53,6 +53,7 @@ interface Evento {
   des_logo_url?: string | null;
   des_visibilidade?: string;
   id_usuario_criador?: number;
+  des_ponto_coleta?: string;
 }
 
 interface Entidade {
@@ -63,6 +64,12 @@ interface Entidade {
 interface EventoEntidade {
   id_entidade: number;
   hasColetas: boolean;
+}
+
+interface PontoColeta {
+  id_ponto_coleta: number;
+  nom_ponto_coleta: string;
+  id_entidade_gestora: number;
 }
 
 interface EventoFormProps {
@@ -92,6 +99,12 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
   const [similarEvents, setSimilarEvents] = useState<string[]>([]);
   const [loadingEntidades, setLoadingEntidades] = useState(false);
 
+  // Pontos de Coleta states
+  const [pontosColetaEnabled, setPontosColetaEnabled] = useState(false);
+  const [pontosColeta, setPontosColeta] = useState<PontoColeta[]>([]);
+  const [selectedPontosColeta, setSelectedPontosColeta] = useState<number[]>([]);
+  const [loadingPontos, setLoadingPontos] = useState(false);
+
   const isAdmin = user?.isAdmin || user?.entityId === 1;
 
   const form = useForm<EventoFormData>({
@@ -101,7 +114,7 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
       des_evento: "",
       dat_inicio: "",
       dat_termino: "",
-      des_visibilidade: isAdmin ? "P" : "R", // Não-admin default = Privado
+      des_visibilidade: isAdmin ? "P" : "R",
     },
   });
 
@@ -129,6 +142,29 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
     };
 
     loadEntidades();
+  }, []);
+
+  // Load pontos de coleta
+  useEffect(() => {
+    const loadPontosColeta = async () => {
+      setLoadingPontos(true);
+      try {
+        const { data, error } = await supabase
+          .from('ponto_coleta')
+          .select('id_ponto_coleta, nom_ponto_coleta, id_entidade_gestora')
+          .eq('des_status', 'A')
+          .order('nom_ponto_coleta');
+
+        if (error) throw error;
+        setPontosColeta(data || []);
+      } catch (error) {
+        console.error('Erro ao carregar pontos de coleta:', error);
+      } finally {
+        setLoadingPontos(false);
+      }
+    };
+
+    loadPontosColeta();
   }, []);
 
   // Load existing access control when editing
@@ -168,6 +204,39 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
     };
 
     loadEventoEntidades();
+  }, [evento?.id_evento]);
+
+  // Load existing pontos de coleta when editing
+  useEffect(() => {
+    const loadEventoPontosColeta = async () => {
+      if (!evento?.id_evento) return;
+
+      try {
+        // Load des_ponto_coleta from evento
+        const { data: eventoData } = await supabase
+          .from('evento')
+          .select('des_ponto_coleta')
+          .eq('id_evento', evento.id_evento)
+          .maybeSingle();
+
+        if (eventoData?.des_ponto_coleta === 'A') {
+          setPontosColetaEnabled(true);
+
+          // Load associated pontos
+          const { data: eventoPontos, error } = await supabase
+            .from('evento_ponto_coleta')
+            .select('id_ponto_coleta')
+            .eq('id_evento', evento.id_evento);
+
+          if (error) throw error;
+          setSelectedPontosColeta((eventoPontos || []).map(p => p.id_ponto_coleta));
+        }
+      } catch (error) {
+        console.error('Erro ao carregar pontos de coleta do evento:', error);
+      }
+    };
+
+    loadEventoPontosColeta();
   }, [evento?.id_evento]);
 
   // Check for similar event names (debounced)
@@ -261,6 +330,50 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
     setSelectedEntidades(prev => prev.filter(e => e.id_entidade !== entidadeId));
   };
 
+  // Pontos de coleta handlers
+  const handleAddPontoColeta = (pontoId: string) => {
+    if (!pontoId) return;
+    const id = parseInt(pontoId);
+    if (selectedPontosColeta.includes(id)) return;
+    setSelectedPontosColeta(prev => [...prev, id]);
+  };
+
+  const handleRemovePontoColeta = (pontoId: number) => {
+    setSelectedPontosColeta(prev => prev.filter(id => id !== pontoId));
+  };
+
+  const handlePontosColetaToggle = (enabled: boolean) => {
+    setPontosColetaEnabled(enabled);
+    if (!enabled) {
+      setSelectedPontosColeta([]);
+    }
+  };
+
+  // Filter pontos de coleta based on visibility rules
+  const getAvailablePontosColeta = () => {
+    let filtered = pontosColeta;
+
+    // For private events, filter by creator entity or associated entities
+    if (visibilidade === 'R') {
+      const allowedEntidades = new Set<number>();
+      // Creator entity
+      if (user?.entityId) {
+        allowedEntidades.add(user.entityId);
+      }
+      // Associated entities from access control
+      selectedEntidades.forEach(e => allowedEntidades.add(e.id_entidade));
+
+      filtered = filtered.filter(p => allowedEntidades.has(p.id_entidade_gestora));
+    }
+
+    // Exclude already selected
+    return filtered.filter(p => !selectedPontosColeta.includes(p.id_ponto_coleta));
+  };
+
+  const getPontoColetaNome = (id: number) => {
+    return pontosColeta.find(p => p.id_ponto_coleta === id)?.nom_ponto_coleta || `Ponto ${id}`;
+  };
+
   const uploadLogo = async (eventoId: number): Promise<string | null> => {
     if (!newLogoFile) return null;
     
@@ -308,6 +421,31 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
     }
   };
 
+  const saveEventoPontosColeta = async (eventoId: number) => {
+    // Delete existing
+    await supabase
+      .from('evento_ponto_coleta')
+      .delete()
+      .eq('id_evento', eventoId);
+
+    if (pontosColetaEnabled && selectedPontosColeta.length > 0) {
+      const inserts = selectedPontosColeta.map(pontoId => ({
+        id_evento: eventoId,
+        id_ponto_coleta: pontoId,
+        id_usuario_criador: user?.id || 1,
+      }));
+
+      const { error } = await supabase
+        .from('evento_ponto_coleta')
+        .insert(inserts);
+
+      if (error) {
+        console.error('Erro ao salvar pontos de coleta do evento:', error);
+        throw error;
+      }
+    }
+  };
+
   const createMutation = useMutation({
     mutationFn: async (data: EventoFormData) => {
       console.log("Criando evento:", data);
@@ -318,6 +456,7 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
         dat_inicio: new Date(data.dat_inicio).toISOString(),
         dat_termino: new Date(data.dat_termino).toISOString(),
         des_visibilidade: data.des_visibilidade,
+        des_ponto_coleta: pontosColetaEnabled ? 'A' : 'D',
         des_status: "A",
         des_locked: "D",
         id_usuario_criador: user?.id || 1,
@@ -346,6 +485,11 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
       // Save entidades for private events
       if (insertedEvento && data.des_visibilidade === 'R') {
         await saveEventoEntidades(insertedEvento.id_evento);
+      }
+
+      // Save pontos de coleta
+      if (insertedEvento) {
+        await saveEventoPontosColeta(insertedEvento.id_evento);
       }
     },
     onSuccess: () => {
@@ -387,6 +531,7 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
           dat_inicio: new Date(data.dat_inicio).toISOString(),
           dat_termino: new Date(data.dat_termino).toISOString(),
           des_visibilidade: data.des_visibilidade,
+          des_ponto_coleta: pontosColetaEnabled ? 'A' : 'D',
           des_logo_url: logoUrl,
           dat_atualizacao: new Date().toISOString(),
           id_usuario_atualizador: user?.id || 1,
@@ -403,6 +548,9 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
 
       // Update entidades for private events
       await saveEventoEntidades(evento.id_evento);
+
+      // Update pontos de coleta
+      await saveEventoPontosColeta(evento.id_evento);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["eventos"] });
@@ -715,6 +863,72 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
                             <X className="h-3 w-3" />
                           </button>
                         )}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Pontos de Coleta Toggle */}
+            <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+              <div className="flex items-center gap-3">
+                <MapPin className={`h-5 w-5 ${pontosColetaEnabled ? 'text-green-600' : 'text-muted-foreground'}`} />
+                <div>
+                  <Label className="text-base font-medium">
+                    Pontos de Coleta para Entrega
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Definir pontos de coleta específicos para entrega de resíduos neste evento
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={pontosColetaEnabled}
+                onCheckedChange={handlePontosColetaToggle}
+              />
+            </div>
+
+            {/* Pontos de Coleta Selection - Only when enabled */}
+            {pontosColetaEnabled && (
+              <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-muted-foreground" />
+                  <h3 className="font-medium">Pontos de Coleta</h3>
+                  <Badge variant="secondary" className="ml-auto">
+                    {selectedPontosColeta.length}
+                  </Badge>
+                </div>
+
+                <Select onValueChange={handleAddPontoColeta} value="">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Adicionar ponto de coleta..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getAvailablePontosColeta().map((ponto) => (
+                      <SelectItem key={ponto.id_ponto_coleta} value={ponto.id_ponto_coleta.toString()}>
+                        {ponto.nom_ponto_coleta}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {selectedPontosColeta.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedPontosColeta.map((pontoId) => (
+                      <Badge 
+                        key={pontoId} 
+                        variant="outline"
+                        className="flex items-center gap-1 py-1 px-2"
+                      >
+                        {getPontoColetaNome(pontoId)}
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePontoColeta(pontoId)}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
                       </Badge>
                     ))}
                   </div>
