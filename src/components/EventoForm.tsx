@@ -14,7 +14,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, Calendar as CalendarIcon, Globe, Lock, X, AlertTriangle, Users, MapPin } from "lucide-react";
+import { ArrowLeft, Calendar as CalendarIcon, Globe, Lock, X, AlertTriangle, Users, MapPin, DollarSign } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -54,6 +55,13 @@ interface Evento {
   des_visibilidade?: string;
   id_usuario_criador?: number;
   des_ponto_coleta?: string;
+  id_tabela_precos?: number | null;
+  des_tabela_preco_restrita?: string;
+}
+
+interface TabelaPrecos {
+  id_tabela_precos: number;
+  des_tabela_precos: string;
 }
 
 interface Entidade {
@@ -104,6 +112,12 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
   const [pontosColeta, setPontosColeta] = useState<PontoColeta[]>([]);
   const [selectedPontosColeta, setSelectedPontosColeta] = useState<number[]>([]);
   const [loadingPontos, setLoadingPontos] = useState(false);
+
+  // Tabela de Preços states
+  const [compraResiduosEnabled, setCompraResiduosEnabled] = useState(false);
+  const [tabelasPrecos, setTabelasPrecos] = useState<TabelaPrecos[]>([]);
+  const [selectedTabelaPrecos, setSelectedTabelaPrecos] = useState<string>('');
+  const [tabelaPrecoRestrita, setTabelaPrecoRestrita] = useState<string>('D');
 
   const isAdmin = user?.isAdmin || user?.entityId === 1;
 
@@ -165,6 +179,26 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
     };
 
     loadPontosColeta();
+  }, []);
+
+  // Load tabelas de precos
+  useEffect(() => {
+    const loadTabelasPrecos = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('tabela_precos')
+          .select('id_tabela_precos, des_tabela_precos')
+          .eq('des_status', 'A')
+          .order('des_tabela_precos');
+
+        if (error) throw error;
+        setTabelasPrecos(data || []);
+      } catch (error) {
+        console.error('Erro ao carregar tabelas de preços:', error);
+      }
+    };
+
+    loadTabelasPrecos();
   }, []);
 
   // Load existing access control when editing
@@ -237,6 +271,31 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
     };
 
     loadEventoPontosColeta();
+  }, [evento?.id_evento]);
+
+  // Load tabela de precos when editing
+  useEffect(() => {
+    const loadEventoTabelaPrecos = async () => {
+      if (!evento?.id_evento) return;
+
+      try {
+        const { data: eventoData } = await supabase
+          .from('evento')
+          .select('id_tabela_precos, des_tabela_preco_restrita')
+          .eq('id_evento', evento.id_evento)
+          .maybeSingle();
+
+        if (eventoData?.id_tabela_precos) {
+          setCompraResiduosEnabled(true);
+          setSelectedTabelaPrecos(eventoData.id_tabela_precos.toString());
+          setTabelaPrecoRestrita(eventoData.des_tabela_preco_restrita || 'D');
+        }
+      } catch (error) {
+        console.error('Erro ao carregar tabela de preços do evento:', error);
+      }
+    };
+
+    loadEventoTabelaPrecos();
   }, [evento?.id_evento]);
 
   // Check for similar event names (debounced)
@@ -457,6 +516,8 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
         dat_termino: new Date(data.dat_termino).toISOString(),
         des_visibilidade: data.des_visibilidade,
         des_ponto_coleta: pontosColetaEnabled ? 'A' : 'D',
+        id_tabela_precos: compraResiduosEnabled && selectedTabelaPrecos ? parseInt(selectedTabelaPrecos) : null,
+        des_tabela_preco_restrita: compraResiduosEnabled ? tabelaPrecoRestrita : 'D',
         des_status: "A",
         des_locked: "D",
         id_usuario_criador: user?.id || 1,
@@ -532,6 +593,8 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
           dat_termino: new Date(data.dat_termino).toISOString(),
           des_visibilidade: data.des_visibilidade,
           des_ponto_coleta: pontosColetaEnabled ? 'A' : 'D',
+          id_tabela_precos: compraResiduosEnabled && selectedTabelaPrecos ? parseInt(selectedTabelaPrecos) : null,
+          des_tabela_preco_restrita: compraResiduosEnabled ? tabelaPrecoRestrita : 'D',
           des_logo_url: logoUrl,
           dat_atualizacao: new Date().toISOString(),
           id_usuario_atualizador: user?.id || 1,
@@ -933,6 +996,76 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Compra de Resíduos Toggle */}
+            <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+              <div className="flex items-center gap-3">
+                <DollarSign className={`h-5 w-5 ${compraResiduosEnabled ? 'text-green-600' : 'text-muted-foreground'}`} />
+                <div>
+                  <Label className="text-base font-medium">
+                    Compra de Resíduos
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Vincular tabela de preços a este evento
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={compraResiduosEnabled}
+                onCheckedChange={(checked) => {
+                  setCompraResiduosEnabled(checked);
+                  if (!checked) {
+                    setSelectedTabelaPrecos('');
+                    setTabelaPrecoRestrita('D');
+                  }
+                }}
+              />
+            </div>
+
+            {/* Tabela de Preços Selection */}
+            {compraResiduosEnabled && (
+              <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-muted-foreground" />
+                  <h3 className="font-medium">Tabela de Preços</h3>
+                </div>
+
+                <Select value={selectedTabelaPrecos} onValueChange={setSelectedTabelaPrecos}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar tabela de preços..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tabelasPrecos.map((tabela) => (
+                      <SelectItem key={tabela.id_tabela_precos} value={tabela.id_tabela_precos.toString()}>
+                        {tabela.des_tabela_precos}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Tipo de Tabela:</Label>
+                  <RadioGroup
+                    value={tabelaPrecoRestrita}
+                    onValueChange={setTabelaPrecoRestrita}
+                    className="space-y-2"
+                  >
+                    <div className="flex items-start space-x-2">
+                      <RadioGroupItem value="D" id="irrestrita" />
+                      <Label htmlFor="irrestrita" className="font-normal cursor-pointer">
+                        <span className="font-medium">Irrestrita</span> - Permite alterar valores na coleta
+                      </Label>
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <RadioGroupItem value="A" id="restrita" />
+                      <Label htmlFor="restrita" className="font-normal cursor-pointer">
+                        <span className="font-medium">Restrita</span> - Não permite alterar valores
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
               </div>
             )}
 

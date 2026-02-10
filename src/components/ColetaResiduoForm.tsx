@@ -37,14 +37,21 @@ interface ColetaResiduo {
   subtotal: number;
 }
 
+interface TabelaPrecoResiduo {
+  id_residuo: number;
+  vlr_total: number;
+}
+
 interface ColetaResiduoFormProps {
   onBack: () => void;
   onAdd: (residuo: ColetaResiduo) => void;
   existingResiduos: ColetaResiduo[];
   editingResiduo?: ColetaResiduo | null;
+  tabelaPrecos?: TabelaPrecoResiduo[] | null;
+  tabelaRestrita?: boolean;
 }
 
-export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResiduo }: ColetaResiduoFormProps) {
+export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResiduo, tabelaPrecos, tabelaRestrita }: ColetaResiduoFormProps) {
   const [tiposResiduos, setTiposResiduos] = useState<TipoResiduo[]>([]);
   const [residuos, setResiduos] = useState<Residuo[]>([]);
   const [filteredResiduos, setFilteredResiduos] = useState<Residuo[]>([]);
@@ -219,6 +226,17 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
   const handleSelectResiduo = (residuo: Residuo) => {
     setSelectedResiduo(residuo);
     setOpenResiduoCombo(false);
+    
+    // Check if there's a price table entry for this residuo
+    if (tabelaPrecos && tabelaPrecos.length > 0) {
+      const precoEntry = tabelaPrecos.find(tp => tp.id_residuo === residuo.id_residuo);
+      if (precoEntry) {
+        valorUnitario.setValue(precoEntry.vlr_total.toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }));
+      }
+    }
     
     // Se for Rejeito, setar valor automaticamente como 0
     if (residuo.nom_residuo.toLowerCase().includes('rejeito')) {
@@ -450,7 +468,7 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
                 </div>
 
                 <div>
-                  <Label htmlFor="valor">Valor Unitário (R$) *</Label>
+                  <Label htmlFor="valor">Previsão de Venda (R$) *</Label>
                   {selectedResiduo?.nom_residuo.toLowerCase().includes('rejeito') ? (
                     <p className="text-sm text-amber-600 mb-1">
                       Rejeito não possui valor comercial
@@ -472,7 +490,7 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
                       placeholder="0,00"
                       className="pl-10"
                       required
-                      disabled={selectedResiduo?.nom_residuo.toLowerCase().includes('rejeito')}
+                      disabled={selectedResiduo?.nom_residuo.toLowerCase().includes('rejeito') || (tabelaRestrita && tabelaPrecos?.some(tp => tp.id_residuo === selectedResiduo?.id_residuo))}
                     />
                   </div>
                 </div>

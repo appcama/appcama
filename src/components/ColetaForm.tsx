@@ -90,6 +90,8 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
   const [openDatePicker, setOpenDatePicker] = useState(false);
   const [allPontosColeta, setAllPontosColeta] = useState<PontoColeta[]>([]);
   const [pontoColetaDisabled, setPontoColetaDisabled] = useState(false);
+  const [eventoTabelaPrecos, setEventoTabelaPrecos] = useState<{ id_residuo: number; vlr_total: number }[] | null>(null);
+  const [eventoTabelaRestrita, setEventoTabelaRestrita] = useState(false);
 
   // Estados e utilitários para máscara/validação de data (DD/MM/AAAA)
   const today = new Date();
@@ -392,7 +394,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         try {
           const { data: eventoData } = await supabase
             .from('evento')
-            .select('des_ponto_coleta')
+            .select('des_ponto_coleta, id_tabela_precos, des_tabela_preco_restrita')
             .eq('id_evento', parseInt(newFormData.id_evento))
             .maybeSingle();
 
@@ -411,6 +413,17 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
           } else if (eventoData) {
             setPontosColeta([]);
             setPontoColetaDisabled(true);
+          }
+
+          // Load price table if exists
+          if (eventoData?.id_tabela_precos) {
+            const { data: precos } = await supabase
+              .from('tabela_precos_residuo')
+              .select('id_residuo, vlr_total')
+              .eq('id_tabela_preco', eventoData.id_tabela_precos);
+
+            setEventoTabelaPrecos(precos || []);
+            setEventoTabelaRestrita(eventoData.des_tabela_preco_restrita === 'A');
           }
         } catch (error) {
           console.error('[ColetaForm] Error loading evento config for editing:', error);
@@ -633,6 +646,8 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         onAdd={handleAddResiduo}
         existingResiduos={coletaResiduos}
         editingResiduo={editingResiduo}
+        tabelaPrecos={eventoTabelaPrecos}
+        tabelaRestrita={eventoTabelaRestrita}
       />
     );
   }
@@ -794,22 +809,23 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
                   setFormData(prev => ({ ...prev, id_evento: value, id_ponto_coleta: '' }));
                   
                   if (!value) {
-                    // No event selected: show all pontos
+                    // No event selected: show all pontos, clear price table
                     setPontosColeta(allPontosColeta);
                     setPontoColetaDisabled(false);
+                    setEventoTabelaPrecos(null);
+                    setEventoTabelaRestrita(false);
                     return;
                   }
 
                   try {
-                    // Fetch event config
+                    // Fetch event config including price table
                     const { data: eventoData } = await supabase
                       .from('evento')
-                      .select('des_ponto_coleta')
+                      .select('des_ponto_coleta, id_tabela_precos, des_tabela_preco_restrita')
                       .eq('id_evento', parseInt(value))
                       .maybeSingle();
 
                     if (eventoData?.des_ponto_coleta === 'A') {
-                      // Event has specific pontos: filter
                       const { data: eventoPontos } = await supabase
                         .from('evento_ponto_coleta')
                         .select('id_ponto_coleta')
@@ -819,14 +835,29 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
                       setPontosColeta(allPontosColeta.filter(p => pontosIds.has(p.id_ponto_coleta)));
                       setPontoColetaDisabled(false);
                     } else {
-                      // Event without pontos: disable field
                       setPontosColeta([]);
                       setPontoColetaDisabled(true);
+                    }
+
+                    // Load price table if exists
+                    if (eventoData?.id_tabela_precos) {
+                      const { data: precos } = await supabase
+                        .from('tabela_precos_residuo')
+                        .select('id_residuo, vlr_total')
+                        .eq('id_tabela_preco', eventoData.id_tabela_precos);
+
+                      setEventoTabelaPrecos(precos || []);
+                      setEventoTabelaRestrita(eventoData.des_tabela_preco_restrita === 'A');
+                    } else {
+                      setEventoTabelaPrecos(null);
+                      setEventoTabelaRestrita(false);
                     }
                   } catch (error) {
                     console.error('[ColetaForm] Error fetching evento config:', error);
                     setPontosColeta(allPontosColeta);
                     setPontoColetaDisabled(false);
+                    setEventoTabelaPrecos(null);
+                    setEventoTabelaRestrita(false);
                   }
                 }}
                 disabled={!isDataLoaded}
@@ -874,7 +905,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
                         <th className="text-left p-2 font-semibold">Resíduo</th>
                         <th className="text-left p-2 font-semibold">Tipo</th>
                         <th className="text-right p-2 font-semibold">Quantidade (kg)</th>
-                        <th className="text-right p-2 font-semibold">Valor Unitário</th>
+                        <th className="text-right p-2 font-semibold">Previsão de Venda</th>
                         <th className="text-right p-2 font-semibold">Subtotal</th>
                         <th className="text-center p-2 font-semibold">Ações</th>
                       </tr>

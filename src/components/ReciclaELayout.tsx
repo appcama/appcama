@@ -25,6 +25,8 @@ import { TipoResiduoForm } from '@/components/TipoResiduoForm';
 import { PerfilForm } from '@/components/PerfilForm';
 import { UsuarioForm } from '@/components/UsuarioForm';
 import { ColetaForm } from '@/components/ColetaForm';
+import { TabelaPrecosList } from '@/components/TabelaPrecosList';
+import { TabelaPrecosForm } from '@/components/TabelaPrecosForm';
 import { Sidebar } from '@/components/Sidebar';
 import { MobileHeader } from '@/components/MobileHeader';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
@@ -192,6 +194,14 @@ export function ReciclaELayout() {
               editingUsuario={editingItem}
             />
           );
+        case 'tabela-precos':
+          return (
+            <TabelaPrecosForm
+              onBack={handleBackToList}
+              onSuccess={handleFormSuccess}
+              editingTabelaPrecos={editingItem}
+            />
+          );
         default:
           return <Dashboard />;
       }
@@ -223,6 +233,8 @@ export function ReciclaELayout() {
         return <Residuos />;
       case 'indicadores':
         return <Indicadores />;
+      case 'tabela-precos':
+        return <TabelaPrecosList onAddNew={handleAddNew} onEdit={handleEdit} />;
       case 'perfis':
         return <PerfilList onAddNew={handleAddNew} onEdit={handleEdit} onViewUsers={handleViewUsers} />;
       case 'usuarios':

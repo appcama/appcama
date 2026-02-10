@@ -19,7 +19,8 @@ import {
   FileText,
   TrendingUp,
   Package,
-  LogOut
+  LogOut,
+  DollarSign
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { featureByItemId } from "@/lib/featureMap";
@@ -190,6 +191,11 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose,
           id: "indicadores",
           label: "Indicadores",
           icon: TrendingUp,
+        },
+        {
+          id: "tabela-precos",
+          label: "Tabela de Preços",
+          icon: DollarSign,
         },
       ]
     },
