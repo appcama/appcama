@@ -784,7 +784,10 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                  <Command>
+                  <Command filter={(value, search) => {
+                      if (value === '__clear__') return 1;
+                      return value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0;
+                    }}>
                     <CommandInput placeholder="Buscar evento pelo nome..." />
                     <CommandList>
                       <CommandEmpty>Nenhum evento encontrado.</CommandEmpty>
@@ -904,7 +907,10 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                  <Command>
+                  <Command filter={(value, search) => {
+                      if (value === '__clear__') return 1;
+                      return value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0;
+                    }}>
                     <CommandInput placeholder="Buscar entidade geradora pelo nome..." />
                     <CommandList>
                       <CommandEmpty>Nenhuma entidade encontrada.</CommandEmpty>
