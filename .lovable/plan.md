@@ -1,115 +1,146 @@
 
-## Plano: Atualizar Template do Email de Validação
 
-### Alterações Solicitadas
+## Plano: Pontos de Coleta associados a Eventos
 
-| Item | Atual | Novo |
-|------|-------|------|
-| Nome do sistema | ReciclaSystem | ReCiclaÊ |
-| Subtítulo | Sistema de Gestão de Reciclagem | Sistema de Gestão de Reciclagem |
-| Logo | Não tem | Adicionar logo ReCiclaÊ |
-| Login | "Faça login com o email: X" | "Faça login com o CPF/CNPJ: X" |
+### Resumo
+Adicionar a funcionalidade de associar pontos de coleta a eventos. No formulário de evento, um botao tipo switch (igual ao "Evento Publico") permitira habilitar pontos de coleta. Quando habilitado, sera possivel selecionar os pontos. No formulario de coleta, se o evento selecionado tiver pontos associados, o campo ponto de coleta mostrara apenas esses pontos; se nao tiver, o campo sera desabilitado ou mostrara todos os pontos normalmente.
 
-### Arquivos a Modificar
+### 1. Migracao de Banco de Dados
 
-#### 1. Edge Function: `supabase/functions/send-validation-email/index.ts`
+**Adicionar coluna na tabela `evento`:**
+```sql
+ALTER TABLE evento ADD COLUMN des_ponto_coleta character(1) NOT NULL DEFAULT 'D';
+```
+- `'A'` = Evento possui pontos de coleta
+- `'D'` = Evento nao possui pontos de coleta
 
-**Mudanças na interface (linha 12-16):**
-```typescript
-interface ValidationEmailRequest {
-  userId: number;
-  email: string;
-  userName: string;
-  cpfCnpj?: string; // Novo campo para CPF/CNPJ
-}
+**Criar tabela `evento_ponto_coleta`:**
+```sql
+CREATE TABLE evento_ponto_coleta (
+  id_evento_ponto_coleta SERIAL PRIMARY KEY,
+  id_evento INTEGER NOT NULL REFERENCES evento(id_evento),
+  id_ponto_coleta INTEGER NOT NULL REFERENCES ponto_coleta(id_ponto_coleta),
+  id_usuario_criador INTEGER NOT NULL,
+  dat_criacao TIMESTAMP NOT NULL DEFAULT now(),
+  UNIQUE(id_evento, id_ponto_coleta)
+);
+
+ALTER TABLE evento_ponto_coleta ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow authenticated users to read evento_ponto_coleta" ON evento_ponto_coleta FOR SELECT USING (true);
+CREATE POLICY "Allow authenticated users to insert evento_ponto_coleta" ON evento_ponto_coleta FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow authenticated users to delete evento_ponto_coleta" ON evento_ponto_coleta FOR DELETE USING (true);
 ```
 
-**Mudanças no template do email (linhas 117-164):**
+### 2. Atualizar `src/integrations/supabase/types.ts`
 
-1. **Remetente (linha 118):**
-   - De: `"ReciclaSystem <noreply@rcyclae.com.br>"`
-   - Para: `"ReCiclaÊ <noreply@rcyclae.com.br>"`
+Adicionar os tipos da nova tabela `evento_ponto_coleta` e a nova coluna `des_ponto_coleta` na tabela `evento`.
 
-2. **Assunto (linha 120):**
-   - De: `Validação de Conta - ReciclaSystem`
-   - Para: `Validação de Conta - ReCiclaÊ`
+### 3. Modificar `src/components/EventoForm.tsx`
 
-3. **Header com logo (linhas 122-126):**
-   ```html
-   <div style="text-align: center; margin-bottom: 30px;">
-     <img src="https://appcama.lovable.app/reciclae-logo.png" 
-          alt="ReCiclaÊ" 
-          style="max-width: 180px; height: auto; margin-bottom: 10px;" />
-     <h1 style="color: #059669; margin: 0;">ReCiclaÊ</h1>
-     <p style="color: #6b7280; margin: 5px 0;">Sistema de Gestão de Reciclagem</p>
-   </div>
-   ```
+**Novos estados:**
+- `pontosColetaEnabled` (boolean) - switch ligado/desligado
+- `pontosColeta` (array) - lista de pontos disponiveis
+- `selectedPontosColeta` (array) - pontos selecionados
+- `loadingPontos` (boolean)
 
-4. **Instruções de login (linha 144-145):**
-   - De: `Faça login com o email: <strong>${email}</strong>`
-   - Para: `Faça login com o CPF/CNPJ: <strong>${cpfCnpj || 'não informado'}</strong>`
+**Nova secao no formulario** (abaixo do switch de visibilidade, acima do logo):
+- Switch "Pontos de Coleta para Entrega" com icone MapPin
+- Descricao: "Definir pontos de coleta especificos para entrega de residuos neste evento"
+- Quando ativado, exibe Select para adicionar pontos + badges dos selecionados (mesmo padrao do Controle de Acesso)
 
-5. **Nome do sistema nas instruções (linha 143):**
-   - De: `Acesse o sistema ReciclaSystem`
-   - Para: `Acesse o sistema ReCiclaÊ`
+**Regras de filtragem de pontos:**
+- Se evento privado: apenas pontos cuja `id_entidade_gestora` seja a entidade criadora OU esteja na lista de `selectedEntidades` (controle de acesso)
+- Apenas pontos com `des_status = 'A'`
+- Cada ponto so pode ser adicionado uma vez (enforced pela constraint UNIQUE)
 
-#### 2. Frontend: `src/components/UsuariosList.tsx`
+**No save (create/update):**
+- Salvar `des_ponto_coleta` ('A' ou 'D') no evento
+- Chamar nova funcao `saveEventoPontosColeta` para gerenciar a tabela `evento_ponto_coleta`
 
-**Adicionar CPF/CNPJ na chamada da edge function (linhas 171-177):**
+**No load (edicao):**
+- Carregar `des_ponto_coleta` e setar o switch
+- Carregar pontos associados da tabela `evento_ponto_coleta`
+
+### 4. Modificar `src/components/ColetaForm.tsx`
+
+**Ao selecionar um evento:**
+- Buscar na tabela `evento` o campo `des_ponto_coleta`
+- Se `des_ponto_coleta === 'A'`: buscar pontos da tabela `evento_ponto_coleta` e filtrar o select de pontos de coleta para mostrar apenas esses
+- Se `des_ponto_coleta === 'D'`: desabilitar o campo ponto de coleta (limpar valor selecionado)
+- Se nenhum evento selecionado: mostrar todos os pontos normalmente (comportamento atual)
+
+**Logica de `onValueChange` do evento:**
 ```typescript
-const { data, error: emailError } = await supabase.functions.invoke('send-validation-email', {
-  body: {
-    userId: usuario.id_usuario,
-    email: usuario.des_email,
-    userName: usuario.des_email?.split('@')[0] || 'Usuário',
-    cpfCnpj: usuario.entidade?.num_cpf_cnpj || '' // Novo campo
+const handleEventoChange = async (eventoId: string) => {
+  setFormData(prev => ({ ...prev, id_evento: eventoId, id_ponto_coleta: '' }));
+  
+  if (!eventoId) {
+    // Sem evento: todos os pontos disponiveis
+    setPontosColeta(allPontosColeta);
+    setPontoColetaDisabled(false);
+    return;
   }
-});
+  
+  // Buscar config do evento
+  const { data: evento } = await supabase
+    .from('evento')
+    .select('des_ponto_coleta')
+    .eq('id_evento', parseInt(eventoId))
+    .single();
+    
+  if (evento?.des_ponto_coleta === 'A') {
+    // Evento com pontos: filtrar
+    const { data: eventoPontos } = await supabase
+      .from('evento_ponto_coleta')
+      .select('id_ponto_coleta')
+      .eq('id_evento', parseInt(eventoId));
+    
+    const pontosIds = new Set(eventoPontos?.map(p => p.id_ponto_coleta));
+    setPontosColeta(allPontosColeta.filter(p => pontosIds.has(p.id_ponto_coleta)));
+    setPontoColetaDisabled(false);
+  } else {
+    // Evento sem pontos: desabilitar campo
+    setPontoColetaDisabled(true);
+  }
+};
 ```
 
-#### 3. Frontend: `src/components/UsuarioForm.tsx`
+### 5. Interface do Switch no EventoForm
 
-**Buscar CPF/CNPJ da entidade selecionada ao criar usuário (linha 105-111):**
-
-Precisa buscar o CPF/CNPJ da entidade para enviar junto com o email de validação ao criar um novo usuário.
-
-### Verificação da Logo
-
-A logo `reciclae-logo.png` já existe em `public/reciclae-logo.png` e estará disponível na URL publicada.
-
-### Resultado Final do Email
+O switch de Pontos de Coleta seguira o mesmo padrao visual do "Evento Publico":
 
 ```text
-┌─────────────────────────────────────────────┐
-│          [LOGO ReCiclaÊ]                    │
-│                                             │
-│            ReCiclaÊ                         │
-│    Sistema de Gestão de Reciclagem          │
-├─────────────────────────────────────────────┤
-│                                             │
-│  Bem-vindo, [nome]!                         │
-│                                             │
-│  Sua conta foi criada com sucesso...        │
-│                                             │
-│  ┌────────────────────────────┐            │
-│  │   Código de Validação:     │            │
-│  │        161861              │            │
-│  └────────────────────────────┘            │
-│                                             │
-│  Instruções:                                │
-│  1. Acesse o sistema ReCiclaÊ              │
-│  2. Faça login com o CPF/CNPJ: 123.456.789-00 │
-│     e a senha temporária: 123456789         │
-│  3. Digite o código de validação acima      │
-│  4. Defina sua nova senha                   │
-│                                             │
-└─────────────────────────────────────────────┘
++--------------------------------------------------+
+| [MapPin icon]  Pontos de Coleta para Entrega     [toggle] |
+|   Definir pontos especificos para entrega         |
++--------------------------------------------------+
 ```
 
-### Resumo das Mudanças
+Quando ativado, aparece abaixo:
+```text
++--------------------------------------------------+
+| Pontos de Coleta                         2/sem limite |
+|                                                  |
+| [Select: Adicionar ponto de coleta...]           |
+|                                                  |
+| [Ponto A  x] [Ponto B  x]                       |
++--------------------------------------------------+
+```
 
-| Arquivo | Alteração |
+### 6. Arquivos Modificados
+
+| Arquivo | Alteracao |
 |---------|-----------|
-| `send-validation-email/index.ts` | Atualizar nome, logo e trocar email por CPF/CNPJ |
-| `UsuariosList.tsx` | Passar CPF/CNPJ para a edge function |
-| `UsuarioForm.tsx` | Buscar e passar CPF/CNPJ ao criar usuário |
+| Nova migracao SQL | Criar tabela `evento_ponto_coleta` + coluna `des_ponto_coleta` |
+| `supabase types` | Adicionar tipos da nova tabela |
+| `EventoForm.tsx` | Adicionar switch + selecao de pontos de coleta |
+| `ColetaForm.tsx` | Filtrar/desabilitar pontos conforme evento selecionado |
+
+### 7. Consideracoes
+
+- Pontos de coleta podem ser desativados a qualquer momento independente da associacao ao evento
+- A constraint UNIQUE(id_evento, id_ponto_coleta) garante que cada ponto so aparece uma vez por evento
+- O campo nao e obrigatorio - o switch inicia desligado por padrao
+- Ao desligar o switch, os pontos associados sao removidos
+
