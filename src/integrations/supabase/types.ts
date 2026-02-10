@@ -169,6 +169,7 @@ export type Database = {
           dat_atualizacao: string | null
           dat_coleta: string
           dat_criacao: string
+          des_custo: string
           des_locked: string
           des_status: string
           id_certificado: number | null
@@ -186,6 +187,7 @@ export type Database = {
           dat_atualizacao?: string | null
           dat_coleta: string
           dat_criacao: string
+          des_custo?: string
           des_locked?: string
           des_status?: string
           id_certificado?: number | null
@@ -203,6 +205,7 @@ export type Database = {
           dat_atualizacao?: string | null
           dat_coleta?: string
           dat_criacao?: string
+          des_custo?: string
           des_locked?: string
           des_status?: string
           id_certificado?: number | null
@@ -280,6 +283,7 @@ export type Database = {
           id_usuario_atualizador: number | null
           id_usuario_criador: number
           qtd_total: number
+          vlr_custo: number | null
           vlr_total: number
         }
         Insert: {
@@ -294,6 +298,7 @@ export type Database = {
           id_usuario_atualizador?: number | null
           id_usuario_criador: number
           qtd_total: number
+          vlr_custo?: number | null
           vlr_total: number
         }
         Update: {
@@ -308,6 +313,7 @@ export type Database = {
           id_usuario_atualizador?: number | null
           id_usuario_criador?: number
           qtd_total?: number
+          vlr_custo?: number | null
           vlr_total?: number
         }
         Relationships: [

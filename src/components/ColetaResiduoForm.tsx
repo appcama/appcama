@@ -35,6 +35,8 @@ interface ColetaResiduo {
   qtd_total: number;
   vlr_total: number;
   subtotal: number;
+  vlr_custo?: number;
+  subtotal_custo?: number;
 }
 
 interface TabelaPrecoResiduo {
@@ -49,9 +51,10 @@ interface ColetaResiduoFormProps {
   editingResiduo?: ColetaResiduo | null;
   tabelaPrecos?: TabelaPrecoResiduo[] | null;
   tabelaRestrita?: boolean;
+  comCusto?: boolean;
 }
 
-export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResiduo, tabelaPrecos, tabelaRestrita }: ColetaResiduoFormProps) {
+export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResiduo, tabelaPrecos, tabelaRestrita, comCusto }: ColetaResiduoFormProps) {
   const [tiposResiduos, setTiposResiduos] = useState<TipoResiduo[]>([]);
   const [residuos, setResiduos] = useState<Residuo[]>([]);
   const [filteredResiduos, setFilteredResiduos] = useState<Residuo[]>([]);
@@ -65,6 +68,7 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
   // REGRA 002: Limitar Valor: 9.999,99
   const quantidade = useDecimalMask('', 9999999999.99);
   const valorUnitario = useCurrencyMask('', 9999.99);
+  const valorCusto = useCurrencyMask('', 9999.99);
   
   // Hook offline para manter consistência, mas neste caso é apenas local
   const { submitForm, isSubmitting } = useOfflineForm({
@@ -78,6 +82,7 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
       if (selectedResiduo && quantidade.value && valorUnitario.value) {
         const qtd = parseFloat(quantidade.value);
         const valor = valorUnitario.getNumericValue();
+        const custoValue = comCusto ? valorCusto.getNumericValue() : undefined;
         
         const coletaResiduo: ColetaResiduo = {
           id: editingResiduo?.id,
@@ -87,6 +92,8 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
           qtd_total: qtd,
           vlr_total: valor,
           subtotal: qtd * valor,
+          vlr_custo: custoValue,
+          subtotal_custo: custoValue !== undefined ? qtd * custoValue : undefined,
         };
 
         onAdd(coletaResiduo);
@@ -114,6 +121,13 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
           minimumFractionDigits: 2,
           maximumFractionDigits: 2
         }));
+        // Carregar valor de custo se existir
+        if (editingResiduo.vlr_custo !== undefined && editingResiduo.vlr_custo !== null) {
+          valorCusto.setValue(editingResiduo.vlr_custo.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          }));
+        }
         // Definir o tipo de resíduo automaticamente
         setSelectedTipoResiduo(residuo.id_tipo_residuo.toString());
       }
@@ -257,6 +271,16 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
       toast({
         title: 'Erro',
         description: 'Preencha todos os campos',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validar valor de custo quando com custo
+    if (comCusto && (!valorCusto.value || valorCusto.getNumericValue() < 0.01)) {
+      toast({
+        title: 'Erro',
+        description: 'Valor Unitário de Custo deve ser no mínimo R$ 0,01',
         variant: 'destructive',
       });
       return;
@@ -495,10 +519,33 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
                   </div>
                 </div>
 
+                {comCusto && (
+                  <div>
+                    <Label htmlFor="valor_custo">Valor Unitário de Custo (R$) *</Label>
+                    <p className="text-xs text-gray-500 mb-1">
+                      Máximo: R$ 9.999,99
+                    </p>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                        R$
+                      </span>
+                      <Input
+                        id="valor_custo"
+                        type="text"
+                        value={valorCusto.value}
+                        onChange={(e) => valorCusto.handleChange(e.target.value)}
+                        placeholder="0,00"
+                        className="pl-10"
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {quantidade.value && valorUnitario.value && (
-                  <div className="p-3 bg-recycle-green-light rounded-lg">
+                  <div className="p-3 bg-recycle-green-light rounded-lg space-y-2">
                     <div className="flex justify-between items-center">
-                      <span className="font-medium">Subtotal:</span>
+                      <span className="font-medium">Subtotal Venda:</span>
                       <span className="text-lg font-bold text-recycle-green">
                         R$ {calculateSubtotal().toLocaleString('pt-BR', {
                           minimumFractionDigits: 2,
@@ -506,6 +553,17 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
                         })}
                       </span>
                     </div>
+                    {comCusto && valorCusto.value && (
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">Subtotal Custo:</span>
+                        <span className="text-lg font-bold text-orange-600">
+                          R$ {((parseFloat(quantidade.value) || 0) * valorCusto.getNumericValue()).toLocaleString('pt-BR', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                          })}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
 
