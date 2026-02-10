@@ -1,73 +1,84 @@
 
 
-## Plano: Campo de Entidade Geradora com filtro de busca e filtragem por evento
+## Plano: Campo de Ponto de Coleta como Combobox com obrigatoriedade condicional
 
 ### Resumo
-Transformar o campo "Entidade Geradora" de um Select simples em um Combobox com filtro de busca (mesmo padrao do campo Evento). Quando um evento for selecionado, filtrar as entidades geradoras exibindo apenas as associadas ao evento via tabela `evento_entidade`. Sem evento selecionado, todas as entidades geradoras ficam disponiveis.
+Transformar o campo "Ponto de Coleta" de um Select simples em um Combobox com filtro de busca (mesmo padrao dos campos Evento e Entidade Geradora). Quando um evento com pontos de coleta habilitados e associados for selecionado (`des_ponto_coleta = 'A'`), o campo torna-se obrigatorio e exibe apenas os pontos associados. Sem evento ou com evento sem pontos, comportamento atual e mantido.
 
 ### Alteracoes
 
 **Arquivo: `src/components/ColetaForm.tsx`**
 
-1. **Novo estado para controle do popover e entidades completas**:
-   - Adicionar `openEntidadePopover` (boolean) para controlar abertura/fechamento do combobox
-   - Adicionar `allEntidades` para guardar todas as entidades geradoras carregadas (similar a `allPontosColeta`)
+1. **Novo estado para controle do popover**:
+   - Adicionar `openPontoColetaPopover` (boolean)
+   - Adicionar `pontoColetaRequired` (boolean) - indica se o campo e obrigatorio baseado no evento selecionado
 
-2. **Substituir Select por Popover + Command (Combobox)** no campo Entidade Geradora:
-   - Mesmo padrao visual ja usado no campo Evento
-   - Input de busca filtra entidades pelo nome em tempo real
-   - Opcao "Nenhuma entidade" para limpar selecao
-   - Ao selecionar, popover fecha e valor e preenchido
+2. **Substituir Select por Popover + Command (Combobox)** no campo Ponto de Coleta:
+   - Mesmo padrao visual dos outros dois campos (Evento e Entidade Geradora)
+   - Input de busca filtra pontos de coleta pelo nome
+   - Opcao "Nenhum ponto de coleta" para limpar selecao (visivel apenas quando nao obrigatorio)
+   - Filtro customizado com `.includes()` (substring match)
 
-3. **Filtragem por evento selecionado**:
-   - Quando um evento e selecionado (no `onSelect` do evento), buscar entidades associadas na tabela `evento_entidade`
-   - Se o evento tiver entidades associadas, filtrar a lista de entidades geradoras para mostrar apenas essas
-   - Se o evento nao tiver entidades associadas (ou for evento publico sem restricao), manter todas as entidades disponiveis
-   - Quando o evento for desmarcado ("Nenhum evento"), restaurar todas as entidades geradoras
-   - Limpar a selecao de entidade geradora quando o evento mudar (para evitar inconsistencia)
+3. **Obrigatoriedade condicional**:
+   - Quando evento selecionado com `des_ponto_coleta = 'A'` (pontos associados habilitados): campo obrigatorio, label muda para "Ponto de Coleta *"
+   - Quando evento sem pontos ou sem evento: campo opcional, label "Ponto de Coleta (Opcional)"
+   - Setar `pontoColetaRequired = true` quando `des_ponto_coleta === 'A'` e houver pontos associados
+   - Setar `pontoColetaRequired = false` ao limpar evento ou quando `des_ponto_coleta !== 'A'`
 
-4. **Logica no `onSelect` do evento** (ja existente, sera expandida):
-   - Alem de carregar pontos de coleta e tabela de precos, tambem carregar entidades associadas ao evento
-   - Query: `supabase.from('evento_entidade').select('id_entidade').eq('id_evento', eventoId)`
-   - Se houver entidades associadas, filtrar `entidades` para incluir apenas as que estao no resultado
-   - Se nao houver, manter `allEntidades`
+4. **Validacao no handleSubmit**:
+   - Adicionar verificacao: se `pontoColetaRequired === true` e `formData.id_ponto_coleta` estiver vazio, exibir toast de erro e bloquear envio
 
-5. **No clear do evento** (opcao "Nenhum evento"):
-   - Restaurar `entidades` para `allEntidades`
-   - Limpar `id_entidade_geradora` do formData
+5. **Logica existente mantida**:
+   - Quando evento tem `des_ponto_coleta = 'A'`: filtra pontos para os associados (ja implementado)
+   - Quando evento tem `des_ponto_coleta = 'D'`: desabilita campo (mantido via `pontoColetaDisabled`)
+   - Sem evento: mostra todos os pontos de coleta (ja implementado)
 
 ### Secao Tecnica
 
-O combobox da Entidade Geradora seguira o mesmo padrao do Evento:
+Layout do combobox:
 
 ```text
-Entidade Geradora (Opcional)
+Ponto de Coleta * (ou "Opcional" conforme contexto)
 +-------------------------------------------+
-| Buscar entidade geradora...         [v]   |
+| Buscar ponto de coleta...           [v]   |
 +-------------------------------------------+
-| Nenhuma entidade                          |
-| Entidade ABC                              |
-| Entidade DEF                              |
-| Entidade GHI                              |
+| Nenhum ponto de coleta (se opcional)      |
+| Ponto ABC                                |
+| Ponto DEF                                |
 +-------------------------------------------+
 ```
 
-Fluxo de filtragem por evento:
+Logica de obrigatoriedade:
 
 ```text
-Sem evento selecionado:
-  entidades = allEntidades (todas as geradoras ativas)
+Evento selecionado com des_ponto_coleta = 'A':
+  pontoColetaRequired = true
+  pontoColetaDisabled = false
+  pontosColeta = filtrados pelos associados
 
-Com evento selecionado:
-  1. Buscar evento_entidade WHERE id_evento = X
-  2. Se houver registros: entidades = allEntidades filtradas pelos ids retornados
-  3. Se nao houver registros: entidades = allEntidades (sem restricao)
-  4. Limpar id_entidade_geradora do formData
+Evento selecionado com des_ponto_coleta = 'D':
+  pontoColetaRequired = false
+  pontoColetaDisabled = true
+  pontosColeta = []
+
+Sem evento:
+  pontoColetaRequired = false
+  pontoColetaDisabled = false
+  pontosColeta = allPontosColeta
+```
+
+Validacao adicionada no `handleSubmit`:
+
+```text
+if (pontoColetaRequired && !formData.id_ponto_coleta) {
+  toast error: "Selecione um ponto de coleta para este evento"
+  return
+}
 ```
 
 ### Arquivos Modificados
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `ColetaForm.tsx` | Adicionar estados `openEntidadePopover` e `allEntidades`; substituir Select por Combobox; adicionar filtragem de entidades ao selecionar evento |
+| `ColetaForm.tsx` | Adicionar estados `openPontoColetaPopover` e `pontoColetaRequired`; substituir Select por Combobox; adicionar validacao condicional no submit |
 
