@@ -94,6 +94,8 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
   const [eventoTabelaPrecos, setEventoTabelaPrecos] = useState<{ id_residuo: number; vlr_total: number }[] | null>(null);
   const [eventoTabelaRestrita, setEventoTabelaRestrita] = useState(false);
   const [openEventoPopover, setOpenEventoPopover] = useState(false);
+  const [openEntidadePopover, setOpenEntidadePopover] = useState(false);
+  const [allEntidades, setAllEntidades] = useState<Entidade[]>([]);
 
   // Estados e utilitários para máscara/validação de data (DD/MM/AAAA)
   const today = new Date();
@@ -286,6 +288,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         
         console.log('[ColetaForm] Entidades geradoras loaded for all users:', entidadesGeradoras.length);
         setEntidades(entidadesGeradoras);
+        setAllEntidades(entidadesGeradoras);
 
         // Para usuários não-admin, ainda definir automaticamente a entidade do usuário como padrão
         if (!isAdmin && userEntityId) {
@@ -789,9 +792,10 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
                         <CommandItem
                           value="__clear__"
                           onSelect={async () => {
-                            setFormData(prev => ({ ...prev, id_evento: '', id_ponto_coleta: '' }));
+                            setFormData(prev => ({ ...prev, id_evento: '', id_ponto_coleta: '', id_entidade_geradora: '' }));
                             setPontosColeta(allPontosColeta);
                             setPontoColetaDisabled(false);
+                            setEntidades(allEntidades);
                             setEventoTabelaPrecos(null);
                             setEventoTabelaRestrita(false);
                             setOpenEventoPopover(false);
@@ -806,7 +810,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
                             value={evento.nom_evento || ''}
                             onSelect={async () => {
                               const value = evento.id_evento.toString();
-                              setFormData(prev => ({ ...prev, id_evento: value, id_ponto_coleta: '' }));
+                              setFormData(prev => ({ ...prev, id_evento: value, id_ponto_coleta: '', id_entidade_geradora: '' }));
                               setOpenEventoPopover(false);
 
                               try {
@@ -842,10 +846,29 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
                                   setEventoTabelaPrecos(null);
                                   setEventoTabelaRestrita(false);
                                 }
+
+                                // Filtrar entidades geradoras associadas ao evento
+                                try {
+                                  const { data: eventoEntidades } = await supabase
+                                    .from('evento_entidade')
+                                    .select('id_entidade')
+                                    .eq('id_evento', evento.id_evento);
+
+                                  if (eventoEntidades && eventoEntidades.length > 0) {
+                                    const entidadeIds = new Set(eventoEntidades.map(ee => ee.id_entidade));
+                                    setEntidades(allEntidades.filter(e => entidadeIds.has(e.id_entidade)));
+                                  } else {
+                                    setEntidades(allEntidades);
+                                  }
+                                } catch (entError) {
+                                  console.error('[ColetaForm] Error filtering entidades by evento:', entError);
+                                  setEntidades(allEntidades);
+                                }
                               } catch (error) {
                                 console.error('[ColetaForm] Error fetching evento config:', error);
                                 setPontosColeta(allPontosColeta);
                                 setPontoColetaDisabled(false);
+                                setEntidades(allEntidades);
                                 setEventoTabelaPrecos(null);
                                 setEventoTabelaRestrita(false);
                               }
@@ -853,6 +876,60 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
                           >
                             <Check className={`mr-2 h-4 w-4 ${formData.id_evento === evento.id_evento.toString() ? 'opacity-100' : 'opacity-0'}`} />
                             {evento.nom_evento}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div>
+              <Label htmlFor="id_entidade_geradora">Entidade Geradora (Opcional)</Label>
+              <Popover open={openEntidadePopover} onOpenChange={setOpenEntidadePopover}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openEntidadePopover}
+                    className="w-full justify-between font-normal"
+                    disabled={!isDataLoaded}
+                  >
+                    {formData.id_entidade_geradora
+                      ? entidades.find(e => e.id_entidade.toString() === formData.id_entidade_geradora)?.nom_entidade
+                        || allEntidades.find(e => e.id_entidade.toString() === formData.id_entidade_geradora)?.nom_entidade
+                      : (isDataLoaded ? "Buscar entidade geradora..." : "Carregando...")}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Buscar entidade geradora pelo nome..." />
+                    <CommandList>
+                      <CommandEmpty>Nenhuma entidade encontrada.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="__clear__"
+                          onSelect={() => {
+                            setFormData(prev => ({ ...prev, id_entidade_geradora: '' }));
+                            setOpenEntidadePopover(false);
+                          }}
+                        >
+                          <Check className={`mr-2 h-4 w-4 ${!formData.id_entidade_geradora ? 'opacity-100' : 'opacity-0'}`} />
+                          Nenhuma entidade
+                        </CommandItem>
+                        {entidades.map((entidade) => (
+                          <CommandItem
+                            key={entidade.id_entidade}
+                            value={entidade.nom_entidade}
+                            onSelect={() => {
+                              setFormData(prev => ({ ...prev, id_entidade_geradora: entidade.id_entidade.toString() }));
+                              setOpenEntidadePopover(false);
+                            }}
+                          >
+                            <Check className={`mr-2 h-4 w-4 ${formData.id_entidade_geradora === entidade.id_entidade.toString() ? 'opacity-100' : 'opacity-0'}`} />
+                            {entidade.nom_entidade}
                           </CommandItem>
                         ))}
                       </CommandGroup>
@@ -876,26 +953,6 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
                   {pontosColeta.map((ponto) => (
                     <SelectItem key={ponto.id_ponto_coleta} value={ponto.id_ponto_coleta.toString()}>
                       {ponto.nom_ponto_coleta}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="id_entidade_geradora">Entidade Geradora (Opcional)</Label>
-              <Select
-                value={formData.id_entidade_geradora}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, id_entidade_geradora: value }))}
-                disabled={!isDataLoaded}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={isDataLoaded ? "Selecione a entidade geradora" : "Carregando..."} />
-                </SelectTrigger>
-                <SelectContent>
-                  {entidades.map((entidade) => (
-                    <SelectItem key={entidade.id_entidade} value={entidade.id_entidade.toString()}>
-                      {entidade.nom_entidade}
                     </SelectItem>
                   ))}
                 </SelectContent>
