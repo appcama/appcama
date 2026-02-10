@@ -234,11 +234,13 @@ export function TabelaPrecosForm({ onBack, onSuccess, editingTabelaPrecos }: Tab
         <Button variant="ghost" onClick={onBack} className="mr-4 h-8 w-8 p-0">
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <div className="flex items-center space-x-2">
-          <DollarSign className="h-5 w-5" />
+        <div>
           <h2 className="text-xl font-semibold">
             {isEditing ? 'Editar Tabela de Preços' : 'Nova Tabela de Preços'}
           </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Preencha as informações para criar uma nova tabela de preço
+          </p>
         </div>
       </CardHeader>
       <CardContent>
