@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Trash2, Edit, Package, Calendar as CalendarIcon, Check, ChevronsUpDown } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,6 +36,8 @@ interface ColetaResiduo {
   qtd_total: number;
   vlr_total: number;
   subtotal: number;
+  vlr_custo?: number;
+  subtotal_custo?: number;
 }
 
 interface ColetaFormProps {
@@ -98,6 +101,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
   const [allEntidades, setAllEntidades] = useState<Entidade[]>([]);
   const [openPontoColetaPopover, setOpenPontoColetaPopover] = useState(false);
   const [pontoColetaRequired, setPontoColetaRequired] = useState(false);
+  const [desCusto, setDesCusto] = useState<string>('D');
 
   // Estados e utilitários para máscara/validação de data (DD/MM/AAAA)
   const today = new Date();
@@ -359,6 +363,11 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
       }
 
       console.log('[ColetaForm] Setting form data after data load:', newFormData);
+
+      // Carregar des_custo da coleta
+      if (editingColeta.des_custo) {
+        setDesCusto(editingColeta.des_custo);
+      }
       
       // Carregar resíduos da coleta simultaneamente
       const { data: residuosData, error: residuosError } = await supabase
@@ -368,6 +377,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
           id_residuo,
           qtd_total,
           vlr_total,
+          vlr_custo,
           residuo:id_residuo (
             nom_residuo,
             tipo_residuo:id_tipo_residuo (
@@ -389,6 +399,8 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
           qtd_total: item.qtd_total,
           vlr_total: item.vlr_total,
           subtotal: item.qtd_total * item.vlr_total,
+          vlr_custo: item.vlr_custo ?? undefined,
+          subtotal_custo: item.vlr_custo ? item.qtd_total * item.vlr_custo : undefined,
         }));
         setColetaResiduos(residuosFormatted);
       }
@@ -535,6 +547,16 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
       return;
     }
 
+    // Validação de entidade geradora obrigatória quando com custo
+    if (desCusto === 'A' && !formData.id_entidade_geradora) {
+      toast({
+        title: 'Erro',
+        description: 'Selecione uma entidade geradora para coleta com custo',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     // Validação específica da regra: DD/MM/AAAA e último 10 dias, sem futuro
     const validationErr = validateBRDate(displayDate);
     if (validationErr || !formData.dat_coleta || coletaResiduos.length === 0) {
@@ -555,15 +577,16 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
     try {
       const { totalValor } = calculateTotals();
 
-      const coletaData = {
+      const coletaData: any = {
         cod_coleta: formData.cod_coleta,
         id_ponto_coleta: formData.id_ponto_coleta ? parseInt(formData.id_ponto_coleta) : null,
         id_entidade_geradora: formData.id_entidade_geradora ? parseInt(formData.id_entidade_geradora) : null,
         id_evento: formData.id_evento ? parseInt(formData.id_evento) : null,
         dat_coleta: formData.dat_coleta,
         vlr_total: totalValor,
-        id_tipo_situacao: 1, // Assumindo situação padrão
-        id_usuario_criador: user?.id || 1, // Usar ID do usuário logado
+        des_custo: desCusto,
+        id_tipo_situacao: 1,
+        id_usuario_criador: user?.id || 1,
         dat_criacao: new Date().toISOString(),
       };
 
@@ -620,6 +643,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         id_residuo: residuo.id_residuo,
         qtd_total: residuo.qtd_total,
         vlr_total: residuo.vlr_total,
+        vlr_custo: desCusto === 'A' ? (residuo.vlr_custo ?? null) : null,
         id_tipo_situacao: 1,
         id_usuario_criador: user?.id || 1,
         dat_criacao: new Date().toISOString(),
@@ -668,6 +692,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         editingResiduo={editingResiduo}
         tabelaPrecos={eventoTabelaPrecos}
         tabelaRestrita={eventoTabelaRestrita}
+        comCusto={desCusto === 'A'}
       />
     );
   }
@@ -909,7 +934,31 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
             </div>
 
             <div>
-              <Label htmlFor="id_entidade_geradora">Entidade Geradora (Opcional)</Label>
+              <Label>Custo da Coleta</Label>
+              <RadioGroup
+                value={desCusto}
+                onValueChange={(value) => {
+                  setDesCusto(value);
+                  // Limpar entidade geradora se mudar para sem custo
+                  if (value === 'D') {
+                    // nada a limpar, mantém opcional
+                  }
+                }}
+                className="flex gap-6 mt-2"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="D" id="sem_custo" />
+                  <Label htmlFor="sem_custo" className="font-normal cursor-pointer">Sem Custo</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="A" id="com_custo" />
+                  <Label htmlFor="com_custo" className="font-normal cursor-pointer">Com Custo</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div>
+              <Label htmlFor="id_entidade_geradora">{desCusto === 'A' ? 'Entidade Geradora *' : 'Entidade Geradora (Opcional)'}</Label>
               <Popover open={openEntidadePopover} onOpenChange={setOpenEntidadePopover}>
                 <PopoverTrigger asChild>
                   <Button
@@ -935,16 +984,18 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
                     <CommandList>
                       <CommandEmpty>Nenhuma entidade encontrada.</CommandEmpty>
                       <CommandGroup>
-                        <CommandItem
-                          value="__clear__"
-                          onSelect={() => {
-                            setFormData(prev => ({ ...prev, id_entidade_geradora: '' }));
-                            setOpenEntidadePopover(false);
-                          }}
-                        >
-                          <Check className={`mr-2 h-4 w-4 ${!formData.id_entidade_geradora ? 'opacity-100' : 'opacity-0'}`} />
-                          Nenhuma entidade
-                        </CommandItem>
+                        {desCusto !== 'A' && (
+                          <CommandItem
+                            value="__clear__"
+                            onSelect={() => {
+                              setFormData(prev => ({ ...prev, id_entidade_geradora: '' }));
+                              setOpenEntidadePopover(false);
+                            }}
+                          >
+                            <Check className={`mr-2 h-4 w-4 ${!formData.id_entidade_geradora ? 'opacity-100' : 'opacity-0'}`} />
+                            Nenhuma entidade
+                          </CommandItem>
+                        )}
                         {entidades.map((entidade) => (
                           <CommandItem
                             key={entidade.id_entidade}
@@ -1059,7 +1110,13 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
                         <th className="text-left p-2 font-semibold">Tipo</th>
                         <th className="text-right p-2 font-semibold">Quantidade (kg)</th>
                         <th className="text-right p-2 font-semibold">Previsão de Venda</th>
-                        <th className="text-right p-2 font-semibold">Subtotal</th>
+                        <th className="text-right p-2 font-semibold">Subtotal Venda</th>
+                        {desCusto === 'A' && (
+                          <>
+                            <th className="text-right p-2 font-semibold">Vlr. Unit. Custo</th>
+                            <th className="text-right p-2 font-semibold">Subtotal Custo</th>
+                          </>
+                        )}
                         <th className="text-center p-2 font-semibold">Ações</th>
                       </tr>
                     </thead>
@@ -1075,6 +1132,16 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
                           <td className="p-2 text-right font-semibold text-recycle-green">
                             R$ {residuo.subtotal.toFixed(2)}
                           </td>
+                          {desCusto === 'A' && (
+                            <>
+                              <td className="p-2 text-right">
+                                R$ {(residuo.vlr_custo ?? 0).toFixed(2)}
+                              </td>
+                              <td className="p-2 text-right font-semibold text-orange-600">
+                                R$ {(residuo.subtotal_custo ?? 0).toFixed(2)}
+                              </td>
+                            </>
+                          )}
                           <td className="p-2">
                             <div className="flex justify-center gap-1">
                               <TooltipProvider>
@@ -1127,11 +1194,19 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
                         <span className="font-semibold">{totalQuantidade.toFixed(2)} kg</span>
                       </div>
                       <div className="flex justify-between text-lg">
-                        <span>Total de Valor:</span>
+                        <span>Total Venda:</span>
                         <span className="font-bold text-recycle-green">
                           R$ {totalValor.toFixed(2)}
                         </span>
                       </div>
+                      {desCusto === 'A' && (
+                        <div className="flex justify-between text-lg">
+                          <span>Total Custo:</span>
+                          <span className="font-bold text-orange-600">
+                            R$ {coletaResiduos.reduce((sum, r) => sum + (r.subtotal_custo ?? 0), 0).toFixed(2)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
