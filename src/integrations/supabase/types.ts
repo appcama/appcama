@@ -502,8 +502,10 @@ export type Database = {
           des_logo_url: string | null
           des_ponto_coleta: string
           des_status: string
+          des_tabela_preco_restrita: string
           des_visibilidade: string
           id_evento: number
+          id_tabela_precos: number | null
           id_usuario_atualizador: number | null
           id_usuario_criador: number
           nom_evento: string | null
@@ -518,8 +520,10 @@ export type Database = {
           des_logo_url?: string | null
           des_ponto_coleta?: string
           des_status?: string
+          des_tabela_preco_restrita?: string
           des_visibilidade?: string
           id_evento?: number
+          id_tabela_precos?: number | null
           id_usuario_atualizador?: number | null
           id_usuario_criador: number
           nom_evento?: string | null
@@ -534,13 +538,22 @@ export type Database = {
           des_logo_url?: string | null
           des_ponto_coleta?: string
           des_status?: string
+          des_tabela_preco_restrita?: string
           des_visibilidade?: string
           id_evento?: number
+          id_tabela_precos?: number | null
           id_usuario_atualizador?: number | null
           id_usuario_criador?: number
           nom_evento?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "evento_id_tabela_precos_fkey"
+            columns: ["id_tabela_precos"]
+            isOneToOne: false
+            referencedRelation: "tabela_precos"
+            referencedColumns: ["id_tabela_precos"]
+          },
           {
             foreignKeyName: "evento_id_usuario_atualizador_fkey"
             columns: ["id_usuario_atualizador"]
@@ -1029,6 +1042,72 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "usuario"
             referencedColumns: ["id_usuario"]
+          },
+        ]
+      }
+      tabela_precos: {
+        Row: {
+          dat_atualizacao: string | null
+          dat_criacao: string
+          des_locked: string
+          des_status: string
+          des_tabela_precos: string
+          id_tabela_precos: number
+          id_usuario_atualizador: number | null
+          id_usuario_criador: number
+        }
+        Insert: {
+          dat_atualizacao?: string | null
+          dat_criacao?: string
+          des_locked?: string
+          des_status?: string
+          des_tabela_precos: string
+          id_tabela_precos?: number
+          id_usuario_atualizador?: number | null
+          id_usuario_criador: number
+        }
+        Update: {
+          dat_atualizacao?: string | null
+          dat_criacao?: string
+          des_locked?: string
+          des_status?: string
+          des_tabela_precos?: string
+          id_tabela_precos?: number
+          id_usuario_atualizador?: number | null
+          id_usuario_criador?: number
+        }
+        Relationships: []
+      }
+      tabela_precos_residuo: {
+        Row: {
+          id_residuo: number
+          id_tabela_preco: number
+          vlr_total: number
+        }
+        Insert: {
+          id_residuo: number
+          id_tabela_preco: number
+          vlr_total: number
+        }
+        Update: {
+          id_residuo?: number
+          id_tabela_preco?: number
+          vlr_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tabela_precos_residuo_id_residuo_fkey"
+            columns: ["id_residuo"]
+            isOneToOne: false
+            referencedRelation: "residuo"
+            referencedColumns: ["id_residuo"]
+          },
+          {
+            foreignKeyName: "tabela_precos_residuo_id_tabela_preco_fkey"
+            columns: ["id_tabela_preco"]
+            isOneToOne: false
+            referencedRelation: "tabela_precos"
+            referencedColumns: ["id_tabela_precos"]
           },
         ]
       }
