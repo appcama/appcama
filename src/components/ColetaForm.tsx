@@ -96,6 +96,8 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
   const [openEventoPopover, setOpenEventoPopover] = useState(false);
   const [openEntidadePopover, setOpenEntidadePopover] = useState(false);
   const [allEntidades, setAllEntidades] = useState<Entidade[]>([]);
+  const [openPontoColetaPopover, setOpenPontoColetaPopover] = useState(false);
+  const [pontoColetaRequired, setPontoColetaRequired] = useState(false);
 
   // Estados e utilitários para máscara/validação de data (DD/MM/AAAA)
   const today = new Date();
@@ -412,12 +414,15 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
             const pontosIds = new Set((eventoPontos || []).map(p => p.id_ponto_coleta));
             setPontosColeta(prev => {
               const all = allPontosColeta.length > 0 ? allPontosColeta : prev;
-              return all.filter(p => pontosIds.has(p.id_ponto_coleta));
+              const filtered = all.filter(p => pontosIds.has(p.id_ponto_coleta));
+              setPontoColetaRequired(filtered.length > 0);
+              return filtered;
             });
             setPontoColetaDisabled(false);
           } else if (eventoData) {
             setPontosColeta([]);
             setPontoColetaDisabled(true);
+            setPontoColetaRequired(false);
           }
 
           // Load price table if exists
@@ -519,6 +524,16 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validação de ponto de coleta obrigatório
+    if (pontoColetaRequired && !formData.id_ponto_coleta) {
+      toast({
+        title: 'Erro',
+        description: 'Selecione um ponto de coleta para este evento',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     // Validação específica da regra: DD/MM/AAAA e último 10 dias, sem futuro
     const validationErr = validateBRDate(displayDate);
@@ -798,6 +813,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
                             setFormData(prev => ({ ...prev, id_evento: '', id_ponto_coleta: '', id_entidade_geradora: '' }));
                             setPontosColeta(allPontosColeta);
                             setPontoColetaDisabled(false);
+                            setPontoColetaRequired(false);
                             setEntidades(allEntidades);
                             setEventoTabelaPrecos(null);
                             setEventoTabelaRestrita(false);
@@ -830,11 +846,14 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
                                     .eq('id_evento', evento.id_evento);
 
                                   const pontosIds = new Set((eventoPontos || []).map(p => p.id_ponto_coleta));
-                                  setPontosColeta(allPontosColeta.filter(p => pontosIds.has(p.id_ponto_coleta)));
+                                  const filteredPontos = allPontosColeta.filter(p => pontosIds.has(p.id_ponto_coleta));
+                                  setPontosColeta(filteredPontos);
                                   setPontoColetaDisabled(false);
+                                  setPontoColetaRequired(filteredPontos.length > 0);
                                 } else {
                                   setPontosColeta([]);
                                   setPontoColetaDisabled(true);
+                                  setPontoColetaRequired(false);
                                 }
 
                                 if (eventoData?.id_tabela_precos) {
@@ -871,6 +890,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
                                 console.error('[ColetaForm] Error fetching evento config:', error);
                                 setPontosColeta(allPontosColeta);
                                 setPontoColetaDisabled(false);
+                                setPontoColetaRequired(false);
                                 setEntidades(allEntidades);
                                 setEventoTabelaPrecos(null);
                                 setEventoTabelaRestrita(false);
@@ -946,23 +966,66 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
             </div>
 
             <div>
-              <Label htmlFor="id_ponto_coleta">Ponto de Coleta (Opcional)</Label>
-              <Select
-                value={formData.id_ponto_coleta}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, id_ponto_coleta: value }))}
-                disabled={!isDataLoaded || pontoColetaDisabled}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={pontoColetaDisabled ? "Evento sem pontos de coleta definidos" : (isDataLoaded ? "Selecione o ponto de coleta (opcional)" : "Carregando...")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {pontosColeta.map((ponto) => (
-                    <SelectItem key={ponto.id_ponto_coleta} value={ponto.id_ponto_coleta.toString()}>
-                      {ponto.nom_ponto_coleta}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="id_ponto_coleta">
+                {pontoColetaRequired ? 'Ponto de Coleta *' : 'Ponto de Coleta (Opcional)'}
+              </Label>
+              <Popover open={openPontoColetaPopover} onOpenChange={setOpenPontoColetaPopover}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openPontoColetaPopover}
+                    className="w-full justify-between font-normal"
+                    disabled={!isDataLoaded || pontoColetaDisabled}
+                  >
+                    {pontoColetaDisabled
+                      ? "Evento sem pontos de coleta definidos"
+                      : formData.id_ponto_coleta
+                        ? pontosColeta.find(p => p.id_ponto_coleta.toString() === formData.id_ponto_coleta)?.nom_ponto_coleta
+                          || allPontosColeta.find(p => p.id_ponto_coleta.toString() === formData.id_ponto_coleta)?.nom_ponto_coleta
+                        : (isDataLoaded ? "Buscar ponto de coleta..." : "Carregando...")}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command filter={(value, search) => {
+                      if (value === '__clear__') return 1;
+                      return value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0;
+                    }}>
+                    <CommandInput placeholder="Buscar ponto de coleta pelo nome..." />
+                    <CommandList>
+                      <CommandEmpty>Nenhum ponto de coleta encontrado.</CommandEmpty>
+                      <CommandGroup>
+                        {!pontoColetaRequired && (
+                          <CommandItem
+                            value="__clear__"
+                            onSelect={() => {
+                              setFormData(prev => ({ ...prev, id_ponto_coleta: '' }));
+                              setOpenPontoColetaPopover(false);
+                            }}
+                          >
+                            <Check className={`mr-2 h-4 w-4 ${!formData.id_ponto_coleta ? 'opacity-100' : 'opacity-0'}`} />
+                            Nenhum ponto de coleta
+                          </CommandItem>
+                        )}
+                        {pontosColeta.map((ponto) => (
+                          <CommandItem
+                            key={ponto.id_ponto_coleta}
+                            value={ponto.nom_ponto_coleta}
+                            onSelect={() => {
+                              setFormData(prev => ({ ...prev, id_ponto_coleta: ponto.id_ponto_coleta.toString() }));
+                              setOpenPontoColetaPopover(false);
+                            }}
+                          >
+                            <Check className={`mr-2 h-4 w-4 ${formData.id_ponto_coleta === ponto.id_ponto_coleta.toString() ? 'opacity-100' : 'opacity-0'}`} />
+                            {ponto.nom_ponto_coleta}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </CardContent>
         </Card>
