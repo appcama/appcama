@@ -88,6 +88,8 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
   });
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [openDatePicker, setOpenDatePicker] = useState(false);
+  const [allPontosColeta, setAllPontosColeta] = useState<PontoColeta[]>([]);
+  const [pontoColetaDisabled, setPontoColetaDisabled] = useState(false);
 
   // Estados e utilitários para máscara/validação de data (DD/MM/AAAA)
   const today = new Date();
@@ -252,7 +254,9 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         if (!isAdmin && userEntityId) {
           console.log('[ColetaForm] Pontos filtered by entity:', userEntityId);
         }
-        setPontosColeta(pontosResult.data || []);
+        const loadedPontos = pontosResult.data || [];
+        setPontosColeta(loadedPontos);
+        setAllPontosColeta(loadedPontos);
       }
 
       // Processar entidades geradoras (disponível para todos os usuários)
@@ -382,6 +386,36 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
 
       // Setar dados do form APÓS carregar os dados dos selects
       setFormData(newFormData);
+
+      // Handle pontos de coleta filtering based on event config
+      if (newFormData.id_evento) {
+        try {
+          const { data: eventoData } = await supabase
+            .from('evento')
+            .select('des_ponto_coleta')
+            .eq('id_evento', parseInt(newFormData.id_evento))
+            .maybeSingle();
+
+          if (eventoData?.des_ponto_coleta === 'A') {
+            const { data: eventoPontos } = await supabase
+              .from('evento_ponto_coleta')
+              .select('id_ponto_coleta')
+              .eq('id_evento', parseInt(newFormData.id_evento));
+
+            const pontosIds = new Set((eventoPontos || []).map(p => p.id_ponto_coleta));
+            setPontosColeta(prev => {
+              const all = allPontosColeta.length > 0 ? allPontosColeta : prev;
+              return all.filter(p => pontosIds.has(p.id_ponto_coleta));
+            });
+            setPontoColetaDisabled(false);
+          } else if (eventoData) {
+            setPontosColeta([]);
+            setPontoColetaDisabled(true);
+          }
+        } catch (error) {
+          console.error('[ColetaForm] Error loading evento config for editing:', error);
+        }
+      }
 
       // Atualizar exibição da data no formato brasileiro
       if (newFormData.dat_coleta) {
@@ -717,10 +751,10 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
               <Select
                 value={formData.id_ponto_coleta}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, id_ponto_coleta: value }))}
-                disabled={!isDataLoaded}
+                disabled={!isDataLoaded || pontoColetaDisabled}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={isDataLoaded ? "Selecione o ponto de coleta (opcional)" : "Carregando..."} />
+                  <SelectValue placeholder={pontoColetaDisabled ? "Evento sem pontos de coleta definidos" : (isDataLoaded ? "Selecione o ponto de coleta (opcional)" : "Carregando...")} />
                 </SelectTrigger>
                 <SelectContent>
                   {pontosColeta.map((ponto) => (
@@ -756,7 +790,45 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
               <Label htmlFor="id_evento">Evento (Opcional)</Label>
               <Select
                 value={formData.id_evento}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, id_evento: value }))}
+                onValueChange={async (value) => {
+                  setFormData(prev => ({ ...prev, id_evento: value, id_ponto_coleta: '' }));
+                  
+                  if (!value) {
+                    // No event selected: show all pontos
+                    setPontosColeta(allPontosColeta);
+                    setPontoColetaDisabled(false);
+                    return;
+                  }
+
+                  try {
+                    // Fetch event config
+                    const { data: eventoData } = await supabase
+                      .from('evento')
+                      .select('des_ponto_coleta')
+                      .eq('id_evento', parseInt(value))
+                      .maybeSingle();
+
+                    if (eventoData?.des_ponto_coleta === 'A') {
+                      // Event has specific pontos: filter
+                      const { data: eventoPontos } = await supabase
+                        .from('evento_ponto_coleta')
+                        .select('id_ponto_coleta')
+                        .eq('id_evento', parseInt(value));
+
+                      const pontosIds = new Set((eventoPontos || []).map(p => p.id_ponto_coleta));
+                      setPontosColeta(allPontosColeta.filter(p => pontosIds.has(p.id_ponto_coleta)));
+                      setPontoColetaDisabled(false);
+                    } else {
+                      // Event without pontos: disable field
+                      setPontosColeta([]);
+                      setPontoColetaDisabled(true);
+                    }
+                  } catch (error) {
+                    console.error('[ColetaForm] Error fetching evento config:', error);
+                    setPontosColeta(allPontosColeta);
+                    setPontoColetaDisabled(false);
+                  }
+                }}
                 disabled={!isDataLoaded}
               >
                 <SelectTrigger>

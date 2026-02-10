@@ -500,6 +500,7 @@ export type Database = {
           des_evento: string | null
           des_locked: string
           des_logo_url: string | null
+          des_ponto_coleta: string
           des_status: string
           des_visibilidade: string
           id_evento: number
@@ -515,6 +516,7 @@ export type Database = {
           des_evento?: string | null
           des_locked?: string
           des_logo_url?: string | null
+          des_ponto_coleta?: string
           des_status?: string
           des_visibilidade?: string
           id_evento?: number
@@ -530,6 +532,7 @@ export type Database = {
           des_evento?: string | null
           des_locked?: string
           des_logo_url?: string | null
+          des_ponto_coleta?: string
           des_status?: string
           des_visibilidade?: string
           id_evento?: number
@@ -597,6 +600,45 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "usuario"
             referencedColumns: ["id_usuario"]
+          },
+        ]
+      }
+      evento_ponto_coleta: {
+        Row: {
+          dat_criacao: string
+          id_evento: number
+          id_evento_ponto_coleta: number
+          id_ponto_coleta: number
+          id_usuario_criador: number
+        }
+        Insert: {
+          dat_criacao?: string
+          id_evento: number
+          id_evento_ponto_coleta?: number
+          id_ponto_coleta: number
+          id_usuario_criador: number
+        }
+        Update: {
+          dat_criacao?: string
+          id_evento?: number
+          id_evento_ponto_coleta?: number
+          id_ponto_coleta?: number
+          id_usuario_criador?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evento_ponto_coleta_id_evento_fkey"
+            columns: ["id_evento"]
+            isOneToOne: false
+            referencedRelation: "evento"
+            referencedColumns: ["id_evento"]
+          },
+          {
+            foreignKeyName: "evento_ponto_coleta_id_ponto_coleta_fkey"
+            columns: ["id_ponto_coleta"]
+            isOneToOne: false
+            referencedRelation: "ponto_coleta"
+            referencedColumns: ["id_ponto_coleta"]
           },
         ]
       }
