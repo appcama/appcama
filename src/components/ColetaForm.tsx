@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Trash2, Edit, Package, Calendar as CalendarIcon } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Edit, Package, Calendar as CalendarIcon, Check, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandGroup } from '@/components/ui/command';
 import { Calendar } from '@/components/ui/calendar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
@@ -92,6 +93,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
   const [pontoColetaDisabled, setPontoColetaDisabled] = useState(false);
   const [eventoTabelaPrecos, setEventoTabelaPrecos] = useState<{ id_residuo: number; vlr_total: number }[] | null>(null);
   const [eventoTabelaRestrita, setEventoTabelaRestrita] = useState(false);
+  const [openEventoPopover, setOpenEventoPopover] = useState(false);
 
   // Estados e utilitários para máscara/validação de data (DD/MM/AAAA)
   const today = new Date();
@@ -762,6 +764,105 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
             </div>
 
             <div>
+              <Label htmlFor="id_evento">Evento (Opcional)</Label>
+              <Popover open={openEventoPopover} onOpenChange={setOpenEventoPopover}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openEventoPopover}
+                    className="w-full justify-between font-normal"
+                    disabled={!isDataLoaded}
+                  >
+                    {formData.id_evento
+                      ? eventos.find(e => e.id_evento.toString() === formData.id_evento)?.nom_evento
+                      : (isDataLoaded ? "Buscar evento..." : "Carregando...")}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Buscar evento pelo nome..." />
+                    <CommandList>
+                      <CommandEmpty>Nenhum evento encontrado.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="__clear__"
+                          onSelect={async () => {
+                            setFormData(prev => ({ ...prev, id_evento: '', id_ponto_coleta: '' }));
+                            setPontosColeta(allPontosColeta);
+                            setPontoColetaDisabled(false);
+                            setEventoTabelaPrecos(null);
+                            setEventoTabelaRestrita(false);
+                            setOpenEventoPopover(false);
+                          }}
+                        >
+                          <Check className={`mr-2 h-4 w-4 ${!formData.id_evento ? 'opacity-100' : 'opacity-0'}`} />
+                          Nenhum evento
+                        </CommandItem>
+                        {eventos.map((evento) => (
+                          <CommandItem
+                            key={evento.id_evento}
+                            value={evento.nom_evento || ''}
+                            onSelect={async () => {
+                              const value = evento.id_evento.toString();
+                              setFormData(prev => ({ ...prev, id_evento: value, id_ponto_coleta: '' }));
+                              setOpenEventoPopover(false);
+
+                              try {
+                                const { data: eventoData } = await supabase
+                                  .from('evento')
+                                  .select('des_ponto_coleta, id_tabela_precos, des_tabela_preco_restrita')
+                                  .eq('id_evento', evento.id_evento)
+                                  .maybeSingle();
+
+                                if (eventoData?.des_ponto_coleta === 'A') {
+                                  const { data: eventoPontos } = await supabase
+                                    .from('evento_ponto_coleta')
+                                    .select('id_ponto_coleta')
+                                    .eq('id_evento', evento.id_evento);
+
+                                  const pontosIds = new Set((eventoPontos || []).map(p => p.id_ponto_coleta));
+                                  setPontosColeta(allPontosColeta.filter(p => pontosIds.has(p.id_ponto_coleta)));
+                                  setPontoColetaDisabled(false);
+                                } else {
+                                  setPontosColeta([]);
+                                  setPontoColetaDisabled(true);
+                                }
+
+                                if (eventoData?.id_tabela_precos) {
+                                  const { data: precos } = await supabase
+                                    .from('tabela_precos_residuo')
+                                    .select('id_residuo, vlr_total')
+                                    .eq('id_tabela_preco', eventoData.id_tabela_precos);
+
+                                  setEventoTabelaPrecos(precos || []);
+                                  setEventoTabelaRestrita(eventoData.des_tabela_preco_restrita === 'A');
+                                } else {
+                                  setEventoTabelaPrecos(null);
+                                  setEventoTabelaRestrita(false);
+                                }
+                              } catch (error) {
+                                console.error('[ColetaForm] Error fetching evento config:', error);
+                                setPontosColeta(allPontosColeta);
+                                setPontoColetaDisabled(false);
+                                setEventoTabelaPrecos(null);
+                                setEventoTabelaRestrita(false);
+                              }
+                            }}
+                          >
+                            <Check className={`mr-2 h-4 w-4 ${formData.id_evento === evento.id_evento.toString() ? 'opacity-100' : 'opacity-0'}`} />
+                            {evento.nom_evento}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div>
               <Label htmlFor="id_ponto_coleta">Ponto de Coleta (Opcional)</Label>
               <Select
                 value={formData.id_ponto_coleta}
@@ -795,80 +896,6 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
                   {entidades.map((entidade) => (
                     <SelectItem key={entidade.id_entidade} value={entidade.id_entidade.toString()}>
                       {entidade.nom_entidade}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="id_evento">Evento (Opcional)</Label>
-              <Select
-                value={formData.id_evento}
-                onValueChange={async (value) => {
-                  setFormData(prev => ({ ...prev, id_evento: value, id_ponto_coleta: '' }));
-                  
-                  if (!value) {
-                    // No event selected: show all pontos, clear price table
-                    setPontosColeta(allPontosColeta);
-                    setPontoColetaDisabled(false);
-                    setEventoTabelaPrecos(null);
-                    setEventoTabelaRestrita(false);
-                    return;
-                  }
-
-                  try {
-                    // Fetch event config including price table
-                    const { data: eventoData } = await supabase
-                      .from('evento')
-                      .select('des_ponto_coleta, id_tabela_precos, des_tabela_preco_restrita')
-                      .eq('id_evento', parseInt(value))
-                      .maybeSingle();
-
-                    if (eventoData?.des_ponto_coleta === 'A') {
-                      const { data: eventoPontos } = await supabase
-                        .from('evento_ponto_coleta')
-                        .select('id_ponto_coleta')
-                        .eq('id_evento', parseInt(value));
-
-                      const pontosIds = new Set((eventoPontos || []).map(p => p.id_ponto_coleta));
-                      setPontosColeta(allPontosColeta.filter(p => pontosIds.has(p.id_ponto_coleta)));
-                      setPontoColetaDisabled(false);
-                    } else {
-                      setPontosColeta([]);
-                      setPontoColetaDisabled(true);
-                    }
-
-                    // Load price table if exists
-                    if (eventoData?.id_tabela_precos) {
-                      const { data: precos } = await supabase
-                        .from('tabela_precos_residuo')
-                        .select('id_residuo, vlr_total')
-                        .eq('id_tabela_preco', eventoData.id_tabela_precos);
-
-                      setEventoTabelaPrecos(precos || []);
-                      setEventoTabelaRestrita(eventoData.des_tabela_preco_restrita === 'A');
-                    } else {
-                      setEventoTabelaPrecos(null);
-                      setEventoTabelaRestrita(false);
-                    }
-                  } catch (error) {
-                    console.error('[ColetaForm] Error fetching evento config:', error);
-                    setPontosColeta(allPontosColeta);
-                    setPontoColetaDisabled(false);
-                    setEventoTabelaPrecos(null);
-                    setEventoTabelaRestrita(false);
-                  }
-                }}
-                disabled={!isDataLoaded}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={isDataLoaded ? "Selecione o evento" : "Carregando..."} />
-                </SelectTrigger>
-                <SelectContent>
-                  {eventos.map((evento) => (
-                    <SelectItem key={evento.id_evento} value={evento.id_evento.toString()}>
-                      {evento.nom_evento}
                     </SelectItem>
                   ))}
                 </SelectContent>
