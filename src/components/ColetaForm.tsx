@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Trash2, Edit, Package, Calendar as CalendarIcon, Check, ChevronsUpDown } from 'lucide-react';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { ArrowLeft, Plus, Trash2, Edit, Package, Calendar as CalendarIcon, Check, ChevronsUpDown, DollarSign } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -933,28 +933,19 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
               </Popover>
             </div>
 
-            <div>
-              <Label>Custo da Coleta</Label>
-              <RadioGroup
-                value={desCusto}
-                onValueChange={(value) => {
-                  setDesCusto(value);
-                  // Limpar entidade geradora se mudar para sem custo
-                  if (value === 'D') {
-                    // nada a limpar, mantém opcional
-                  }
-                }}
-                className="flex gap-6 mt-2"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="D" id="sem_custo" />
-                  <Label htmlFor="sem_custo" className="font-normal cursor-pointer">Sem Custo</Label>
+            <div className="flex items-center justify-between rounded-lg border border-border p-4">
+              <div className="flex items-center gap-3">
+                <DollarSign className="h-5 w-5 text-recycle-green" />
+                <div>
+                  <Label htmlFor="custo_coleta" className="text-sm font-semibold cursor-pointer">Coleta com Custo</Label>
+                  <p className="text-sm text-muted-foreground">Habilite para registrar valores de custo por resíduo</p>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="A" id="com_custo" />
-                  <Label htmlFor="com_custo" className="font-normal cursor-pointer">Com Custo</Label>
-                </div>
-              </RadioGroup>
+              </div>
+              <Switch
+                id="custo_coleta"
+                checked={desCusto === 'A'}
+                onCheckedChange={(checked) => setDesCusto(checked ? 'A' : 'D')}
+              />
             </div>
 
             <div>
