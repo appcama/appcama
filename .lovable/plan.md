@@ -1,52 +1,73 @@
 
 
-## Plano: Campo de Evento como primeiro campo com filtro de busca
+## Plano: Campo de Entidade Geradora com filtro de busca e filtragem por evento
 
 ### Resumo
-Mover o campo "Evento" para ser o primeiro dos 3 campos opcionais na tela de Coleta e transformar o Select simples em um campo com filtro de busca por nome do evento. As regras de visibilidade (eventos publicos/privados com controle de acesso) ja estao implementadas pelo hook `useEventosVisiveis` e serao mantidas.
+Transformar o campo "Entidade Geradora" de um Select simples em um Combobox com filtro de busca (mesmo padrao do campo Evento). Quando um evento for selecionado, filtrar as entidades geradoras exibindo apenas as associadas ao evento via tabela `evento_entidade`. Sem evento selecionado, todas as entidades geradoras ficam disponiveis.
 
 ### Alteracoes
 
 **Arquivo: `src/components/ColetaForm.tsx`**
 
-1. **Reordenar campos** (linhas ~764-876):
-   - Ordem atual: Ponto de Coleta > Entidade Geradora > Evento
-   - Ordem nova: **Evento** > Ponto de Coleta > Entidade Geradora
+1. **Novo estado para controle do popover e entidades completas**:
+   - Adicionar `openEntidadePopover` (boolean) para controlar abertura/fechamento do combobox
+   - Adicionar `allEntidades` para guardar todas as entidades geradoras carregadas (similar a `allPontosColeta`)
 
-2. **Substituir Select por Popover + Command (Combobox)** no campo Evento:
-   - Usar os componentes `Popover`, `Command`, `CommandInput`, `CommandList`, `CommandEmpty`, `CommandItem` (ja disponiveis no projeto via cmdk)
-   - O campo tera um input de busca que filtra eventos pelo nome
-   - Ao digitar, a lista de eventos e filtrada em tempo real
-   - Ao selecionar, o popover fecha e o valor e preenchido
-   - Manter toda a logica existente de `onValueChange` (carregar pontos de coleta e tabela de precos do evento)
+2. **Substituir Select por Popover + Command (Combobox)** no campo Entidade Geradora:
+   - Mesmo padrao visual ja usado no campo Evento
+   - Input de busca filtra entidades pelo nome em tempo real
+   - Opcao "Nenhuma entidade" para limpar selecao
+   - Ao selecionar, popover fecha e valor e preenchido
 
-3. **Importar componentes necessarios**:
-   - Adicionar imports de `Command, CommandInput, CommandList, CommandEmpty, CommandItem, CommandGroup` de `@/components/ui/command`
-   - Adicionar import de `Check, ChevronsUpDown` de `lucide-react`
+3. **Filtragem por evento selecionado**:
+   - Quando um evento e selecionado (no `onSelect` do evento), buscar entidades associadas na tabela `evento_entidade`
+   - Se o evento tiver entidades associadas, filtrar a lista de entidades geradoras para mostrar apenas essas
+   - Se o evento nao tiver entidades associadas (ou for evento publico sem restricao), manter todas as entidades disponiveis
+   - Quando o evento for desmarcado ("Nenhum evento"), restaurar todas as entidades geradoras
+   - Limpar a selecao de entidade geradora quando o evento mudar (para evitar inconsistencia)
+
+4. **Logica no `onSelect` do evento** (ja existente, sera expandida):
+   - Alem de carregar pontos de coleta e tabela de precos, tambem carregar entidades associadas ao evento
+   - Query: `supabase.from('evento_entidade').select('id_entidade').eq('id_evento', eventoId)`
+   - Se houver entidades associadas, filtrar `entidades` para incluir apenas as que estao no resultado
+   - Se nao houver, manter `allEntidades`
+
+5. **No clear do evento** (opcao "Nenhum evento"):
+   - Restaurar `entidades` para `allEntidades`
+   - Limpar `id_entidade_geradora` do formData
 
 ### Secao Tecnica
 
-O componente Combobox seguira este padrao:
+O combobox da Entidade Geradora seguira o mesmo padrao do Evento:
 
 ```text
-Evento (Opcional)
+Entidade Geradora (Opcional)
 +-------------------------------------------+
-| Buscar evento...                    [v]   |
+| Buscar entidade geradora...         [v]   |
 +-------------------------------------------+
-| Evento ABC                               |
-| Evento DEF                               |
-| Evento GHI                               |
+| Nenhuma entidade                          |
+| Entidade ABC                              |
+| Entidade DEF                              |
+| Entidade GHI                              |
 +-------------------------------------------+
 ```
 
-A logica de visibilidade dos eventos permanece inalterada - o hook `useEventosVisiveis` ja filtra:
-- Eventos publicos ativos para todos
-- Eventos privados apenas para entidades autorizadas
-- Apenas eventos vigentes (dat_termino >= hoje)
+Fluxo de filtragem por evento:
+
+```text
+Sem evento selecionado:
+  entidades = allEntidades (todas as geradoras ativas)
+
+Com evento selecionado:
+  1. Buscar evento_entidade WHERE id_evento = X
+  2. Se houver registros: entidades = allEntidades filtradas pelos ids retornados
+  3. Se nao houver registros: entidades = allEntidades (sem restricao)
+  4. Limpar id_entidade_geradora do formData
+```
 
 ### Arquivos Modificados
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `ColetaForm.tsx` | Reordenar campos; substituir Select do evento por Combobox com filtro de busca |
+| `ColetaForm.tsx` | Adicionar estados `openEntidadePopover` e `allEntidades`; substituir Select por Combobox; adicionar filtragem de entidades ao selecionar evento |
 
