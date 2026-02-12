@@ -1,4 +1,4 @@
-
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,9 +9,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { 
   Package, Plus, CalendarIcon, ChevronDown, Save, CheckCircle, 
-  DollarSign, Building, MapPin, Calendar, Recycle, Info, AlertTriangle, Lightbulb
+  DollarSign, Building, MapPin, Calendar, Recycle, Info, AlertTriangle, Lightbulb, Printer
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 /** Mini-card wrapper que simula uma "captura de tela" do sistema */
 function MockupCard({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -54,21 +58,285 @@ function StepNumber({ n }: { n: number }) {
   );
 }
 
+type ManualStep = {
+  title: string;
+  description: string;
+  rules: { prefix: string; text: string }[];
+};
+
+const manualSteps: ManualStep[] = [
+  {
+    title: 'Acessar o formulário de Coletas',
+    description: 'No menu lateral, clique em "Coletas" para abrir a listagem. Em seguida, clique no botão "Nova Coleta". O formulário abrirá com a data de hoje já preenchida.',
+    rules: [
+      { prefix: 'DICA', text: 'O formulário abrirá com a data de hoje já preenchida.' },
+    ],
+  },
+  {
+    title: 'Preencher a Data da Coleta',
+    description: 'Selecione a data em que a coleta foi realizada. Por padrão, a data de hoje é preenchida automaticamente.',
+    rules: [
+      { prefix: 'OBRIGATÓRIO', text: 'Campo obrigatório.' },
+    ],
+  },
+  {
+    title: 'Selecionar o Evento (opcional)',
+    description: 'Se a coleta está vinculada a um evento, selecione-o na lista. Caso contrário, deixe em branco.',
+    rules: [
+      { prefix: 'OPCIONAL', text: 'Campo opcional.' },
+      { prefix: 'DICA', text: 'A busca funciona por substring (ex: "mutir" encontra "Mutirão").' },
+    ],
+  },
+  {
+    title: 'Custo da Coleta',
+    description: 'Indique se esta coleta possui custos associados. O switch "Coleta com Custo" controla dois estados:\n\n• Desabilitado (padrão): A coleta não possui custos. A Entidade Geradora é opcional e o campo de Valor de Custo nos resíduos fica oculto.\n\n• Habilitado: A coleta possui custos. A Entidade Geradora torna-se obrigatória e cada resíduo exige o preenchimento do Valor Unitário de Custo (mínimo R$ 0,01). A grade de resíduos exibe colunas adicionais de custo.',
+    rules: [
+      { prefix: 'ATENÇÃO', text: 'Quando habilitado, a Entidade Geradora torna-se obrigatória.' },
+      { prefix: 'ATENÇÃO', text: 'Resíduos passam a exigir o valor unitário de custo (mínimo R$ 0,01).' },
+    ],
+  },
+  {
+    title: 'Entidade Geradora',
+    description: 'Selecione a entidade que gerou o resíduo. A obrigatoriedade depende do custo da coleta:\n\n• Sem custo: Campo opcional.\n• Com custo: Campo obrigatório.',
+    rules: [
+      { prefix: 'DICA', text: 'A busca funciona por nome ou CPF/CNPJ.' },
+    ],
+  },
+  {
+    title: 'Ponto de Coleta',
+    description: 'Selecione o ponto de coleta onde os resíduos foram recolhidos.',
+    rules: [
+      { prefix: 'OPCIONAL', text: 'Geralmente opcional.' },
+      { prefix: 'ATENÇÃO', text: 'Obrigatório quando o evento possui pontos de coleta associados.' },
+    ],
+  },
+  {
+    title: 'Adicionar Resíduos',
+    description: 'Preencha os campos para cada resíduo coletado e clique em "Adicionar".\n\nCampos obrigatórios: Resíduo, Quantidade (kg) e Valor Unitário de Venda.\n\nQuando "Coleta com Custo" está habilitado, o campo Valor Unitário de Custo também é obrigatório (mínimo R$ 0,01).',
+    rules: [
+      { prefix: 'OBRIGATÓRIO', text: 'Resíduo, quantidade e valor de venda são sempre obrigatórios.' },
+      { prefix: 'ATENÇÃO', text: 'Valor de custo aparece apenas quando "Coleta com Custo" está habilitado.' },
+    ],
+  },
+  {
+    title: 'Grid de Resíduos Adicionados',
+    description: 'Confira os resíduos adicionados na tabela. Você pode remover itens antes de salvar. As colunas de custo só aparecem quando "Coleta com Custo" está habilitado.',
+    rules: [
+      { prefix: 'DICA', text: 'As colunas de custo só aparecem quando "Coleta com Custo" está habilitado.' },
+    ],
+  },
+  {
+    title: 'Salvar a Coleta',
+    description: 'Após preencher todos os campos e adicionar os resíduos, clique em "Salvar" para registrar a coleta. A coleta aparecerá na listagem com o código gerado automaticamente.',
+    rules: [
+      { prefix: 'DICA', text: 'Após salvar, a coleta aparecerá na listagem com o código gerado automaticamente.' },
+      { prefix: 'ATENÇÃO', text: 'Certifique-se de que pelo menos um resíduo foi adicionado antes de salvar.' },
+    ],
+  },
+];
+
+function generateManualPDF() {
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 20;
+  const contentWidth = pageWidth - margin * 2;
+  let y = margin;
+
+  const addFooter = (pageNum: number) => {
+    const totalPages = doc.getNumberOfPages();
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text(`Página ${pageNum} de ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+    doc.text('Gerado pelo Sistema ReCiclaÊ', margin, pageHeight - 10);
+  };
+
+  const checkPageBreak = (neededSpace: number) => {
+    if (y + neededSpace > pageHeight - 25) {
+      doc.addPage();
+      y = margin;
+    }
+  };
+
+  // Header
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(34, 97, 51); // green
+  doc.text('ReCiclaÊ', margin, y);
+  y += 8;
+
+  doc.setFontSize(14);
+  doc.setTextColor(40, 40, 40);
+  doc.text('Manual — Como Lançar uma Coleta', margin, y);
+  y += 7;
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(120, 120, 120);
+  doc.text(`Gerado em: ${format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`, margin, y);
+  y += 4;
+
+  // Divider
+  doc.setDrawColor(200, 200, 200);
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 8;
+
+  // Steps
+  manualSteps.forEach((step, index) => {
+    const stepNum = index + 1;
+
+    checkPageBreak(40);
+
+    // Step title
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(34, 97, 51);
+    doc.text(`Passo ${stepNum}: ${step.title}`, margin, y);
+    y += 7;
+
+    // Description
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
+    const descLines = doc.splitTextToSize(step.description, contentWidth);
+    descLines.forEach((line: string) => {
+      checkPageBreak(6);
+      doc.text(line, margin, y);
+      y += 5;
+    });
+    y += 2;
+
+    // Rules/tips
+    step.rules.forEach((rule) => {
+      checkPageBreak(8);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bolditalic');
+      
+      if (rule.prefix === 'OBRIGATÓRIO') {
+        doc.setTextColor(185, 28, 28);
+      } else if (rule.prefix === 'ATENÇÃO') {
+        doc.setTextColor(180, 120, 0);
+      } else if (rule.prefix === 'OPCIONAL') {
+        doc.setTextColor(37, 99, 235);
+      } else {
+        doc.setTextColor(5, 122, 85);
+      }
+
+      const ruleText = `[${rule.prefix}] ${rule.text}`;
+      const ruleLines = doc.splitTextToSize(ruleText, contentWidth);
+      ruleLines.forEach((line: string) => {
+        checkPageBreak(5);
+        doc.text(line, margin, y);
+        y += 4.5;
+      });
+    });
+
+    // Step 8: tables
+    if (stepNum === 8) {
+      y += 3;
+      checkPageBreak(45);
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(60, 60, 60);
+      doc.text('Exemplo — Sem custo:', margin, y);
+      y += 2;
+
+      autoTable(doc, {
+        startY: y,
+        margin: { left: margin, right: margin },
+        head: [['Resíduo', 'Qtd. (kg)', 'Vlr. Unit.', 'Subtotal']],
+        body: [
+          ['Papelão', '150,00', 'R$ 0,50', 'R$ 75,00'],
+          ['PET', '80,00', 'R$ 1,20', 'R$ 96,00'],
+        ],
+        foot: [['Total Venda', '', '', 'R$ 171,00']],
+        styles: { fontSize: 9, cellPadding: 2 },
+        headStyles: { fillColor: [34, 97, 51], textColor: 255 },
+        footStyles: { fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold' },
+      });
+
+      y = (doc as any).lastAutoTable.finalY + 8;
+      checkPageBreak(45);
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(60, 60, 60);
+      doc.text('Exemplo — Com custo:', margin, y);
+      y += 2;
+
+      autoTable(doc, {
+        startY: y,
+        margin: { left: margin, right: margin },
+        head: [['Resíduo', 'Qtd. (kg)', 'Vlr. Venda', 'Sub. Venda', 'Vlr. Custo', 'Sub. Custo']],
+        body: [
+          ['Papelão', '150,00', 'R$ 0,50', 'R$ 75,00', 'R$ 0,30', 'R$ 45,00'],
+          ['PET', '80,00', 'R$ 1,20', 'R$ 96,00', 'R$ 0,80', 'R$ 64,00'],
+        ],
+        foot: [['Total Venda', '', '', 'R$ 171,00', 'Total Custo', 'R$ 109,00']],
+        styles: { fontSize: 9, cellPadding: 2 },
+        headStyles: { fillColor: [34, 97, 51], textColor: 255 },
+        footStyles: { fillColor: [240, 240, 240], textColor: [40, 40, 40], fontStyle: 'bold' },
+      });
+
+      y = (doc as any).lastAutoTable.finalY + 6;
+    }
+
+    y += 6;
+
+    // Divider between steps
+    if (stepNum < manualSteps.length) {
+      checkPageBreak(4);
+      doc.setDrawColor(220, 220, 220);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 6;
+    }
+  });
+
+  // Add footers to all pages
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    addFooter(i);
+  }
+
+  // Open in new tab
+  const blobUrl = doc.output('bloburl');
+  window.open(blobUrl as unknown as string, '_blank');
+}
+
 export function ManualColeta() {
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handlePrintPDF = async () => {
+    setIsGenerating(true);
+    try {
+      generateManualPDF();
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Package className="w-6 h-6 text-primary" />
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Package className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-xl">Manual — Como Lançar uma Coleta</CardTitle>
+                <CardDescription>
+                  Guia passo a passo ilustrado com os campos e regras do formulário de coleta
+                </CardDescription>
+              </div>
             </div>
-            <div>
-              <CardTitle className="text-xl">Manual — Como Lançar uma Coleta</CardTitle>
-              <CardDescription>
-                Guia passo a passo ilustrado com os campos e regras do formulário de coleta
-              </CardDescription>
-            </div>
+            <Button variant="outline" size="sm" onClick={handlePrintPDF} disabled={isGenerating} className="gap-2">
+              <Printer className="w-4 h-4" />
+              {isGenerating ? 'Gerando...' : 'Imprimir PDF'}
+            </Button>
           </div>
         </CardHeader>
 
