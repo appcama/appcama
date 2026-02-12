@@ -1,84 +1,68 @@
 
-## Plano: Pagina de Manual Ilustrado - Como Lancar uma Coleta
+
+## Plano: Botao de Imprimir PDF no Manual de Coleta
 
 ### Resumo
-Criar um componente `ManualColeta` acessivel pelo menu lateral (item "ajuda" ja mapeado no `featureMap.ts`), contendo um guia passo a passo ilustrado com representacoes visuais dos campos do formulario de coleta, usando os proprios componentes do sistema (Card, Label, Switch, Input, Badge, Table, etc.) como "mockups" estaticos.
-
-### Estrutura da Pagina
-
-A pagina tera um layout de scroll vertical com secoes numeradas (Passo 1, 2, 3...), cada uma contendo:
-- Titulo e descricao do passo
-- Ilustracao estatica usando componentes reais do sistema (readonly/desabilitados) mostrando como o campo aparece
-- Dicas e observacoes em destaque
-
-### Passos Ilustrados
-
-1. **Acessar o formulario de Coletas**: Ilustracao do menu lateral com o item "Coletas" destacado e o botao "Nova Coleta"
-2. **Preencher a data**: Campo de calendario ilustrado
-3. **Selecionar o Evento (opcional)**: Combobox de evento com exemplo
-4. **Custo da Coleta**: Switch ilustrado mostrando os dois estados (sem custo / com custo) e explicando o impacto nos campos seguintes
-5. **Entidade Geradora**: Combobox com destaque de quando e obrigatorio (com custo) vs opcional
-6. **Ponto de Coleta**: Combobox com destaque de quando e obrigatorio (evento com pontos associados)
-7. **Adicionar Residuos**: Formulario de residuo com campos de tipo, quantidade, valor de venda e valor de custo (quando habilitado)
-8. **Grid de Residuos**: Tabela ilustrando as colunas (com e sem custo)
-9. **Salvar a Coleta**: Botao de salvar e confirmacao
+Adicionar um botao "Imprimir PDF" no cabecalho do manual que gera um PDF completo com todo o passo a passo, usando jsPDF (ja instalado no projeto). O PDF tera layout limpo com titulo, passos numerados, descricoes, tabelas ilustrativas e badges de dicas.
 
 ### Alteracoes
 
-**Novo arquivo: `src/components/ManualColeta.tsx`**
-- Componente com todas as secoes ilustradas
-- Usa Accordion para cada passo (permite expandir/colapsar)
-- Ilustracoes feitas com componentes do sistema em modo visual (nao interativos)
-- Badges coloridos para dicas ("Obrigatorio", "Opcional", "Dica")
-- Responsivo para mobile e desktop
+**Arquivo: `src/components/ManualColeta.tsx`**
 
-**Arquivo: `src/components/ReciclaELayout.tsx`**
-- Adicionar import do `ManualColeta`
-- Adicionar case `'ajuda'` ou `'manual-coleta'` no switch do `renderContent`
+1. **Importar** `jsPDF`, `autoTable`, `Printer` (lucide), `useState` e `format` (date-fns)
 
-**Arquivo: `src/components/Sidebar.tsx`**
-- Verificar se ja existe item de menu para "Ajuda" e se necessario adicionar item "Manual" ou reaproveitar o existente
+2. **Funcao `generateManualPDF()`** que cria o PDF com todo o conteudo:
+   - Cabecalho com logo ReciclaE e titulo "Manual - Como Lancar uma Coleta"
+   - Data de geracao
+   - Cada passo renderizado como secao numerada:
+     - Titulo do passo em negrito
+     - Descricao do passo
+     - Tabelas ilustrativas onde aplicavel (Passo 8: grid sem custo e com custo usando autoTable)
+     - Regras/dicas como texto destacado com prefixo (OBRIGATORIO, OPCIONAL, DICA, ATENCAO)
+   - Quebra de pagina automatica quando necessario
+   - Rodape com numero de pagina e "Gerado pelo Sistema ReciclaE"
 
-**Arquivo: `src/lib/featureMap.ts`**
-- Verificar mapeamento do item (ja existe `ajuda: "Ajuda"`)
+3. **Botao "Imprimir PDF"** no CardHeader, ao lado do titulo:
+   - Icone `Printer` + texto "Imprimir PDF"
+   - Variant `outline`, tamanho `sm`
+   - Ao clicar, gera o PDF e abre em nova aba para impressao (mesmo padrao do `printPDF` existente no sistema)
+   - Estado `isGenerating` para desabilitar durante geracao
+
+### Conteudo do PDF por passo
+
+| Passo | Titulo | Conteudo especial no PDF |
+|-------|--------|--------------------------|
+| 1 | Acessar o formulario de Coletas | Texto descritivo |
+| 2 | Preencher a Data da Coleta | Texto + regra "Campo obrigatorio" |
+| 3 | Selecionar o Evento | Texto + "Campo opcional" |
+| 4 | Custo da Coleta | Texto com explicacao dos dois estados (sem/com custo) e impacto nos campos |
+| 5 | Entidade Geradora | Texto com regra de obrigatoriedade condicional |
+| 6 | Ponto de Coleta | Texto com regra de obrigatoriedade condicional |
+| 7 | Adicionar Residuos | Texto com campos obrigatorios e campo de custo condicional |
+| 8 | Grid de Residuos | Duas tabelas via autoTable: sem custo (4 colunas) e com custo (6 colunas) com dados ficticios |
+| 9 | Salvar a Coleta | Texto final com dicas |
 
 ### Secao Tecnica
 
-Estrutura do componente:
+Estrutura da funcao de geracao:
 
 ```text
-ManualColeta
-+-- Card (Titulo: Manual - Como Lancar uma Coleta)
-+-- Accordion
-    +-- Passo 1: Acessar Coletas
-    |   +-- Ilustracao: mini sidebar + botao "Nova Coleta"
-    +-- Passo 2: Data da Coleta
-    |   +-- Ilustracao: campo de data com calendario
-    +-- Passo 3: Selecionar Evento
-    |   +-- Ilustracao: combobox de evento
-    +-- Passo 4: Custo da Coleta
-    |   +-- Ilustracao: Switch OFF (sem custo) + Switch ON (com custo)
-    |   +-- Badge: "Quando habilitado, entidade geradora obrigatoria"
-    +-- Passo 5: Entidade Geradora
-    |   +-- Ilustracao: combobox com label dinamico
-    +-- Passo 6: Ponto de Coleta
-    |   +-- Ilustracao: combobox + regra de obrigatoriedade
-    +-- Passo 7: Adicionar Residuos
-    |   +-- Ilustracao: campos de tipo, quantidade, valores
-    |   +-- Destaque: campo de custo quando habilitado
-    +-- Passo 8: Grid de Residuos
-    |   +-- Tabela ilustrativa com dados fictícios
-    |   +-- Versao sem custo vs com custo lado a lado
-    +-- Passo 9: Salvar
-        +-- Botao ilustrativo + mensagem de sucesso
+generateManualPDF()
+  +-- Criar jsPDF (orientacao retrato, A4)
+  +-- Cabecalho: logo + titulo + data
+  +-- Loop pelos 9 passos:
+  |   +-- Verificar espaco na pagina (addPage se necessario)
+  |   +-- Titulo do passo (font bold, tamanho 13)
+  |   +-- Descricao (font normal, tamanho 10)
+  |   +-- Regras/dicas (font italic, tamanho 9, com prefixo colorido)
+  |   +-- Tabelas especiais no passo 8 (autoTable)
+  +-- Rodape em todas as paginas
+  +-- Abrir blob em nova aba para impressao
 ```
-
-Cada ilustracao sera um mini-card com fundo cinza claro (`bg-gray-50`) contendo os componentes do sistema renderizados em modo estatico (pointer-events-none, opacity ajustada para parecer uma "captura de tela").
 
 ### Arquivos Modificados
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `ManualColeta.tsx` (novo) | Componente completo do manual ilustrado |
-| `ReciclaELayout.tsx` | Adicionar case para renderizar ManualColeta |
-| `Sidebar.tsx` | Verificar/adicionar item de menu (se necessario) |
+| `ManualColeta.tsx` | Adicionar botao de imprimir PDF e funcao de geracao do PDF completo |
+
