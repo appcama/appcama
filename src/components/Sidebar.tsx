@@ -20,7 +20,8 @@ import {
   TrendingUp,
   Package,
   LogOut,
-  DollarSign
+  DollarSign,
+  HelpCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { featureByItemId } from "@/lib/featureMap";
@@ -222,6 +223,16 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose,
     {
       label: "DADOS",
       items: []
+    },
+    {
+      label: "AJUDA",
+      items: [
+        {
+          id: "ajuda",
+          label: "Manual de Coleta",
+          icon: HelpCircle,
+        },
+      ]
     },
     {
       label: "RELATÓRIOS",

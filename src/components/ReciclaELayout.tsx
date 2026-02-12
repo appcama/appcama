@@ -33,6 +33,7 @@ import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { PWAOfflineBanner } from '@/components/PWAOfflineBanner';
 import { RelatoriosLayout } from '@/components/RelatoriosLayout';
 import { Certificados } from '@/components/Certificados';
+import { ManualColeta } from '@/components/ManualColeta';
 import { useBreakpoints } from '@/hooks/use-breakpoints';
 import { cn } from '@/lib/utils';
 
@@ -246,6 +247,8 @@ export function ReciclaELayout() {
       case 'relatorios-ambientais':
       case 'relatorios-comparativos':
         return <RelatoriosLayout activeItem={activeItem} />;
+      case 'ajuda':
+        return <ManualColeta />;
       default:
         return <Dashboard />;
     }
