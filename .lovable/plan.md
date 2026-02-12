@@ -1,127 +1,84 @@
 
-
-## Plano: Campo identificador de custo de coleta com radio button e impacto no formulario de residuos
+## Plano: Pagina de Manual Ilustrado - Como Lancar uma Coleta
 
 ### Resumo
-Adicionar um radio button "Coleta com Custo" / "Coleta sem Custo" no formulario de coleta. Quando marcado "com custo", a entidade geradora torna-se obrigatoria e o formulario de residuos ganha um campo adicional "Valor Unitario de Custo". A grid de residuos exibira colunas extras de custo. O valor sera salvo na tabela `coleta_residuo` no campo `vlr_custo`.
+Criar um componente `ManualColeta` acessivel pelo menu lateral (item "ajuda" ja mapeado no `featureMap.ts`), contendo um guia passo a passo ilustrado com representacoes visuais dos campos do formulario de coleta, usando os proprios componentes do sistema (Card, Label, Switch, Input, Badge, Table, etc.) como "mockups" estaticos.
 
-### Pre-requisito: Migracao de banco de dados
+### Estrutura da Pagina
 
-Antes da implementacao, sera necessario:
+A pagina tera um layout de scroll vertical com secoes numeradas (Passo 1, 2, 3...), cada uma contendo:
+- Titulo e descricao do passo
+- Ilustracao estatica usando componentes reais do sistema (readonly/desabilitados) mostrando como o campo aparece
+- Dicas e observacoes em destaque
 
-1. **Tabela `coleta`**: Adicionar coluna `des_custo char(1) NOT NULL DEFAULT 'D'`
-   - `'D'` = sem custo (default)
-   - `'A'` = com custo
+### Passos Ilustrados
 
-2. **Tabela `coleta_residuo`**: Adicionar coluna `vlr_custo numeric(10,2) NULL`
+1. **Acessar o formulario de Coletas**: Ilustracao do menu lateral com o item "Coletas" destacado e o botao "Nova Coleta"
+2. **Preencher a data**: Campo de calendario ilustrado
+3. **Selecionar o Evento (opcional)**: Combobox de evento com exemplo
+4. **Custo da Coleta**: Switch ilustrado mostrando os dois estados (sem custo / com custo) e explicando o impacto nos campos seguintes
+5. **Entidade Geradora**: Combobox com destaque de quando e obrigatorio (com custo) vs opcional
+6. **Ponto de Coleta**: Combobox com destaque de quando e obrigatorio (evento com pontos associados)
+7. **Adicionar Residuos**: Formulario de residuo com campos de tipo, quantidade, valor de venda e valor de custo (quando habilitado)
+8. **Grid de Residuos**: Tabela ilustrando as colunas (com e sem custo)
+9. **Salvar a Coleta**: Botao de salvar e confirmacao
 
-### Alteracoes no codigo
+### Alteracoes
 
-**Arquivo: `src/components/ColetaForm.tsx`**
+**Novo arquivo: `src/components/ManualColeta.tsx`**
+- Componente com todas as secoes ilustradas
+- Usa Accordion para cada passo (permite expandir/colapsar)
+- Ilustracoes feitas com componentes do sistema em modo visual (nao interativos)
+- Badges coloridos para dicas ("Obrigatorio", "Opcional", "Dica")
+- Responsivo para mobile e desktop
 
-1. **Importar RadioGroup e RadioGroupItem** de `@/components/ui/radio-group`
+**Arquivo: `src/components/ReciclaELayout.tsx`**
+- Adicionar import do `ManualColeta`
+- Adicionar case `'ajuda'` ou `'manual-coleta'` no switch do `renderContent`
 
-2. **Novo estado `desCusto`** (string, default `'D'`):
-   - Controla se a coleta e com ou sem custo
+**Arquivo: `src/components/Sidebar.tsx`**
+- Verificar se ja existe item de menu para "Ajuda" e se necessario adicionar item "Manual" ou reaproveitar o existente
 
-3. **Radio button posicionado ANTES do campo Entidade Geradora**:
-   - Ordem dos campos ficara: Evento > **Custo da Coleta (radio)** > Entidade Geradora > Ponto de Coleta
-   - Opcoes: "Sem Custo" (valor `'D'`, default) e "Com Custo" (valor `'A'`)
-
-4. **Quando `desCusto = 'A'` (com custo)**:
-   - Label da Entidade Geradora muda para "Entidade Geradora *" (obrigatoria)
-   - Opcao "Nenhuma entidade" (clear) fica oculta no combobox
-   - Validacao no `handleSubmit`: bloquear se entidade geradora nao selecionada
-
-5. **Quando `desCusto = 'D'` (sem custo)**:
-   - Entidade Geradora volta a ser opcional (comportamento atual)
-   - Opcao "Nenhuma entidade" fica visivel
-
-6. **Passar `desCusto` como prop para `ColetaResiduoForm`**
-
-7. **Incluir `des_custo` no payload de salvamento** (`coletaData`)
-
-8. **Atualizar interface `ColetaResiduo`**:
-   - Adicionar campos `vlr_custo?: number` e `subtotal_custo?: number`
-
-9. **Grid de residuos (tabela)**:
-   - Quando `desCusto = 'A'`: exibir 3 colunas adicionais: "Vlr. Unit. Custo", "Subtotal Custo"
-   - Adicionar linha de "Total Custo" no rodape dos totais
-   - Quando `desCusto = 'D'`: manter grid atual sem colunas de custo
-
-10. **Salvar `vlr_custo` no insert de `coleta_residuo`** no `handleSubmit`
-
-11. **Carregar `vlr_custo` ao editar coleta** no `loadColetaEditingData`
-
----
-
-**Arquivo: `src/components/ColetaResiduoForm.tsx`**
-
-1. **Nova prop `comCusto: boolean`** na interface `ColetaResiduoFormProps`
-
-2. **Quando `comCusto = true`**:
-   - Exibir campo "Valor Unitario de Custo (R$) *" usando `useCurrencyMask` (mesmo padrao do vlr_total)
-   - Campo obrigatorio com valor minimo R$ 0,01
-   - Maximo: R$ 9.999,99 (mesmo limite do campo de venda)
-   - Exibir subtotal de custo (quantidade x valor custo)
-
-3. **Atualizar interface `ColetaResiduo`** para incluir `vlr_custo` e `subtotal_custo`
-
-4. **Validacao**: quando `comCusto = true`, vlr_custo deve ser >= 0.01
-
-5. **Incluir vlr_custo e subtotal_custo no objeto retornado via `onAdd`**
-
----
-
-**Arquivo: `src/integrations/supabase/types.ts`**
-- Sera necessario regenerar ou atualizar manualmente os tipos para incluir `des_custo` em `coleta` e `vlr_custo` em `coleta_residuo`
+**Arquivo: `src/lib/featureMap.ts`**
+- Verificar mapeamento do item (ja existe `ajuda: "Ajuda"`)
 
 ### Secao Tecnica
 
-Layout do radio button:
+Estrutura do componente:
 
 ```text
-Custo da Coleta
-( ) Sem Custo    ( ) Com Custo
+ManualColeta
++-- Card (Titulo: Manual - Como Lancar uma Coleta)
++-- Accordion
+    +-- Passo 1: Acessar Coletas
+    |   +-- Ilustracao: mini sidebar + botao "Nova Coleta"
+    +-- Passo 2: Data da Coleta
+    |   +-- Ilustracao: campo de data com calendario
+    +-- Passo 3: Selecionar Evento
+    |   +-- Ilustracao: combobox de evento
+    +-- Passo 4: Custo da Coleta
+    |   +-- Ilustracao: Switch OFF (sem custo) + Switch ON (com custo)
+    |   +-- Badge: "Quando habilitado, entidade geradora obrigatoria"
+    +-- Passo 5: Entidade Geradora
+    |   +-- Ilustracao: combobox com label dinamico
+    +-- Passo 6: Ponto de Coleta
+    |   +-- Ilustracao: combobox + regra de obrigatoriedade
+    +-- Passo 7: Adicionar Residuos
+    |   +-- Ilustracao: campos de tipo, quantidade, valores
+    |   +-- Destaque: campo de custo quando habilitado
+    +-- Passo 8: Grid de Residuos
+    |   +-- Tabela ilustrativa com dados fictícios
+    |   +-- Versao sem custo vs com custo lado a lado
+    +-- Passo 9: Salvar
+        +-- Botao ilustrativo + mensagem de sucesso
 ```
 
-Grid de residuos COM custo:
-
-```text
-| Residuo | Tipo | Qtd (kg) | Prev. Venda | Subtotal Venda | Vlr. Unit. Custo | Subtotal Custo | Acoes |
-|---------|------|----------|-------------|----------------|------------------|----------------|-------|
-| Papel   | ...  | 100,00   | R$ 0,50     | R$ 50,00       | R$ 0,30          | R$ 30,00       | [E][R]|
-
-Total Quantidade: 100,00 kg
-Total Venda: R$ 50,00
-Total Custo: R$ 30,00
-```
-
-Grid de residuos SEM custo (atual, sem alteracao):
-
-```text
-| Residuo | Tipo | Qtd (kg) | Prev. Venda | Subtotal | Acoes |
-```
-
-Fluxo de obrigatoriedade:
-
-```text
-desCusto = 'D' (sem custo):
-  - Entidade Geradora: opcional
-  - vlr_custo: nao exibido, salvo como null
-
-desCusto = 'A' (com custo):
-  - Entidade Geradora: obrigatoria
-  - vlr_custo: obrigatorio >= 0.01
-  - Grid com colunas extras de custo
-```
+Cada ilustracao sera um mini-card com fundo cinza claro (`bg-gray-50`) contendo os componentes do sistema renderizados em modo estatico (pointer-events-none, opacity ajustada para parecer uma "captura de tela").
 
 ### Arquivos Modificados
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| Migracao SQL | Adicionar `des_custo` em `coleta` e `vlr_custo` em `coleta_residuo` |
-| `ColetaForm.tsx` | Radio button de custo, obrigatoriedade condicional da entidade, colunas extras na grid, salvar des_custo e vlr_custo |
-| `ColetaResiduoForm.tsx` | Nova prop `comCusto`, campo de valor unitario de custo, validacao, subtotal custo |
-| `types.ts` | Atualizar tipos Supabase |
-
+| `ManualColeta.tsx` (novo) | Componente completo do manual ilustrado |
+| `ReciclaELayout.tsx` | Adicionar case para renderizar ManualColeta |
+| `Sidebar.tsx` | Verificar/adicionar item de menu (se necessario) |
