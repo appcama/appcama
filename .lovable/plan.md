@@ -1,68 +1,48 @@
 
 
-## Plano: Botao de Imprimir PDF no Manual de Coleta
+## Plano: Substituir PDF por Impressao HTML
 
 ### Resumo
-Adicionar um botao "Imprimir PDF" no cabecalho do manual que gera um PDF completo com todo o passo a passo, usando jsPDF (ja instalado no projeto). O PDF tera layout limpo com titulo, passos numerados, descricoes, tabelas ilustrativas e badges de dicas.
+Trocar o botao "Imprimir PDF" para abrir uma nova aba com o conteudo HTML completo do manual (com todos os graficos, mockups, badges e ilustracoes), usando `window.print()` nativo do navegador. Isso preserva toda a fidelidade visual da pagina.
+
+### Como funciona
+Em vez de gerar um PDF via jsPDF (que nao suporta imagens/componentes visuais), o botao vai:
+1. Abrir uma nova aba/janela com o conteudo HTML do manual
+2. Incluir os estilos CSS necessarios para manter a aparencia
+3. Chamar `window.print()` automaticamente para o usuario imprimir ou salvar como PDF pelo navegador
 
 ### Alteracoes
 
 **Arquivo: `src/components/ManualColeta.tsx`**
 
-1. **Importar** `jsPDF`, `autoTable`, `Printer` (lucide), `useState` e `format` (date-fns)
+1. **Remover** imports do `jsPDF` e `autoTable` (nao serao mais necessarios)
+2. **Remover** toda a funcao `generateManualPDF()` e o array `manualSteps`
+3. **Adicionar** funcao `handlePrint()` que:
+   - Captura o HTML do container do manual (usando um `ref` no conteudo)
+   - Abre uma nova janela com `window.open()`
+   - Injeta o HTML do manual com estilos inline copiados do Tailwind
+   - Expande todos os accordions antes de capturar (para que todos os passos aparecam)
+   - Chama `window.print()` na nova janela
+4. **Adicionar** um `ref` no container do conteudo do manual
+5. **Antes de imprimir**: expandir programaticamente todos os itens do accordion para que todos os passos fiquem visiveis na impressao
+6. **Manter** o botao com icone `Printer` e texto "Imprimir"
 
-2. **Funcao `generateManualPDF()`** que cria o PDF com todo o conteudo:
-   - Cabecalho com logo ReciclaE e titulo "Manual - Como Lancar uma Coleta"
-   - Data de geracao
-   - Cada passo renderizado como secao numerada:
-     - Titulo do passo em negrito
-     - Descricao do passo
-     - Tabelas ilustrativas onde aplicavel (Passo 8: grid sem custo e com custo usando autoTable)
-     - Regras/dicas como texto destacado com prefixo (OBRIGATORIO, OPCIONAL, DICA, ATENCAO)
-   - Quebra de pagina automatica quando necessario
-   - Rodape com numero de pagina e "Gerado pelo Sistema ReciclaE"
+### Estrategia tecnica
 
-3. **Botao "Imprimir PDF"** no CardHeader, ao lado do titulo:
-   - Icone `Printer` + texto "Imprimir PDF"
-   - Variant `outline`, tamanho `sm`
-   - Ao clicar, gera o PDF e abre em nova aba para impressao (mesmo padrao do `printPDF` existente no sistema)
-   - Estado `isGenerating` para desabilitar durante geracao
+A abordagem sera:
+- Usar um `ref` no container principal do manual
+- Ao clicar em "Imprimir", alterar o estado do Accordion para abrir todos os itens
+- Aguardar um breve timeout para o DOM atualizar
+- Clonar o `innerHTML` do container
+- Abrir nova janela, injetar HTML + CSS (copiando as stylesheets da pagina atual)
+- Chamar `window.print()` na nova janela
+- Restaurar o estado original do Accordion
 
-### Conteudo do PDF por passo
-
-| Passo | Titulo | Conteudo especial no PDF |
-|-------|--------|--------------------------|
-| 1 | Acessar o formulario de Coletas | Texto descritivo |
-| 2 | Preencher a Data da Coleta | Texto + regra "Campo obrigatorio" |
-| 3 | Selecionar o Evento | Texto + "Campo opcional" |
-| 4 | Custo da Coleta | Texto com explicacao dos dois estados (sem/com custo) e impacto nos campos |
-| 5 | Entidade Geradora | Texto com regra de obrigatoriedade condicional |
-| 6 | Ponto de Coleta | Texto com regra de obrigatoriedade condicional |
-| 7 | Adicionar Residuos | Texto com campos obrigatorios e campo de custo condicional |
-| 8 | Grid de Residuos | Duas tabelas via autoTable: sem custo (4 colunas) e com custo (6 colunas) com dados ficticios |
-| 9 | Salvar a Coleta | Texto final com dicas |
-
-### Secao Tecnica
-
-Estrutura da funcao de geracao:
-
-```text
-generateManualPDF()
-  +-- Criar jsPDF (orientacao retrato, A4)
-  +-- Cabecalho: logo + titulo + data
-  +-- Loop pelos 9 passos:
-  |   +-- Verificar espaco na pagina (addPage se necessario)
-  |   +-- Titulo do passo (font bold, tamanho 13)
-  |   +-- Descricao (font normal, tamanho 10)
-  |   +-- Regras/dicas (font italic, tamanho 9, com prefixo colorido)
-  |   +-- Tabelas especiais no passo 8 (autoTable)
-  +-- Rodape em todas as paginas
-  +-- Abrir blob em nova aba para impressao
-```
+Isso garante que todos os componentes visuais (switches, badges coloridos, tabelas, icones SVG) aparecam exatamente como na tela.
 
 ### Arquivos Modificados
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `ManualColeta.tsx` | Adicionar botao de imprimir PDF e funcao de geracao do PDF completo |
+| `ManualColeta.tsx` | Substituir geracao jsPDF por impressao HTML via window.print() |
 
