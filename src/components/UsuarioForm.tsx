@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Mail, CheckCircle, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useOfflineForm } from "@/hooks/useOfflineForm";
+
 import { validateCpfOrCnpj } from "@/lib/cpf-cnpj-utils";
 
 interface Usuario {

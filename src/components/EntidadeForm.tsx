@@ -12,7 +12,7 @@ import { ArrowLeft, Save, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useOfflineForm } from "@/hooks/useOfflineForm";
+
 import { applyCpfCnpjMask, validateCpfOrCnpj, applyPhoneMask, formatCep, getDocumentType } from "@/lib/cpf-cnpj-utils";
 import { LogoUploadArea } from "@/components/LogoUploadArea";
 import { ImageResizeDialog } from "@/components/ImageResizeDialog";
@@ -201,12 +201,7 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
     return result;
   };
 
-  // Use offline form hook
-  const { submitForm, isSubmitting, isOnline } = useOfflineForm({
-    table: 'entidade',
-    onlineSubmit: originalSubmit,
-    onSuccess
-  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -473,7 +468,24 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
   const onSubmit = async (data: FormData) => {
     // Limpar máscaras antes de enviar
     const cleanedData = prepareDataForSubmit(data);
-    await submitForm(cleanedData, !!editingEntidade, editingEntidade?.id_entidade);
+    setIsSubmitting(true);
+    try {
+      await originalSubmit(cleanedData);
+      toast({
+        title: "Sucesso",
+        description: `Entidade ${editingEntidade ? 'atualizada' : 'criada'} com sucesso!`,
+      });
+      onSuccess();
+    } catch (error: any) {
+      console.error('Erro ao salvar entidade:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao salvar entidade.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -805,7 +817,6 @@ export function EntidadeForm({ onBack, onSuccess, editingEntidade }: EntidadeFor
                 <Button type="submit" disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">
                   <Save className="h-4 w-4 mr-2" />
                   {isSubmitting ? "Salvando..." : "Salvar"}
-                  {!isOnline && " (Offline)"}
                 </Button>
               </div>
             </form>

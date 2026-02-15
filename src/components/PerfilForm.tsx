@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useOfflineForm } from "@/hooks/useOfflineForm";
+
 
 interface Perfil {
   id_perfil: number;
@@ -32,30 +32,7 @@ export function PerfilForm({ onBack, onSuccess, editingPerfil }: PerfilFormProps
   });
   const { toast } = useToast();
   
-  const { submitForm, isSubmitting } = useOfflineForm({
-    table: 'perfil',
-    onlineSubmit: async (data) => {
-      if (editingPerfil) {
-        const { data: result, error } = await supabase
-          .from('perfil')
-          .update(data)
-          .eq('id_perfil', editingPerfil.id_perfil)
-          .select()
-          .single();
-        if (error) throw error;
-        return result;
-      } else {
-        const { data: result, error } = await supabase
-          .from('perfil')
-          .insert(data)
-          .select()
-          .single();
-        if (error) throw error;
-        return result;
-      }
-    },
-    onSuccess
-  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (editingPerfil) {
@@ -101,14 +78,49 @@ export function PerfilForm({ onBack, onSuccess, editingPerfil }: PerfilFormProps
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const data = {
         nom_perfil: formData.nom_perfil,
       };
-      
-      await submitForm(data, !!editingPerfil, editingPerfil?.id_perfil);
-    } catch (error) {
+
+      if (editingPerfil) {
+        const { error } = await supabase
+          .from('perfil')
+          .update({
+            nom_perfil: data.nom_perfil,
+            dat_atualizacao: new Date().toISOString(),
+            id_usuario_atualizador: 1,
+          })
+          .eq('id_perfil', editingPerfil.id_perfil);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('perfil')
+          .insert({
+            nom_perfil: data.nom_perfil,
+            des_status: 'A',
+            des_locked: 'D',
+            dat_criacao: new Date().toISOString(),
+            id_usuario_criador: 1,
+          });
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Sucesso",
+        description: `Perfil ${editingPerfil ? 'atualizado' : 'criado'} com sucesso!`,
+      });
+      onSuccess();
+    } catch (error: any) {
       console.error('Erro ao salvar perfil:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao salvar perfil.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

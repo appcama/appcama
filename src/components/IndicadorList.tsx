@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Plus, TrendingUp, Edit, Power, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { offlineDB } from "@/lib/offline-db";
+
 import { useToast } from "@/hooks/use-toast";
 
 interface Indicador {
@@ -62,27 +62,8 @@ export function IndicadorList({ onEdit, onNew }: IndicadorListProps) {
         throw error;
       }
 
-      // Carregar itens criados offline (pendentes) e mesclar na listagem
-      let mergedIndicadores: Indicador[] = data || [];
-      try {
-        const pendingOps = await offlineDB.getPendingOperations();
-        const offlineCreates = pendingOps.filter(op => op.table === 'indicador' && op.type === 'CREATE' && op.status !== 'COMPLETED');
-        const offlineItems: Indicador[] = offlineCreates.map(op => ({
-          id_indicador: -(op.id || Date.now()),
-          nom_indicador: op.data?.nom_indicador || '(sem nome)',
-          id_unidade_medida: op.data?.id_unidade_medida ?? 0,
-          des_status: op.data?.des_status ?? 'A',
-          unidade_medida: undefined,
-          _offline: true,
-        }));
-        mergedIndicadores = [...mergedIndicadores, ...offlineItems];
-        console.log('[IndicadorList] Offline pendentes adicionados:', offlineItems.length);
-      } catch (offErr) {
-        console.warn('[IndicadorList] Falha ao carregar itens offline pendentes:', offErr);
-      }
-
-      console.log("[IndicadorList] Total itens na listagem:", mergedIndicadores.length);
-      setIndicadores(mergedIndicadores);
+      console.log("[IndicadorList] Total itens na listagem:", (data || []).length);
+      setIndicadores(data || []);
     } catch (error) {
       console.error('[IndicadorList] Error fetching indicadores:', error);
       toast({

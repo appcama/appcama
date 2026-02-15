@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect } from "react";
-import { useOfflineForm } from "@/hooks/useOfflineForm";
+
 
 const formSchema = z.object({
   des_tipo_entidade: z.string().min(2, "Nome do tipo deve ter pelo menos 2 caracteres"),
@@ -50,30 +50,6 @@ export function TipoEntidadeForm({ onBack, onSuccess, editingTipoEntidade }: Tip
     },
   });
   
-  const { submitForm, isSubmitting } = useOfflineForm({
-    table: 'tipo_entidade',
-    onlineSubmit: async (data) => {
-      if (isEditing) {
-        const { data: result, error } = await supabase
-          .from('tipo_entidade')
-          .update(data)
-          .eq('id_tipo_entidade', editingTipoEntidade.id_tipo_entidade)
-          .select()
-          .single();
-        if (error) throw error;
-        return result;
-      } else {
-        const { data: result, error } = await supabase
-          .from('tipo_entidade')
-          .insert(data)
-          .select()
-          .single();
-        if (error) throw error;
-        return result;
-      }
-    },
-    onSuccess
-  });
 
   useEffect(() => {
     if (editingTipoEntidade) {
