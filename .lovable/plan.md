@@ -1,48 +1,58 @@
 
 
-## Plano: Substituir PDF por Impressao HTML
+## Plano: Corrigir limite de 1000 registros no Meus Numeros
 
-### Resumo
-Trocar o botao "Imprimir PDF" para abrir uma nova aba com o conteudo HTML completo do manual (com todos os graficos, mockups, badges e ilustracoes), usando `window.print()` nativo do navegador. Isso preserva toda a fidelidade visual da pagina.
+### Problema identificado
+O Supabase JS client retorna no maximo 1000 linhas por consulta (limite padrao). A tela "Meus Numeros" da CAMAPET tem 1.374 coletas no periodo, mas so as primeiras 1.000 sao buscadas. Isso causa totais incorretos e ate situacoes onde filtrar por evento mostra um valor MAIOR que sem filtro.
 
-### Como funciona
-Em vez de gerar um PDF via jsPDF (que nao suporta imagens/componentes visuais), o botao vai:
-1. Abrir uma nova aba/janela com o conteudo HTML do manual
-2. Incluir os estilos CSS necessarios para manter a aparencia
-3. Chamar `window.print()` automaticamente para o usuario imprimir ou salvar como PDF pelo navegador
+### Dados reais no banco
+- Sem filtro: 1.374 coletas = 6.348,86 kg (sistema mostra apenas 3.657,76 por truncamento)
+- Com filtro Eco Folia Solidaria: 1.267 coletas = 5.927,12 kg (sistema mostra 3.729,98)
 
-### Alteracoes
+### Solucao
+Criar uma funcao auxiliar `fetchAllIds` que pagina a consulta de IDs de coleta para buscar TODOS os registros, nao apenas os primeiros 1000.
 
-**Arquivo: `src/components/ManualColeta.tsx`**
+A mesma correcao sera aplicada tanto no `useMyDashboardData` (Meus Numeros) quanto no `useDashboardData` (Dashboard principal), pois ambos sofrem do mesmo problema.
 
-1. **Remover** imports do `jsPDF` e `autoTable` (nao serao mais necessarios)
-2. **Remover** toda a funcao `generateManualPDF()` e o array `manualSteps`
-3. **Adicionar** funcao `handlePrint()` que:
-   - Captura o HTML do container do manual (usando um `ref` no conteudo)
-   - Abre uma nova janela com `window.open()`
-   - Injeta o HTML do manual com estilos inline copiados do Tailwind
-   - Expande todos os accordions antes de capturar (para que todos os passos aparecam)
-   - Chama `window.print()` na nova janela
-4. **Adicionar** um `ref` no container do conteudo do manual
-5. **Antes de imprimir**: expandir programaticamente todos os itens do accordion para que todos os passos fiquem visiveis na impressao
-6. **Manter** o botao com icone `Printer` e texto "Imprimir"
+### Implementacao
 
-### Estrategia tecnica
+**Arquivo: `src/hooks/useMyDashboardData.tsx`**
+1. Criar funcao `fetchAllColetaIds()` que:
+   - Faz a consulta com `.range(offset, offset + 999)` em loop
+   - Acumula todos os IDs ate nao haver mais resultados
+   - Retorna o array completo de IDs
+2. Substituir a consulta simples de IDs pela chamada dessa funcao
+3. Aplicar a mesma logica na segunda consulta (`coleta_residuo`) que tambem pode ultrapassar 1000 registros
+4. Aplicar a mesma logica na consulta de `coleta_residuo_indicador`
 
-A abordagem sera:
-- Usar um `ref` no container principal do manual
-- Ao clicar em "Imprimir", alterar o estado do Accordion para abrir todos os itens
-- Aguardar um breve timeout para o DOM atualizar
-- Clonar o `innerHTML` do container
-- Abrir nova janela, injetar HTML + CSS (copiando as stylesheets da pagina atual)
-- Chamar `window.print()` na nova janela
-- Restaurar o estado original do Accordion
+**Arquivo: `src/hooks/useDashboardData.tsx`**
+1. Aplicar a mesma correcao de paginacao nas consultas de coleta IDs, coleta_residuo e coleta_residuo_indicador
 
-Isso garante que todos os componentes visuais (switches, badges coloridos, tabelas, icones SVG) aparecam exatamente como na tela.
+### Detalhes Tecnicos
+
+Funcao de paginacao:
+
+```text
+fetchAllRows(query):
+  allRows = []
+  offset = 0
+  pageSize = 1000
+  loop:
+    result = query.range(offset, offset + pageSize - 1)
+    allRows += result.data
+    if result.data.length < pageSize: break
+    offset += pageSize
+  return allRows
+```
+
+Como o Supabase nao permite reusar um query builder apos execucao, a funcao recebera os parametros e reconstruira a query a cada pagina.
+
+As consultas de `coleta_residuo` e `coleta_residuo_indicador` tambem precisam de paginacao porque com 1000+ coletas, facilmente ultrapassam 1000 linhas de residuos.
 
 ### Arquivos Modificados
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `ManualColeta.tsx` | Substituir geracao jsPDF por impressao HTML via window.print() |
+| `src/hooks/useMyDashboardData.tsx` | Adicionar paginacao em todas as consultas |
+| `src/hooks/useDashboardData.tsx` | Adicionar paginacao em todas as consultas |
 
