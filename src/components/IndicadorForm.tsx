@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Save, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useOfflineForm } from "@/hooks/useOfflineForm";
+
 
 interface Indicador {
   id_indicador: number;
@@ -38,27 +38,7 @@ export function IndicadorForm({ editingIndicador, onBack, onSave }: IndicadorFor
   const [loadingUnidades, setLoadingUnidades] = useState(true);
   const { toast } = useToast();
 
-  // Hook offline para formulário
-  const { submitForm, isSubmitting } = useOfflineForm({
-    table: 'indicador',
-    onlineSubmit: async (data) => {
-      if (editingIndicador) {
-        return await supabase
-          .from('indicador')
-          .update({
-            ...data,
-            id_usuario_atualizador: 1,
-            dat_atualizacao: new Date().toISOString(),
-          })
-          .eq('id_indicador', editingIndicador.id_indicador);
-      } else {
-        return await supabase
-          .from('indicador')
-          .insert([data]);
-      }
-    },
-    onSuccess: onSave
-  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     fetchUnidadesMedida();
@@ -163,10 +143,39 @@ export function IndicadorForm({ editingIndicador, onBack, onSave }: IndicadorFor
       des_locked: 'D'
     };
 
+    setIsSubmitting(true);
     try {
-      await submitForm(dataToSubmit, !!editingIndicador, editingIndicador?.id_indicador);
-    } catch (error) {
+      if (editingIndicador) {
+        const { error } = await supabase
+          .from('indicador')
+          .update({
+            ...dataToSubmit,
+            id_usuario_atualizador: 1,
+            dat_atualizacao: new Date().toISOString(),
+          })
+          .eq('id_indicador', editingIndicador.id_indicador);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('indicador')
+          .insert([dataToSubmit]);
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Sucesso",
+        description: `Indicador ${editingIndicador ? 'atualizado' : 'criado'} com sucesso!`,
+      });
+      onSave();
+    } catch (error: any) {
       console.error('Erro ao salvar indicador:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao salvar indicador.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

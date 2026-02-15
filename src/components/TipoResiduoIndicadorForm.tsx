@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useDecimalMask } from '@/hooks/useInputMask';
-import { useOfflineForm } from '@/hooks/useOfflineForm';
+
 
 interface Indicador {
   id_indicador: number;
@@ -38,29 +38,7 @@ export function TipoResiduoIndicadorForm({ onBack, onAdd, existingIndicadores, e
   // Usando máscara decimal para quantidade de referência
   const quantidadeReferencia = useDecimalMask();
 
-  // Hook offline para consistência, mas é operação local
-  const { submitForm, isSubmitting } = useOfflineForm({
-    table: 'tipo_residuo_indicador',
-    onlineSubmit: async (data) => {
-      // Esta é uma adição local, não salva no banco ainda
-      return data;
-    },
-    onSuccess: () => {
-      // Callback executado após processar o indicador
-      if (selectedIndicador) {
-        const qtdRef = quantidadeReferencia.value ? parseFloat(quantidadeReferencia.value) : null;
-        
-        const tipoResiduoIndicador: TipoResiduoIndicador = {
-          id: editingIndicador?.id,
-          id_indicador: selectedIndicador.id_indicador,
-          nom_indicador: selectedIndicador.nom_indicador,
-          qtd_referencia: qtdRef,
-        };
-
-        onAdd(tipoResiduoIndicador);
-      }
-    }
-  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     loadIndicadores();
@@ -141,13 +119,21 @@ export function TipoResiduoIndicadorForm({ onBack, onAdd, existingIndicadores, e
     }
 
     try {
-      // Usar o hook offline form que vai processar e chamar onSuccess
-      await submitForm({
+      setIsSubmitting(true);
+      const qtdRef = quantidadeReferencia.value ? parseFloat(quantidadeReferencia.value) : null;
+
+      const tipoResiduoIndicador: TipoResiduoIndicador = {
+        id: editingIndicador?.id,
         id_indicador: selectedIndicador.id_indicador,
-        qtd_referencia: qtdRef
-      });
+        nom_indicador: selectedIndicador.nom_indicador,
+        qtd_referencia: qtdRef,
+      };
+
+      onAdd(tipoResiduoIndicador);
     } catch (error) {
       console.error('Erro ao processar indicador:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

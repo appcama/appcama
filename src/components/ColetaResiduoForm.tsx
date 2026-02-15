@@ -11,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useDecimalMask, useCurrencyMask } from '@/hooks/useInputMask';
 import { cn } from '@/lib/utils';
-import { useOfflineForm } from '@/hooks/useOfflineForm';
+
 
 interface TipoResiduo {
   id_tipo_residuo: number;
@@ -70,41 +70,7 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
   const valorUnitario = useCurrencyMask('', 9999.99);
   const valorCusto = useCurrencyMask('', 9999.99);
   
-  // Hook offline para manter consistência, mas neste caso é apenas local
-  const { submitForm, isSubmitting } = useOfflineForm({
-    table: 'coleta_residuo',
-    onlineSubmit: async (data) => {
-      // Esta é uma adição local, não salva no banco ainda
-      return data;
-    },
-    onSuccess: () => {
-      // Callback executado após processar o resíduo
-      if (selectedResiduo && quantidade.value && valorUnitario.value) {
-        const qtd = parseFloat(quantidade.value);
-        const valor = valorUnitario.getNumericValue();
-        const custoValue = comCusto ? valorCusto.getNumericValue() : undefined;
-        
-        const coletaResiduo: ColetaResiduo = {
-          id: editingResiduo?.id,
-          id_residuo: selectedResiduo.id_residuo,
-          nom_residuo: selectedResiduo.nom_residuo,
-          tipo_residuo: selectedResiduo.tipo_residuo?.des_tipo_residuo || '',
-          qtd_total: qtd,
-          vlr_total: valor,
-          subtotal: qtd * valor,
-          vlr_custo: custoValue,
-          subtotal_custo: custoValue !== undefined ? qtd * custoValue : undefined,
-        };
-
-        onAdd(coletaResiduo);
-        
-        toast({
-          title: "Sucesso",
-          description: `Resíduo ${editingResiduo ? 'atualizado' : 'adicionado'} com sucesso.`,
-        });
-      }
-    }
-  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -331,14 +297,33 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
     }
 
     try {
-      // Usar o hook offline form que vai processar e chamar onSuccess
-      await submitForm({
+      setIsSubmitting(true);
+      const qtd = parseFloat(quantidade.value);
+      const valor = valorUnitario.getNumericValue();
+      const custoValue = comCusto ? valorCusto.getNumericValue() : undefined;
+
+      const coletaResiduo: ColetaResiduo = {
+        id: editingResiduo?.id,
         id_residuo: selectedResiduo.id_residuo,
+        nom_residuo: selectedResiduo.nom_residuo,
+        tipo_residuo: selectedResiduo.tipo_residuo?.des_tipo_residuo || '',
         qtd_total: qtd,
-        vlr_total: valor
+        vlr_total: valor,
+        subtotal: qtd * valor,
+        vlr_custo: custoValue,
+        subtotal_custo: custoValue !== undefined ? qtd * custoValue : undefined,
+      };
+
+      onAdd(coletaResiduo);
+      
+      toast({
+        title: "Sucesso",
+        description: `Resíduo ${editingResiduo ? 'atualizado' : 'adicionado'} com sucesso.`,
       });
     } catch (error) {
       console.error('Erro ao processar resíduo:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

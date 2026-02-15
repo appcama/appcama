@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useViaCep } from "@/hooks/useViaCep";
 import { applyCepMask } from "@/lib/cpf-cnpj-utils";
-import { useOfflineForm } from "@/hooks/useOfflineForm";
+
 import { useAuth } from "@/hooks/useAuth";
 import { MapLocationPicker } from "@/components/MapLocationPicker";
 
@@ -135,30 +135,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
     return UF_TO_CODE[uf as keyof typeof UF_TO_CODE] ?? null;
   };
 
-  const { submitForm, isSubmitting } = useOfflineForm({
-    table: 'ponto_coleta',
-    onlineSubmit: async (data) => {
-      if (editingPontoColeta) {
-        const { data: result, error } = await supabase
-          .from('ponto_coleta')
-          .update(data)
-          .eq('id_ponto_coleta', editingPontoColeta.id_ponto_coleta)
-          .select()
-          .single();
-        if (error) throw error;
-        return result;
-      } else {
-        const { data: result, error } = await supabase
-          .from('ponto_coleta')
-          .insert(data)
-          .select()
-          .single();
-        if (error) throw error;
-        return result;
-      }
-    },
-    onSuccess
-  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -408,6 +385,7 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const pontoData: any = {
         nom_ponto_coleta: values.nom_ponto_coleta,
@@ -427,15 +405,38 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
         id_usuario_atualizador: 1
       };
 
-      // Adicionar campos específicos para criação
       if (!editingPontoColeta) {
         pontoData.dat_criacao = new Date().toISOString();
         pontoData.id_usuario_criador = 1;
       }
 
-      await submitForm(pontoData, !!editingPontoColeta, editingPontoColeta?.id_ponto_coleta);
-    } catch (error) {
+      if (editingPontoColeta) {
+        const { error } = await supabase
+          .from('ponto_coleta')
+          .update(pontoData)
+          .eq('id_ponto_coleta', editingPontoColeta.id_ponto_coleta);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('ponto_coleta')
+          .insert(pontoData);
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Sucesso",
+        description: `Ponto de coleta ${editingPontoColeta ? 'atualizado' : 'criado'} com sucesso!`,
+      });
+      onSuccess();
+    } catch (error: any) {
       console.error('Erro ao salvar ponto de coleta:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao salvar ponto de coleta.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

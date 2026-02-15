@@ -29,8 +29,8 @@ import { TabelaPrecosList } from '@/components/TabelaPrecosList';
 import { TabelaPrecosForm } from '@/components/TabelaPrecosForm';
 import { Sidebar } from '@/components/Sidebar';
 import { MobileHeader } from '@/components/MobileHeader';
-import { OfflineIndicator } from '@/components/OfflineIndicator';
-import { PWAOfflineBanner } from '@/components/PWAOfflineBanner';
+
+
 import { RelatoriosLayout } from '@/components/RelatoriosLayout';
 import { Certificados } from '@/components/Certificados';
 import { ManualColeta } from '@/components/ManualColeta';
@@ -267,8 +267,8 @@ export function ReciclaELayout() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* PWA Offline Status Banner */}
-      <PWAOfflineBanner />
+
+
       
       {isMobile ? (
         <>
@@ -281,7 +281,6 @@ export function ReciclaELayout() {
           <main className="flex-1 overflow-hidden">
             <div className="h-full overflow-y-auto">
               <div className="p-4 space-y-4">
-                <OfflineIndicator />
                 {renderContent()}
                 
                 {/* Rodapé com logo da CAMA - Mobile */}
@@ -308,7 +307,6 @@ export function ReciclaELayout() {
           <main className="flex-1 overflow-hidden">
             <div className="h-full overflow-y-auto bg-gray-50">
               <div className="p-6 space-y-6">
-                <OfflineIndicator />
                 {renderContent()}
                 
                 {/* Rodapé com logo da CAMA - Desktop */}

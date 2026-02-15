@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { PermissionsProvider } from "@/hooks/usePermissions";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { OfflineIndicator } from "@/components/OfflineIndicator";
+
 import { PWAPrompt } from "@/components/PWAPrompt";
 import { PWAUpdateBanner } from "@/components/PWAUpdateBanner";
 import { googleMapsLoader } from "@/lib/google-maps-loader";
@@ -38,7 +38,6 @@ const App = () => {
             <Toaster />
             <Sonner />
             <div className="relative">
-              <OfflineIndicator className="fixed top-4 right-4 z-50" />
               <PWAPrompt />
               <PWAUpdateBanner />
               <Routes>

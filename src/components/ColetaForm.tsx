@@ -12,7 +12,6 @@ import { Calendar } from '@/components/ui/calendar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useOfflineForm } from '@/hooks/useOfflineForm';
 import { ColetaResiduoForm } from './ColetaResiduoForm';
 import { useAuth } from '@/hooks/useAuth';
 import { useEventosVisiveis } from '@/hooks/useEventosVisiveis';
@@ -57,30 +56,6 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
   const [showResiduoForm, setShowResiduoForm] = useState(false);
   const [editingResiduo, setEditingResiduo] = useState<ColetaResiduo | null>(null);
   
-  const { submitForm, isSubmitting } = useOfflineForm({
-    table: 'coleta',
-    onlineSubmit: async (data) => {
-      if (editingColeta) {
-        const { data: result, error } = await supabase
-          .from('coleta')
-          .update(data)
-          .eq('id_coleta', editingColeta.id_coleta)
-          .select()
-          .single();
-        if (error) throw error;
-        return result;
-      } else {
-        const { data: result, error } = await supabase
-          .from('coleta')
-          .insert(data)
-          .select()
-          .single();
-        if (error) throw error;
-        return result;
-      }
-    },
-    onSuccess
-  });
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
