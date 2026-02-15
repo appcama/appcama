@@ -1,58 +1,84 @@
 
 
-## Plano: Corrigir limite de 1000 registros no Meus Numeros
+## Plano: Remover funcionalidade offline do sistema
 
-### Problema identificado
-O Supabase JS client retorna no maximo 1000 linhas por consulta (limite padrao). A tela "Meus Numeros" da CAMAPET tem 1.374 coletas no periodo, mas so as primeiras 1.000 sao buscadas. Isso causa totais incorretos e ate situacoes onde filtrar por evento mostra um valor MAIOR que sem filtro.
+### Problema
+A funcao de sincronizacao offline (IndexedDB + Dexie.js) esta causando erros constantes quando o sinal de celular cai e volta. O banco "ReciclaEOfflineDB" fica armazenado no navegador e a tentativa de sincronizar ao reconectar gera falhas.
 
-### Dados reais no banco
-- Sem filtro: 1.374 coletas = 6.348,86 kg (sistema mostra apenas 3.657,76 por truncamento)
-- Com filtro Eco Folia Solidaria: 1.267 coletas = 5.927,12 kg (sistema mostra 3.729,98)
+### O que sera removido
+1. **OfflineIndicator** - badge de Online/Offline e botao Sincronizar
+2. **PWAOfflineBanner** - banner de status offline
+3. **Hooks offline** - useOfflineSync, useOfflineForm, useOfflineQuery, useNetworkStatus
+4. **Banco IndexedDB** - offline-db.ts (Dexie)
+5. **Capacitor** - dependencias de mobile nativo (nao estao em uso real)
 
-### Solucao
-Criar uma funcao auxiliar `fetchAllIds` que pagina a consulta de IDs de coleta para buscar TODOS os registros, nao apenas os primeiros 1000.
+### O que sera mantido
+- PWA (service worker para cache de arquivos estaticos)
+- PWAPrompt e PWAUpdateBanner (instalacao do app)
+- Toda a logica de formularios (submit direto ao Supabase)
 
-A mesma correcao sera aplicada tanto no `useMyDashboardData` (Meus Numeros) quanto no `useDashboardData` (Dashboard principal), pois ambos sofrem do mesmo problema.
-
-### Implementacao
-
-**Arquivo: `src/hooks/useMyDashboardData.tsx`**
-1. Criar funcao `fetchAllColetaIds()` que:
-   - Faz a consulta com `.range(offset, offset + 999)` em loop
-   - Acumula todos os IDs ate nao haver mais resultados
-   - Retorna o array completo de IDs
-2. Substituir a consulta simples de IDs pela chamada dessa funcao
-3. Aplicar a mesma logica na segunda consulta (`coleta_residuo`) que tambem pode ultrapassar 1000 registros
-4. Aplicar a mesma logica na consulta de `coleta_residuo_indicador`
-
-**Arquivo: `src/hooks/useDashboardData.tsx`**
-1. Aplicar a mesma correcao de paginacao nas consultas de coleta IDs, coleta_residuo e coleta_residuo_indicador
-
-### Detalhes Tecnicos
-
-Funcao de paginacao:
-
-```text
-fetchAllRows(query):
-  allRows = []
-  offset = 0
-  pageSize = 1000
-  loop:
-    result = query.range(offset, offset + pageSize - 1)
-    allRows += result.data
-    if result.data.length < pageSize: break
-    offset += pageSize
-  return allRows
-```
-
-Como o Supabase nao permite reusar um query builder apos execucao, a funcao recebera os parametros e reconstruira a query a cada pagina.
-
-As consultas de `coleta_residuo` e `coleta_residuo_indicador` tambem precisam de paginacao porque com 1000+ coletas, facilmente ultrapassam 1000 linhas de residuos.
-
-### Arquivos Modificados
+### Arquivos a modificar
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/hooks/useMyDashboardData.tsx` | Adicionar paginacao em todas as consultas |
-| `src/hooks/useDashboardData.tsx` | Adicionar paginacao em todas as consultas |
+| `src/App.tsx` | Remover import e uso do OfflineIndicator |
+| `src/components/ReciclaELayout.tsx` | Remover imports e uso do OfflineIndicator e PWAOfflineBanner |
+| `src/components/ColetaForm.tsx` | Substituir useOfflineForm por submit direto ao Supabase |
+| `src/components/ColetaResiduoForm.tsx` | Substituir useOfflineForm por submit direto |
+| `src/components/EntidadeForm.tsx` | Substituir useOfflineForm por submit direto |
+| `src/components/ResiduoForm.tsx` | Substituir useOfflineForm por submit direto |
+| `src/components/TipoResiduoForm.tsx` | Substituir useOfflineForm por submit direto |
+| `src/components/TipoResiduoIndicadorForm.tsx` | Substituir useOfflineForm por submit direto |
+| `src/components/TipoEntidadeForm.tsx` | Substituir useOfflineForm por submit direto |
+| `src/components/PerfilForm.tsx` | Substituir useOfflineForm por submit direto |
+| `src/components/PontosColetaForm.tsx` | Substituir useOfflineForm por submit direto |
+| `src/components/UsuarioForm.tsx` | Substituir useOfflineForm por submit direto |
+| `src/components/IndicadorForm.tsx` | Substituir useOfflineForm por submit direto |
+
+### Arquivos a remover
+
+| Arquivo |
+|---------|
+| `src/lib/offline-db.ts` |
+| `src/hooks/useOfflineSync.tsx` |
+| `src/hooks/useOfflineForm.tsx` |
+| `src/hooks/useOfflineQuery.tsx` |
+| `src/hooks/useNetworkStatus.tsx` |
+| `src/components/OfflineIndicator.tsx` |
+| `src/components/PWAOfflineBanner.tsx` |
+
+### Como ficam os formularios
+
+Cada formulario que usa `useOfflineForm` sera simplificado. Em vez do wrapper offline, usara um `useState` simples para `isSubmitting` e chamara o Supabase diretamente, como ja fazia na funcao `onlineSubmit` que ja existe dentro de cada componente.
+
+Exemplo antes:
+```text
+const { submitForm, isSubmitting } = useOfflineForm({
+  table: 'coleta',
+  onlineSubmit: async (data) => { /* logica supabase */ }
+});
+```
+
+Exemplo depois:
+```text
+const [isSubmitting, setIsSubmitting] = useState(false);
+const handleSubmit = async (data) => {
+  setIsSubmitting(true);
+  try {
+    /* mesma logica supabase que ja existia */
+    toast({ title: "Sucesso", ... });
+    onSuccess?.();
+  } catch (error) {
+    toast({ title: "Erro", variant: "destructive" });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+```
+
+### Impacto
+- O sistema so funcionara com conexao ativa (comportamento padrao de apps web)
+- Se o usuario tentar salvar sem internet, recebera um erro claro do Supabase
+- Nenhuma funcionalidade de coleta ou cadastro sera perdida
+- Os erros de sincronizacao serao eliminados completamente
 
