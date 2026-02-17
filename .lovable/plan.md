@@ -1,84 +1,45 @@
 
 
-## Plano: Remover funcionalidade offline do sistema
+## Plano: Corrigir filtro de entidade na funcao RPC do Dashboard
 
-### Problema
-A funcao de sincronizacao offline (IndexedDB + Dexie.js) esta causando erros constantes quando o sinal de celular cai e volta. O banco "ReciclaEOfflineDB" fica armazenado no navegador e a tentativa de sincronizar ao reconectar gera falhas.
+### Problema identificado
+A funcao `get_dashboard_data` filtra coletas por `c.id_entidade_geradora = p_entidade_id`. Porem, quando o usuario seleciona "CAMAPET" no filtro de entidade, ele quer ver as coletas **realizadas** pela CAMAPET (onde usuarios da CAMAPET sao os criadores), nao as coletas onde CAMAPET e a entidade geradora dos residuos.
 
-### O que sera removido
-1. **OfflineIndicator** - badge de Online/Offline e botao Sincronizar
-2. **PWAOfflineBanner** - banner de status offline
-3. **Hooks offline** - useOfflineSync, useOfflineForm, useOfflineQuery, useNetworkStatus
-4. **Banco IndexedDB** - offline-db.ts (Dexie)
-5. **Capacitor** - dependencias de mobile nativo (nao estao em uso real)
+### Dados confirmados no banco
+| Filtro | Coletas | Total (kg) |
+|--------|---------|-----------|
+| CAMAPET como entidade **geradora** (`id_entidade_geradora = 82`) | 12 | 82,30 |
+| CAMAPET como entidade **coletora** (usuarios com `id_entidade = 82`) | 3.249 | 13.531,33 |
 
-### O que sera mantido
-- PWA (service worker para cache de arquivos estaticos)
-- PWAPrompt e PWAUpdateBanner (instalacao do app)
-- Toda a logica de formularios (submit direto ao Supabase)
+O Dashboard mostra 82,30 kg porque usa o filtro errado.
+
+### Solucao
+Alterar a funcao RPC `get_dashboard_data` para que o parametro `p_entidade_id` filtre por usuarios da entidade (coletora), nao pela entidade geradora.
+
+A clausula atual:
+```text
+AND (p_entidade_id IS NULL OR c.id_entidade_geradora = p_entidade_id)
+```
+
+Sera alterada para:
+```text
+AND (p_entidade_id IS NULL OR c.id_usuario_criador IN (
+  SELECT u.id_usuario FROM usuario u 
+  WHERE u.id_entidade = p_entidade_id AND u.des_status = 'A'
+))
+```
+
+Essa mesma alteracao sera aplicada nas duas sub-queries da funcao (residuos e indicadores).
 
 ### Arquivos a modificar
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/App.tsx` | Remover import e uso do OfflineIndicator |
-| `src/components/ReciclaELayout.tsx` | Remover imports e uso do OfflineIndicator e PWAOfflineBanner |
-| `src/components/ColetaForm.tsx` | Substituir useOfflineForm por submit direto ao Supabase |
-| `src/components/ColetaResiduoForm.tsx` | Substituir useOfflineForm por submit direto |
-| `src/components/EntidadeForm.tsx` | Substituir useOfflineForm por submit direto |
-| `src/components/ResiduoForm.tsx` | Substituir useOfflineForm por submit direto |
-| `src/components/TipoResiduoForm.tsx` | Substituir useOfflineForm por submit direto |
-| `src/components/TipoResiduoIndicadorForm.tsx` | Substituir useOfflineForm por submit direto |
-| `src/components/TipoEntidadeForm.tsx` | Substituir useOfflineForm por submit direto |
-| `src/components/PerfilForm.tsx` | Substituir useOfflineForm por submit direto |
-| `src/components/PontosColetaForm.tsx` | Substituir useOfflineForm por submit direto |
-| `src/components/UsuarioForm.tsx` | Substituir useOfflineForm por submit direto |
-| `src/components/IndicadorForm.tsx` | Substituir useOfflineForm por submit direto |
+| Migration SQL (nova) | Atualizar funcao `get_dashboard_data` com filtro por entidade coletora |
 
-### Arquivos a remover
-
-| Arquivo |
-|---------|
-| `src/lib/offline-db.ts` |
-| `src/hooks/useOfflineSync.tsx` |
-| `src/hooks/useOfflineForm.tsx` |
-| `src/hooks/useOfflineQuery.tsx` |
-| `src/hooks/useNetworkStatus.tsx` |
-| `src/components/OfflineIndicator.tsx` |
-| `src/components/PWAOfflineBanner.tsx` |
-
-### Como ficam os formularios
-
-Cada formulario que usa `useOfflineForm` sera simplificado. Em vez do wrapper offline, usara um `useState` simples para `isSubmitting` e chamara o Supabase diretamente, como ja fazia na funcao `onlineSubmit` que ja existe dentro de cada componente.
-
-Exemplo antes:
-```text
-const { submitForm, isSubmitting } = useOfflineForm({
-  table: 'coleta',
-  onlineSubmit: async (data) => { /* logica supabase */ }
-});
-```
-
-Exemplo depois:
-```text
-const [isSubmitting, setIsSubmitting] = useState(false);
-const handleSubmit = async (data) => {
-  setIsSubmitting(true);
-  try {
-    /* mesma logica supabase que ja existia */
-    toast({ title: "Sucesso", ... });
-    onSuccess?.();
-  } catch (error) {
-    toast({ title: "Erro", variant: "destructive" });
-  } finally {
-    setIsSubmitting(false);
-  }
-};
-```
+Nenhum arquivo TypeScript precisa ser alterado, pois o parametro `p_entidade_id` ja e passado corretamente pelo frontend. Apenas a logica SQL precisa mudar.
 
 ### Impacto
-- O sistema so funcionara com conexao ativa (comportamento padrao de apps web)
-- Se o usuario tentar salvar sem internet, recebera um erro claro do Supabase
-- Nenhuma funcionalidade de coleta ou cadastro sera perdida
-- Os erros de sincronizacao serao eliminados completamente
-
+- O filtro "Entidade" no Dashboard passara a mostrar coletas realizadas por usuarios daquela entidade
+- O filtro "Tipo de Entidade" ja filtra por `id_entidade_geradora` e permanecera como esta (filtra geradores por tipo)
+- Os totais do Reciclometro e Ecoindicadores serao corrigidos automaticamente
