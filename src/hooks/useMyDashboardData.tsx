@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchAllRows } from "@/lib/supabase-pagination";
 
 export interface MyDashboardFilters {
   tipoEntidadeId?: number;
@@ -49,119 +48,52 @@ export function useMyDashboardData(entityId: number, filters: MyDashboardFilters
         return { indicadores: [], totalResiduos: 0, residuosPorTipo: [] };
       }
 
-      // Get entity IDs for type filter (if needed)
-      let entidadeIds: number[] | null = null;
-      if (filters.tipoEntidadeId) {
-        const { data: entidadesTipo } = await supabase
-          .from("entidade")
-          .select("id_entidade")
-          .eq("id_tipo_entidade", filters.tipoEntidadeId)
-          .eq("des_status", "A");
-          
-        entidadeIds = entidadesTipo?.map(e => e.id_entidade) || [];
-        if (entidadeIds.length === 0) {
-          return { indicadores: [], totalResiduos: 0, residuosPorTipo: [] };
-        }
-      }
-
-      // Single query: fetch coleta_residuo with coleta join filters + embedded indicators
-      // Uses coleta!inner join to filter directly, avoiding the old pattern of
-      // fetching coleta IDs then using .in() which caused 400 errors with large ID arrays
-      const allData = await fetchAllRows(() => {
-        let q = supabase
-          .from("coleta_residuo")
-          .select(`
-            qtd_total,
-            vlr_total,
-            residuo!inner(
-              id_tipo_residuo,
-              tipo_residuo!inner(des_tipo_residuo)
-            ),
-            coleta!inner(id_coleta),
-            coleta_residuo_indicador(
-              id_indicador,
-              qtd_total,
-              indicador(
-                nom_indicador,
-                unidade_medida(des_unidade_medida, cod_unidade_medida)
-              )
-            )
-          `)
-          .in("coleta.id_usuario_criador", usuarioIds)
-          .gte("coleta.dat_coleta", filters.dataInicial)
-          .lte("coleta.dat_coleta", filters.dataFinal)
-          .eq("coleta.des_status", "A")
-          .eq("des_status", "A");
-
-        if (entidadeIds) {
-          q = q.in("coleta.id_entidade_geradora", entidadeIds);
-        }
-        if (filters.eventoId) {
-          q = q.eq("coleta.id_evento", filters.eventoId);
-        }
-        return q;
+      const { data, error } = await supabase.rpc("get_dashboard_data", {
+        p_data_inicial: filters.dataInicial,
+        p_data_final: filters.dataFinal,
+        p_entidade_id: null,
+        p_tipo_entidade_id: filters.tipoEntidadeId || null,
+        p_evento_id: filters.eventoId || null,
+        p_usuario_ids: usuarioIds,
       });
 
-      // Process waste data by type
-      const residuosMap = new Map<number, ResiduoTipoData>();
-      let totalResiduos = 0;
+      if (error) throw error;
 
-      // Process indicators from embedded data
+      const result = data as any;
+      const residuos: any[] = result?.residuos || [];
+      const indicadoresRaw: any[] = result?.indicadores || [];
+
+      // Keep quantities in kg for "Meus Números"
+      const residuosPorTipo: ResiduoTipoData[] = residuos.map((r: any) => ({
+        id_tipo_residuo: r.id_tipo_residuo,
+        des_tipo_residuo: r.des_tipo_residuo,
+        total_quantidade: r.total_quantidade,
+        total_valor: r.total_valor,
+      }));
+
+      const totalResiduos = residuos.reduce((sum: number, r: any) => sum + (r.total_quantidade || 0), 0);
+
+      // Aggregate indicators (sum across tipo_residuo)
       const indicadoresMap = new Map<number, IndicadorData>();
-
-      allData?.forEach((item: any) => {
-        // Process residuo
-        const tipoId = item.residuo.id_tipo_residuo;
-        const quantidade = item.qtd_total || 0;
-        const valor = item.vlr_total || 0;
-        const valorCalculado = quantidade * valor;
-        
-        totalResiduos += quantidade;
-        
-        const existing = residuosMap.get(tipoId);
+      indicadoresRaw.forEach((ind: any) => {
+        const existing = indicadoresMap.get(ind.id_indicador);
         if (existing) {
-          existing.total_quantidade += quantidade;
-          existing.total_valor += valorCalculado;
+          existing.total += ind.total || 0;
         } else {
-          residuosMap.set(tipoId, {
-            id_tipo_residuo: tipoId,
-            des_tipo_residuo: item.residuo.tipo_residuo.des_tipo_residuo,
-            total_quantidade: quantidade,
-            total_valor: valorCalculado,
+          indicadoresMap.set(ind.id_indicador, {
+            id_indicador: ind.id_indicador,
+            nom_indicador: ind.nom_indicador,
+            des_unidade_medida: ind.des_unidade_medida,
+            cod_unidade_medida: ind.cod_unidade_medida,
+            total: ind.total || 0,
           });
         }
-
-        // Process embedded indicators
-        const indicators = item.coleta_residuo_indicador || [];
-        indicators.forEach((ind: any) => {
-          if (!ind.indicador || !ind.indicador.unidade_medida) return;
-          const indicadorId = ind.id_indicador;
-          const existingInd = indicadoresMap.get(indicadorId);
-          if (existingInd) {
-            existingInd.total += ind.qtd_total || 0;
-          } else {
-            indicadoresMap.set(indicadorId, {
-              id_indicador: indicadorId,
-              nom_indicador: ind.indicador.nom_indicador,
-              des_unidade_medida: ind.indicador.unidade_medida.des_unidade_medida,
-              cod_unidade_medida: ind.indicador.unidade_medida.cod_unidade_medida,
-              total: ind.qtd_total || 0,
-            });
-          }
-        });
       });
-
-      // Keep quantities in kg
-      const residuosProcessados = Array.from(residuosMap.values()).map(r => ({
-        ...r,
-        total_quantidade: r.total_quantidade,
-        total_valor: r.total_valor
-      }));
 
       return {
         indicadores: Array.from(indicadoresMap.values()),
-        totalResiduos: totalResiduos,
-        residuosPorTipo: residuosProcessados,
+        totalResiduos,
+        residuosPorTipo,
       };
     },
     refetchInterval: 30000,

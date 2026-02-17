@@ -1538,6 +1538,17 @@ export type Database = {
         }[]
       }
       generate_user_token: { Args: { user_id_param: number }; Returns: string }
+      get_dashboard_data: {
+        Args: {
+          p_data_final: string
+          p_data_inicial: string
+          p_entidade_id?: number
+          p_evento_id?: number
+          p_tipo_entidade_id?: number
+          p_usuario_ids?: number[]
+        }
+        Returns: Json
+      }
       reset_user_password: { Args: { user_id_param: number }; Returns: boolean }
       validate_user_password: {
         Args: { new_password: string; user_id: number }
