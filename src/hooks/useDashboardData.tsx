@@ -50,96 +50,55 @@ export function useDashboardData(filters: DashboardFilters) {
         }
       }
 
-      // Fetch ALL coleta IDs with pagination
-      const coletasIds = await fetchAllRows<{ id_coleta: number }>(() => {
+      // Single query: fetch coleta_residuo with coleta join filters + embedded indicators
+      // This avoids the old pattern of fetching coleta IDs then using .in() which caused
+      // 400 Bad Request errors when the URL became too long with thousands of IDs
+      const allData = await fetchAllRows(() => {
         let q = supabase
-          .from("coleta")
-          .select("id_coleta")
-          .gte("dat_coleta", filters.dataInicial)
-          .lte("dat_coleta", filters.dataFinal)
-          .eq("des_status", "A");
-
-        if (filters.entidadeId) {
-          q = q.eq("id_entidade_geradora", filters.entidadeId);
-        }
-        if (entidadeIds) {
-          q = q.in("id_entidade_geradora", entidadeIds);
-        }
-        if (filters.eventoId) {
-          q = q.eq("id_evento", filters.eventoId);
-        }
-        return q;
-      });
-
-      const coletaIdsArray = coletasIds.map(c => c.id_coleta);
-
-      if (coletaIdsArray.length === 0) {
-        return { indicadores: [], totalResiduos: 0, residuosPorTipo: [] };
-      }
-
-      // Fetch ALL environmental indicators with pagination
-      const indicadoresData = await fetchAllRows(() =>
-        supabase
-          .from("coleta_residuo_indicador")
-          .select(`
-            id_indicador,
-            qtd_total,
-            indicador!inner(
-              nom_indicador,
-              unidade_medida!inner(
-                des_unidade_medida,
-                cod_unidade_medida
-              )
-            ),
-            coleta_residuo!inner(
-              id_coleta
-            )
-          `)
-          .in("coleta_residuo.id_coleta", coletaIdsArray)
-      );
-
-      // Process indicators data
-      const indicadoresMap = new Map<number, IndicadorData>();
-      indicadoresData?.forEach((item: any) => {
-        const indicadorId = item.id_indicador;
-        const existing = indicadoresMap.get(indicadorId);
-        
-        if (existing) {
-          existing.total += item.qtd_total || 0;
-        } else {
-          indicadoresMap.set(indicadorId, {
-            id_indicador: indicadorId,
-            nom_indicador: item.indicador.nom_indicador,
-            des_unidade_medida: item.indicador.unidade_medida.des_unidade_medida,
-            cod_unidade_medida: item.indicador.unidade_medida.cod_unidade_medida,
-            total: item.qtd_total || 0,
-          });
-        }
-      });
-
-      // Fetch ALL waste totals by type with pagination
-      const residuosData = await fetchAllRows(() =>
-        supabase
           .from("coleta_residuo")
           .select(`
             qtd_total,
             vlr_total,
             residuo!inner(
               id_tipo_residuo,
-              tipo_residuo!inner(
-                des_tipo_residuo
+              tipo_residuo!inner(des_tipo_residuo)
+            ),
+            coleta!inner(id_coleta),
+            coleta_residuo_indicador(
+              id_indicador,
+              qtd_total,
+              indicador(
+                nom_indicador,
+                unidade_medida(des_unidade_medida, cod_unidade_medida)
               )
             )
           `)
-          .in("id_coleta", coletaIdsArray)
-          .eq("des_status", "A")
-      );
+          .gte("coleta.dat_coleta", filters.dataInicial)
+          .lte("coleta.dat_coleta", filters.dataFinal)
+          .eq("coleta.des_status", "A")
+          .eq("des_status", "A");
+
+        if (filters.entidadeId) {
+          q = q.eq("coleta.id_entidade_geradora", filters.entidadeId);
+        }
+        if (entidadeIds) {
+          q = q.in("coleta.id_entidade_geradora", entidadeIds);
+        }
+        if (filters.eventoId) {
+          q = q.eq("coleta.id_evento", filters.eventoId);
+        }
+        return q;
+      });
 
       // Process waste data by type
       const residuosMap = new Map<number, ResiduoTipoData>();
       let totalResiduos = 0;
 
-      residuosData?.forEach((item: any) => {
+      // Process indicators from embedded data
+      const indicadoresMap = new Map<number, IndicadorData>();
+
+      allData?.forEach((item: any) => {
+        // Process residuo
         const tipoId = item.residuo.id_tipo_residuo;
         const quantidade = item.qtd_total || 0;
         const valor = item.vlr_total || 0;
@@ -159,9 +118,28 @@ export function useDashboardData(filters: DashboardFilters) {
             total_valor: valorCalculado,
           });
         }
+
+        // Process embedded indicators
+        const indicators = item.coleta_residuo_indicador || [];
+        indicators.forEach((ind: any) => {
+          if (!ind.indicador || !ind.indicador.unidade_medida) return;
+          const indicadorId = ind.id_indicador;
+          const existingInd = indicadoresMap.get(indicadorId);
+          if (existingInd) {
+            existingInd.total += ind.qtd_total || 0;
+          } else {
+            indicadoresMap.set(indicadorId, {
+              id_indicador: indicadorId,
+              nom_indicador: ind.indicador.nom_indicador,
+              des_unidade_medida: ind.indicador.unidade_medida.des_unidade_medida,
+              cod_unidade_medida: ind.indicador.unidade_medida.cod_unidade_medida,
+              total: ind.qtd_total || 0,
+            });
+          }
+        });
       });
 
-      // Convert quantities to tons and keep calculated values
+      // Convert quantities to tons
       const residuosProcessados = Array.from(residuosMap.values()).map(r => ({
         ...r,
         total_quantidade: r.total_quantidade / 1000,
