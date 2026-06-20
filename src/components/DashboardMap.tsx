@@ -1,3 +1,4 @@
+/// <reference types="google.maps" />
 import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDashboardMapData } from "@/hooks/useDashboardMapData";
