@@ -19,4 +19,10 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  esbuild: {
+    pure: mode === 'production'
+      ? ['console.log', 'console.info', 'console.debug', 'console.trace', 'console.warn']
+      : [],
+    drop: mode === 'production' ? ['debugger'] : [],
+  },
 }));
