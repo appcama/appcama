@@ -58,7 +58,6 @@ export function TipoPontoColetaList({ onEdit, onAddNew }: TipoPontoColetaListPro
   const { data: tiposPontoColeta = [], isLoading, error } = useQuery({
     queryKey: ['tipos-ponto-coleta'],
     queryFn: async () => {
-      console.log('Fetching tipos de ponto de coleta...');
       const { data, error } = await supabase
         .from('tipo_ponto_coleta')
         .select('*')
@@ -69,7 +68,6 @@ export function TipoPontoColetaList({ onEdit, onAddNew }: TipoPontoColetaListPro
         throw error;
       }
       
-      console.log('Tipos de ponto de coleta fetched:', data);
       return data as TipoPontoColeta[];
     },
   });

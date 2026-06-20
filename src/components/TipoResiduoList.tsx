@@ -40,7 +40,6 @@ export function TipoResiduoList({ onAddNew, onEdit }: TipoResiduoListProps) {
   const { data: tiposResiduo = [], isLoading, error } = useQuery({
     queryKey: ['tipos-residuo'],
     queryFn: async () => {
-      console.log('Fetching tipos de resíduo com indicadores...');
       
       // Buscar todos os tipos de resíduos
       const { data: tipos, error: tiposError } = await supabase
@@ -53,12 +52,10 @@ export function TipoResiduoList({ onAddNew, onEdit }: TipoResiduoListProps) {
         throw tiposError;
       }
 
-      console.log('Tipos encontrados:', tipos);
 
       // Para cada tipo, buscar seus indicadores usando query separada mais confiável
       const tiposComIndicadores = await Promise.all(
         tipos.map(async (tipo) => {
-          console.log(`Buscando indicadores para tipo ${tipo.id_tipo_residuo}: ${tipo.des_tipo_residuo}`);
           
           // Query separada para buscar as vinculações
           const { data: vinculacoes, error: vinculacoesError } = await supabase
@@ -74,7 +71,6 @@ export function TipoResiduoList({ onAddNew, onEdit }: TipoResiduoListProps) {
             };
           }
 
-          console.log(`Vinculações encontradas para tipo ${tipo.id_tipo_residuo}:`, vinculacoes);
 
           // Se não há vinculações, retornar com indicadores vazios
           if (!vinculacoes || vinculacoes.length === 0) {
@@ -99,7 +95,6 @@ export function TipoResiduoList({ onAddNew, onEdit }: TipoResiduoListProps) {
             };
           }
 
-          console.log(`Indicadores encontrados para tipo ${tipo.id_tipo_residuo}:`, indicadores);
 
           return {
             ...tipo,
@@ -108,7 +103,6 @@ export function TipoResiduoList({ onAddNew, onEdit }: TipoResiduoListProps) {
         })
       );
       
-      console.log('Tipos de resíduo com indicadores finais:', tiposComIndicadores);
       return tiposComIndicadores as TipoResiduoComIndicadores[];
     }
   });

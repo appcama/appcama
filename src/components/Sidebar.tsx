@@ -263,19 +263,16 @@ export function Sidebar({ activeItem, onItemClick, allowedFeatures, onMenuClose,
 
   const isFeatureAllowed = (featureId: string) => {
     if (!allowedFeatures || allowedFeatures.length === 0) {
-      console.log("[Sidebar] No permissions loaded yet, allowing access during loading");
       return true;
     }
 
     const featureName = featureByItemId(featureId);
     
     if (!featureName) {
-      console.log(`[Sidebar] No feature mapping found for: ${featureId}`);
       return false;
     }
 
     const allowed = allowedFeatures.includes(featureName);
-    console.log(`[Sidebar] Feature ${featureName} (${featureId}): ${allowed ? 'ALLOWED' : 'DENIED'}`);
     
     return allowed;
   };

@@ -4,18 +4,15 @@ export function registerServiceWorker() {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js')
         .then((registration) => {
-          console.log('[SW] Service Worker registered successfully:', registration.scope);
           
           // Check for updates every 5 minutes (more aggressive)
           setInterval(() => {
-            console.log('[SW] Verificando atualizações (5min)...');
             registration.update();
           }, 5 * 60 * 1000);
 
           // Check for updates when user returns to tab
           document.addEventListener('visibilitychange', () => {
             if (!document.hidden && registration) {
-              console.log('[SW] Tab visível, verificando atualizações...');
               registration.update();
             }
           });
@@ -23,12 +20,10 @@ export function registerServiceWorker() {
           // Check for updates on registration
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
-            console.log('[SW] Nova versão encontrada, instalando...');
             
             if (newWorker) {
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('[SW] Nova versão instalada, notificando usuário...');
                   
                   // Dispatch custom event for update banner
                   window.dispatchEvent(new CustomEvent('sw-update-available', {
@@ -44,7 +39,6 @@ export function registerServiceWorker() {
 
           // Recarregar quando novo SW assumir controle
           navigator.serviceWorker.addEventListener('controllerchange', () => {
-            console.log('[SW] Novo Service Worker assumiu controle, recarregando...');
             window.location.reload();
           });
         })
@@ -54,7 +48,6 @@ export function registerServiceWorker() {
 
       // Listen for messages from service worker
       navigator.serviceWorker.addEventListener('message', (event) => {
-        console.log('[SW] Message from service worker:', event.data);
         
         if (event.data && event.data.type === 'BACKGROUND_SYNC') {
           // Trigger sync when background sync is available
@@ -63,7 +56,6 @@ export function registerServiceWorker() {
       });
     });
   } else {
-    console.log('[SW] Service Workers not supported');
   }
 }
 

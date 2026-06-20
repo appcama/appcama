@@ -63,7 +63,6 @@ export function TipoEntidadeForm({ onBack, onSuccess, editingTipoEntidade }: Tip
 
   const saveMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      console.log('Saving tipo entidade:', data);
       
       const tipoEntidadeData = {
         des_tipo_entidade: data.des_tipo_entidade,
@@ -110,7 +109,6 @@ export function TipoEntidadeForm({ onBack, onSuccess, editingTipoEntidade }: Tip
   });
 
   const onSubmit = (data: FormData) => {
-    console.log('Form submitted:', data);
     saveMutation.mutate(data);
   };
 

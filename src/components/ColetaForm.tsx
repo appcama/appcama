@@ -131,10 +131,8 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
   useEffect(() => {
     // Aguarda os eventos visíveis serem carregados antes de inicializar o formulário
     if (eventosLoading) {
-      console.log('[ColetaForm] Aguardando carregamento dos eventos visíveis...');
       return;
     }
-    console.log('[ColetaForm] useEffect triggered, eventos carregados:', eventosVisiveis.length);
     initializeForm();
   }, [editingColeta, eventosVisiveis, eventosLoading]);
 
@@ -146,10 +144,8 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
       await loadAllFormData();
       
       if (editingColeta) {
-        console.log('[ColetaForm] editingColeta exists, setting form values');
         await loadColetaEditingData();
       } else {
-        console.log('[ColetaForm] No editingColeta, generating new codigo');
         generateCodigoColeta();
       }
       
@@ -161,7 +157,6 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
   };
 
   const loadAllFormData = async () => {
-    console.log('[ColetaForm] Loading all form data in parallel...');
     
     try {
       // Verificar se o usuário está logado
@@ -175,13 +170,11 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         return;
       }
 
-      console.log('[ColetaForm] User data:', { id: user.id, email: user.email });
 
       // Usar os dados do usuário já disponíveis no hook useAuth
       const isAdmin = user.isAdmin || false;
       const userEntityId = user.entityId;
 
-      console.log('[ColetaForm] User entity data:', { isAdmin, userEntityId });
 
       // Preparar query para pontos de coleta com filtro de entidade
       let pontosQuery = supabase
@@ -191,10 +184,8 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
 
       // Se não for admin, filtrar pela entidade do usuário
       if (!isAdmin && userEntityId) {
-        console.log('[ColetaForm] Filtering pontos de coleta by entity:', userEntityId);
         pontosQuery = pontosQuery.eq('id_entidade_gestora', userEntityId);
       } else if (isAdmin) {
-        console.log('[ColetaForm] Admin user - loading all pontos de coleta');
       }
 
       pontosQuery = pontosQuery.order('nom_ponto_coleta');
@@ -237,9 +228,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         });
         setPontosColeta([]);
       } else {
-        console.log('[ColetaForm] Pontos de coleta loaded:', pontosResult.data?.length || 0, 'items');
         if (!isAdmin && userEntityId) {
-          console.log('[ColetaForm] Pontos filtered by entity:', userEntityId);
         }
         const loadedPontos = pontosResult.data || [];
         setPontosColeta(loadedPontos);
@@ -267,13 +256,11 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
           (entidade: any) => tiposGeradoras.has(entidade.id_tipo_entidade)
         );
         
-        console.log('[ColetaForm] Entidades geradoras loaded for all users:', entidadesGeradoras.length);
         setEntidades(entidadesGeradoras);
         setAllEntidades(entidadesGeradoras);
 
         // Para usuários não-admin, ainda definir automaticamente a entidade do usuário como padrão
         if (!isAdmin && userEntityId) {
-          console.log('[ColetaForm] Non-admin user - setting entity as default:', userEntityId);
           setFormData(prev => ({ 
             ...prev, 
             id_entidade_geradora: userEntityId.toString() 
@@ -290,7 +277,6 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         
         // Se o evento não está na lista (é um evento passado), buscar esse evento específico
         if (!eventoExists) {
-          console.log('[ColetaForm] Evento associado não está na lista vigente, buscando evento passado:', editingColeta.id_evento);
           const { data: eventoPassado } = await supabase
             .from('evento')
             .select('id_evento, nom_evento')
@@ -298,7 +284,6 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
             .single();
           
           if (eventoPassado) {
-            console.log('[ColetaForm] Evento passado adicionado à lista:', eventoPassado.nom_evento);
             eventosData = [...eventosData, eventoPassado];
           }
         }
@@ -306,7 +291,6 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
       
       setEventos(eventosData);
 
-      console.log('[ColetaForm] All form data loaded successfully');
     } catch (error) {
       console.error('[ColetaForm] Error loading form data:', error);
       toast({
@@ -321,7 +305,6 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
     if (!editingColeta) return;
 
     try {
-      console.log('[ColetaForm] Loading coleta editing data:', editingColeta);
 
       // Preparar dados do form
       const newFormData = {
@@ -337,7 +320,6 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         newFormData.id_entidade_geradora = user.entityId.toString();
       }
 
-      console.log('[ColetaForm] Setting form data after data load:', newFormData);
 
       // Carregar des_custo da coleta
       if (editingColeta.des_custo) {
@@ -485,7 +467,6 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
   // Função para recalcular indicadores apenas quando necessário
   const recalculateIndicators = async (coletaId: number) => {
     try {
-      console.log('[ColetaForm] Recalculando indicadores para coleta:', coletaId);
       
       // Chamar a função melhorada que previne duplicações
       const { error } = await supabase.rpc('calculate_and_insert_indicators', {
@@ -497,7 +478,6 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
         throw error;
       }
 
-      console.log('[ColetaForm] Indicadores recalculados com sucesso para coleta:', coletaId);
     } catch (error) {
       console.error('[ColetaForm] Erro ao recalcular indicadores:', error);
       // Não interrumpemos o fluxo principal, apenas logamos o erro

@@ -71,7 +71,6 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
     if (!editingTipoResiduo) return;
     
     try {
-      console.log('Buscando indicadores vinculados para tipo:', editingTipoResiduo.id_tipo_residuo);
       
       // Buscar indicadores vinculados com suas informações
       const { data: vinculacoes, error: vinculacoesError } = await supabase
@@ -85,7 +84,6 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
       }
 
       if (!vinculacoes || vinculacoes.length === 0) {
-        console.log('Nenhuma vinculação encontrada');
         setIndicadores([]);
         return;
       }
@@ -112,7 +110,6 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
         };
       });
       
-      console.log('Indicadores vinculados carregados:', indicadoresVinculados);
       setIndicadores(indicadoresVinculados);
     } catch (error) {
       console.error('Erro ao carregar indicadores vinculados:', error);
@@ -123,7 +120,6 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
   // Carregar dados do formulário para edição
   useEffect(() => {
     if (editingTipoResiduo) {
-      console.log('Carregando dados para edição:', editingTipoResiduo);
       
       form.reset({
         des_tipo_residuo: editingTipoResiduo.des_tipo_residuo || "",
@@ -163,8 +159,6 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
 
   const saveMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      console.log('Salvando tipo residuo:', data);
-      console.log('Indicadores vinculados:', indicadores);
       
       if (indicadores.length === 0) {
         throw new Error('Pelo menos um indicador deve ser vinculado');
@@ -180,8 +174,6 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
       let tipoResiduoId: number;
 
       if (isEditing && editingTipoResiduo) {
-        console.log('Atualizando tipo residuo existente:', editingTipoResiduo.id_tipo_residuo);
-        console.log('Dados para atualização:', tipoResiduoData);
         
         const { error } = await supabase
           .from('tipo_residuo')
@@ -196,7 +188,6 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
         tipoResiduoId = editingTipoResiduo.id_tipo_residuo;
 
         // Remover vinculações existentes
-        console.log('Removendo vinculações existentes para tipo:', tipoResiduoId);
         const { error: deleteError } = await supabase
           .from('tipo_residuo__indicador')
           .delete()
@@ -207,7 +198,6 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
           throw deleteError;
         }
       } else {
-        console.log('Criando novo tipo residuo com dados:', tipoResiduoData);
         const { data: result, error } = await supabase
           .from('tipo_residuo')
           .insert([{
@@ -229,18 +219,15 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
         }
         
         tipoResiduoId = result[0].id_tipo_residuo;
-        console.log('Novo tipo residuo criado com ID:', tipoResiduoId);
       }
 
       // Inserir novas vinculações com indicadores
-      console.log('Criando vinculações para indicadores:', indicadores);
       const indicadorVinculacoes = indicadores.map(indicador => ({
         id_tipo_residuo: tipoResiduoId,
         id_indicador: indicador.id_indicador,
         qtd_referencia: indicador.qtd_referencia,
       }));
 
-      console.log('Dados das vinculações a serem inseridas:', indicadorVinculacoes);
 
       const { error: vincularError } = await supabase
         .from('tipo_residuo__indicador')
@@ -251,10 +238,8 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
         throw vincularError;
       }
       
-      console.log('Vinculações criadas com sucesso!');
     },
     onSuccess: () => {
-      console.log('Mutation success, invalidating queries');
       queryClient.invalidateQueries({ queryKey: ['tipos-residuo'] });
       queryClient.invalidateQueries({ queryKey: ['indicadores-vinculados'] });
       toast.success(
@@ -271,8 +256,6 @@ export function TipoResiduoForm({ onBack, onSuccess, editingTipoResiduo }: TipoR
   });
 
   const onSubmit = (data: FormData) => {
-    console.log('Form submitted com dados:', data);
-    console.log('Indicadores selecionados:', indicadores);
     saveMutation.mutate(data);
   };
 

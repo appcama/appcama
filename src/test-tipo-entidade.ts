@@ -13,7 +13,6 @@ export async function lerTiposEntidade() {
       return null;
     }
 
-    console.log('Tipos de entidade encontrados:', data);
     return data;
   } catch (error) {
     console.error('Erro na consulta:', error);
@@ -34,7 +33,6 @@ export async function lerTiposEntidadeSimples() {
       return null;
     }
 
-    console.log('Tipos de entidade (simples):', data);
     return data;
   } catch (error) {
     console.error('Erro na consulta:', error);

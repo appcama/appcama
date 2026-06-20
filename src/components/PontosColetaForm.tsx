@@ -165,10 +165,6 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
       // Usar setTimeout para garantir que o reset foi aplicado
       setTimeout(() => {
         const { nome, numero } = parseLogradouro(editingPontoColeta.des_logradouro);
-        console.log('Parsing logradouro:', { 
-          original: editingPontoColeta.des_logradouro, 
-          parsed: { nome, numero } 
-        });
         setLogradouroNome(nome);
         setLogradouroNumero(numero);
       }, 0);
@@ -217,11 +213,6 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
       
       // Só atualizar se realmente mudou
       if (current !== combinado) {
-        console.log('Sincronizando logradouro:', { 
-          nome: logradouroNome, 
-          numero: logradouroNumero, 
-          combinado 
-        });
         form.setValue('des_logradouro', combinado, { shouldDirty: true });
       }
     }
@@ -229,12 +220,8 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
 
   const fetchEntidadesGestoras = async () => {
     try {
-      console.log('User data in form:', user);
-      console.log('User entityId in form:', user?.entityId);
-      console.log('User isAdmin in form:', user?.isAdmin);
       
       if (!user) {
-        console.log('No user found, not loading entities');
         setEntidadesGestoras([]);
         setLoadingEntidades(false);
         return;
@@ -254,12 +241,9 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
   
       // Se não é administrador, filtrar pela entidade do usuário
       if (!user.isAdmin && user.entityId) {
-        console.log('Non-admin user, filtering entities by entityId:', user.entityId);
         query = query.eq('id_entidade', user.entityId);
       } else if (user.isAdmin) {
-        console.log('Admin user, showing all entities');
       } else {
-        console.log('No entityId found and not admin, not loading entities');
         setEntidadesGestoras([]);
         setLoadingEntidades(false);
         return;
@@ -267,7 +251,6 @@ export function PontosColetaForm({ editingPontoColeta, onBack, onSuccess }: Pont
   
       const { data, error } = await query.order('nom_entidade');
   
-      console.log('Entities query result:', { data, error });
       
       if (error) throw error;
       setEntidadesGestoras(data || []);

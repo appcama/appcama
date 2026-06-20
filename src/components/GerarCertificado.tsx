@@ -140,7 +140,6 @@ export function GerarCertificado() {
 
       // Filtrar por entidade coletora (usuário criador) se não for admin
       if (!user.isAdmin && user.entityId) {
-        console.log("Non-admin user, filtering by collector entityId:", user.entityId);
 
         // Buscar usuários da mesma entidade
         const { data: usuariosDaEntidade } = await supabase
@@ -154,13 +153,11 @@ export function GerarCertificado() {
         if (userIds.length > 0) {
           query = query.in("id_usuario_criador", userIds);
         } else {
-          console.log("No users found for this entity, not loading coletas");
           setColetas([]);
           setLoading(false);
           return;
         }
       } else if (!user.isAdmin) {
-        console.log("No entityId found and not admin, not loading coletas");
         setColetas([]);
         setLoading(false);
         return;

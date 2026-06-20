@@ -59,13 +59,8 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
   const loadCertificados = async () => {
     try {
       setLoading(true);
-      console.log('[CertificadoList] Loading certificados...');
-      console.log('User data:', user);
-      console.log('User entityId:', user?.entityId);
-      console.log('User isAdmin:', user?.isAdmin);
       
       if (!user) {
-        console.log('No user found, not loading certificados');
         setCertificados([]);
         setLoading(false);
         return;
@@ -98,7 +93,6 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
 
       // Se não é administrador, filtrar pela entidade coletora (usuário criador)
       if (!user.isAdmin && user.entityId) {
-        console.log('Non-admin user, filtering by collector entityId:', user.entityId);
         
         // Buscar usuários da mesma entidade
         const { data: usuariosDaEntidade } = await supabase
@@ -112,15 +106,12 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
         if (userIds.length > 0) {
           query = query.in('id_usuario_criador', userIds);
         } else {
-          console.log('No users found for this entity, not loading certificados');
           setCertificados([]);
           setLoading(false);
           return;
         }
       } else if (user.isAdmin) {
-        console.log('Admin user, showing all certificados');
       } else {
-        console.log('No entityId found and not admin, not loading certificados');
         setCertificados([]);
         setLoading(false);
         return;
@@ -128,10 +119,6 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
 
       const { data, error } = await query.order('id_certificado', { ascending: false });
 
-      console.log('[CertificadoList] Query completed');
-      console.log('[CertificadoList] Error:', error);
-      console.log('[CertificadoList] Data:', data);
-      console.log('[CertificadoList] Data length:', data?.length);
 
       if (error) {
         console.error('[CertificadoList] Error loading certificados:', error);
@@ -143,7 +130,6 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
         throw error;
       }
 
-      console.log('[CertificadoList] Raw data from query:', data);
 
       // Buscar informações das entidades e coletas separadamente
       const processedData: Certificado[] = [];
@@ -195,7 +181,6 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
         });
       }
 
-      console.log('[CertificadoList] Processed certificados:', processedData);
       setCertificados(processedData);
     } catch (error) {
       console.error('[CertificadoList] Unexpected error:', error);
@@ -275,10 +260,8 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
 
   const handleDeleteCertificado = async (certificado: Certificado) => {
     try {
-      console.log('🗑️ Excluindo certificado:', certificado.cod_validador);
       
       // 1️⃣ Liberar as coletas associadas ao certificado
-      console.log('📋 Liberando coletas associadas...');
       const { error: coletaError } = await (supabase as any)
         .from('coleta')
         .update({ 
@@ -298,10 +281,8 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
         return;
       }
       
-      console.log('✅ Coletas liberadas com sucesso');
 
       // 2️⃣ Marcar certificado como locked
-      console.log('🔒 Marcando certificado como locked...');
       const { error: certError } = await (supabase as any)
         .from('certificado')
         .update({ 
@@ -321,7 +302,6 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
         return;
       }
       
-      console.log('✅ Certificado excluído com sucesso');
 
       toast({
         title: 'Sucesso',

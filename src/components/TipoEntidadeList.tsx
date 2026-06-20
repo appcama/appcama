@@ -33,7 +33,6 @@ export function TipoEntidadeList({ onAddNew, onEdit }: TipoEntidadeListProps) {
   const { data: tiposEntidade = [], isLoading, error } = useQuery({
     queryKey: ['tipos-entidade'],
     queryFn: async () => {
-      console.log('Fetching tipos de entidade...');
       const { data, error } = await supabase
         .from('tipo_entidade')
         .select('*')
@@ -44,7 +43,6 @@ export function TipoEntidadeList({ onAddNew, onEdit }: TipoEntidadeListProps) {
         throw error;
       }
       
-      console.log('Tipos de entidade fetched:', data);
       return data as TipoEntidade[];
     }
   });
