@@ -35,7 +35,7 @@ export function Certificados() {
       ) : (
         <CertificadoList 
           onAddNew={() => setCurrentView('gerar')} 
-          onEdit={(item) => } 
+          onEdit={() => {}} 
         />
       )}
     </div>
