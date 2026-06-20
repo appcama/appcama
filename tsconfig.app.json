@@ -7,6 +7,7 @@
       "DOM",
       "DOM.Iterable"
     ],
+    "types": ["google.maps"],
     "module": "ESNext",
     "skipLibCheck": true,
     "moduleResolution": "bundler",
