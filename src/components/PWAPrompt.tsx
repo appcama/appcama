@@ -54,7 +54,6 @@ export function PWAPrompt() {
 
     // Listen for app installed event
     const handleAppInstalled = () => {
-      console.log('PWA installed successfully');
       setShowPrompt(false);
       setDeferredPrompt(null);
       toast({
@@ -125,13 +124,11 @@ export function PWAPrompt() {
         const choiceResult = await deferredPrompt.userChoice;
         
         if (choiceResult.outcome === 'accepted') {
-          console.log('User accepted the install prompt');
           toast({
             title: "Instalando...",
             description: "ReciclaÊ está sendo instalado em seu dispositivo.",
           });
         } else {
-          console.log('User dismissed the install prompt');
         }
         
         setDeferredPrompt(null);

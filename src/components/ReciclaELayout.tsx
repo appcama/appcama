@@ -58,9 +58,6 @@ export function ReciclaELayout() {
     setSidebarCollapsed(prev => !prev);
   };
 
-  console.log('[ReciclaELayout] Current user:', user);
-  console.log('[ReciclaELayout] Allowed features:', allowedFeatures);
-  console.log('[ReciclaELayout] Active item:', activeItem);
 
   // Listener para limpar filtro de perfil
   useEffect(() => {
@@ -75,7 +72,6 @@ export function ReciclaELayout() {
   }, []);
 
   const handleItemClick = (item: string) => {
-    console.log('[ReciclaELayout] Item clicked:', item);
     setActiveItem(item);
     setCurrentView('list');
     setEditingItem(null);
@@ -86,14 +82,11 @@ export function ReciclaELayout() {
   };
 
   const handleAddNew = () => {
-    console.log('Add new clicked for:', activeItem);
     setCurrentView('form');
     setEditingItem(null);
   };
 
   const handleEdit = (item: any) => {
-    console.log('[ReciclaELayout] Edit clicked for:', activeItem, item);
-    console.log('[ReciclaELayout] Item data:', JSON.stringify(item, null, 2));
     setCurrentView('form');
     setEditingItem(item);
   };
@@ -109,7 +102,6 @@ export function ReciclaELayout() {
   };
 
   const handleViewUsers = (perfilId: number) => {
-    console.log('[ReciclaELayout] View users for perfil:', perfilId);
     setSelectedPerfilId(perfilId);
     setActiveItem('usuarios');
     setCurrentView('list');
@@ -117,7 +109,6 @@ export function ReciclaELayout() {
   };
 
   const handleClearPerfilFilter = () => {
-    console.log('[ReciclaELayout] Clearing perfil filter');
     setSelectedPerfilId(null);
   };
 

@@ -70,7 +70,6 @@ export function RelatorioViewer({ reportType, category, filters }: RelatorioView
         }
       }
     } catch (error) {
-      console.warn('Erro ao buscar logo da entidade:', error);
     }
     
     try {
@@ -123,7 +122,6 @@ export function RelatorioViewer({ reportType, category, filters }: RelatorioView
         }
       }
     } catch (error) {
-      console.warn('Erro ao buscar logo da entidade:', error);
     }
     
     try {

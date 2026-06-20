@@ -1,3 +1,4 @@
+/// <reference types="google.maps" />
 // Singleton para garantir carregamento único da Google Maps API
 class GoogleMapsLoader {
   private static instance: GoogleMapsLoader;

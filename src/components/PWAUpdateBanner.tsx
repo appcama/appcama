@@ -9,12 +9,10 @@ export function PWAUpdateBanner() {
 
   useEffect(() => {
     const handleUpdateAvailable = () => {
-      console.log('[PWA Update Banner] Nova atualização disponível');
       setShowBanner(true);
 
       // Auto-update after 30 seconds if user doesn't interact
       const timeout = setTimeout(() => {
-        console.log('[PWA Update Banner] Auto-atualizando após 30s...');
         handleUpdate();
       }, 30000);
 
@@ -32,7 +30,6 @@ export function PWAUpdateBanner() {
   }, [autoUpdateTimeout]);
 
   const handleUpdate = () => {
-    console.log('[PWA Update Banner] Usuário aceitou atualização, recarregando...');
     
     // Clear auto-update timeout
     if (autoUpdateTimeout) {
@@ -44,7 +41,6 @@ export function PWAUpdateBanner() {
   };
 
   const handleDismiss = () => {
-    console.log('[PWA Update Banner] Usuário dispensou banner');
     setShowBanner(false);
 
     // Clear auto-update timeout
@@ -54,7 +50,6 @@ export function PWAUpdateBanner() {
 
     // Still auto-update after 2 minutes even if dismissed
     setTimeout(() => {
-      console.log('[PWA Update Banner] Auto-atualizando após 2min (dismissed)...');
       window.location.reload();
     }, 120000);
   };

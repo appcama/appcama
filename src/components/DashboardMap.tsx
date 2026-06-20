@@ -1,3 +1,4 @@
+/// <reference types="google.maps" />
 import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDashboardMapData } from "@/hooks/useDashboardMapData";
@@ -43,14 +44,12 @@ export const DashboardMap = ({ startDate, endDate, entityId }: DashboardMapProps
 
     // Timeout de fallback: se tilesloaded não disparar em 3s, marca como pronto
     const fallbackTimeout = setTimeout(() => {
-      console.log('Timeout: marcando mapa como pronto');
       setIsMapReady(true);
     }, 3000);
 
     // Aguardar tiles carregarem (ideal)
     google.maps.event.addListenerOnce(mapInstance.current, 'tilesloaded', () => {
       clearTimeout(fallbackTimeout);
-      console.log('Tiles carregadas: mapa pronto');
       setIsMapReady(true);
     });
 

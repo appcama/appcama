@@ -107,12 +107,10 @@ export function PerfilFuncionalidades() {
   const handleSalvar = async () => {
     if (selectedPerfil == null) return;
     setSaving(true);
-    console.log("[PerfilFuncionalidades] Saving for perfil:", selectedPerfil);
 
     const toInsert = [...linkedSet].filter((id) => !originalSet.has(id));
     const toDelete = [...originalSet].filter((id) => !linkedSet.has(id));
 
-    console.log("[PerfilFuncionalidades] toInsert:", toInsert, "toDelete:", toDelete);
 
     // Inserts
     if (toInsert.length > 0) {

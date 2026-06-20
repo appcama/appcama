@@ -62,14 +62,9 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
   const loadColetas = async () => {
     try {
       setLoading(true);
-      console.log('[ColetaList] Loading coletas...');
-      console.log('User data:', user);
-      console.log('User entityId:', user?.entityId);
-      console.log('User isAdmin:', user?.isAdmin);
       
       // Se não há usuário, não buscar dados
       if (!user) {
-        console.log('No user found, not loading coletas');
         setColetas([]);
         setLoading(false);
         return;
@@ -105,7 +100,6 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
 
       // Se não é administrador, filtrar pela entidade coletora (usuário criador)
       if (!user.isAdmin && user.entityId) {
-        console.log('Non-admin user, filtering by collector entityId:', user.entityId);
         
         // Buscar usuários da mesma entidade
         const { data: usuariosDaEntidade } = await supabase
@@ -119,15 +113,12 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
         if (userIds.length > 0) {
           query = query.in('id_usuario_criador', userIds);
         } else {
-          console.log('No users found for this entity, not loading coletas');
           setColetas([]);
           setLoading(false);
           return;
         }
       } else if (user.isAdmin) {
-        console.log('Admin user, showing all coletas');
       } else {
-        console.log('No entityId found and not admin, not loading coletas');
         setColetas([]);
         setLoading(false);
         return;
@@ -140,7 +131,6 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
         throw error;
       }
 
-      console.log('[ColetaList] Raw data from query:', data);
 
       // Processar os dados para incluir a entidade coletora
       const processedData = (data || []).map((coleta: any) => ({
@@ -150,7 +140,6 @@ export function ColetaList({ onAddNew, onEdit }: ColetaListProps) {
         } : null
       }));
 
-      console.log('[ColetaList] Processed coletas:', processedData);
       setColetas(processedData);
     } catch (error) {
       console.error('[ColetaList] Unexpected error:', error);

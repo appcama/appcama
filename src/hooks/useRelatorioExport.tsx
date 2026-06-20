@@ -78,7 +78,6 @@ export function useRelatorioExport() {
       try {
         doc.addImage(logoUrl, 'PNG', 14, yPosition, 25, 25);
       } catch (error) {
-        console.warn('Erro ao carregar logo da entidade, usando logo padrão');
         try {
           doc.addImage('/logo-original.png', 'PNG', 14, yPosition, 25, 25);
         } catch {

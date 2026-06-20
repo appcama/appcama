@@ -164,86 +164,16 @@ function processRelatorioData(
   
   // Se não há coletas ativas, usar todas para demonstração
   const coletasParaProcessar = coletasAtivas.length > 0 ? coletasAtivas : coletas;
-  
-  console.log(`Processando ${coletasParaProcessar.length} coletas para relatório ${reportType}`, {
-    totalColetas: coletas.length,
-    coletasAtivas: coletasAtivas.length,
-    usado: coletasParaProcessar.length
-  });
 
-  // Implementar lógicas específicas por tipo de relatório
-  switch (reportType) {
-    case 'coletas-periodo':
-      return processColetasPorPeriodo(coletasParaProcessar, filters);
-    case 'residuos-coletados':
-      return processResiduosColetados(coletasParaProcessar, filters);
-    case 'performance-pontos':
-      return processPerformancePontos(coletasParaProcessar, filters);
-    case 'ranking-entidades':
-      return processRankingEntidades(coletasParaProcessar, filters);
-    case 'eventos-coleta':
-      return processEventosColeta(coletasParaProcessar, filters);
-    // Relatórios Gerenciais
-    case 'dashboard-executivo':
-      return processDashboardExecutivo(coletasParaProcessar, filters);
-    case 'analise-faturamento':
-      return processAnaliseFaturamento(coletasParaProcessar, filters);
-    case 'produtividade':
-      return processProdutividade(coletasParaProcessar, filters);
-    case 'analise-crescimento':
-      return processAnaliseCrescimento(coletasParaProcessar, filters);
-    case 'ranking-entidades-geradoras':
-      return processRankingEntidadesGeradoras(coletasParaProcessar, filters);
-    case 'custos-beneficios':
-      return processCustosBeneficios(coletasParaProcessar, filters);
-    case 'rejeitos-coletados':
-      return processRejeitosColetados(coletasParaProcessar, filters);
-    default:
-      return processRelatorioGenerico(coletasParaProcessar, filters);
-  }
-}
-
-function processColetasPorPeriodo(coletas: any[], filters: RelatorioFiltersType): RelatorioData {
-  const totalColetas = coletas.length;
-  const valorTotal = coletas.reduce((sum, coleta) => sum + (Number(coleta.vlr_total) || 0), 0);
-  
-  const totalResiduos = coletas.reduce((sum, coleta) => {
-    if (coleta.coleta_residuo) {
-      return sum + coleta.coleta_residuo.reduce((subSum: number, residuo: any) => {
-        return subSum + (Number(residuo.qtd_total) || 0);
-      }, 0);
-    }
-    return sum;
-  }, 0);
-
-  // Agrupar por entidade geradora
-  const entidadesMap = new Map();
-  coletas.forEach(coleta => {
-    const entidade = coleta.entidade?.nom_entidade || 'Não informado';
-    if (!entidadesMap.has(entidade)) {
-      entidadesMap.set(entidade, { count: 0, valor: 0, residuos: 0 });
-    }
-    const data = entidadesMap.get(entidade);
-    data.count++;
-    data.valor += Number(coleta.vlr_total) || 0;
-    if (coleta.coleta_residuo) {
-      data.residuos += coleta.coleta_residuo.reduce((sum: number, r: any) => sum + (Number(r.qtd_total) || 0), 0);
-    }
-  });
-
-  const residuosPorTipo = processResiduosPorTipo(coletas);
+  const residuosPorTipo = processResiduosPorTipo(coletasParaProcessar);
+  const totalResiduos = residuosPorTipo.reduce((sum, tipo) => sum + tipo.quantidade, 0);
+  const valorTotal = residuosPorTipo.reduce((sum, tipo) => sum + tipo.valor, 0);
+  const totalColetas = coletasParaProcessar.length;
+  const entidadesMap = new Set(
+    coletasParaProcessar.map((c: any) => c.entidade?.nom_entidade).filter(Boolean)
+  );
   const indicadores = processIndicadoresAmbientais(totalResiduos);
-
-  const items = coletas.map(coleta => ({
-    id: coleta.id_coleta,
-    nome: coleta.cod_coleta || `COL-${coleta.id_coleta}`,
-    quantidade: coleta.coleta_residuo?.reduce((sum: number, r: any) => sum + (Number(r.qtd_total) || 0), 0) || 0,
-    valor: Number(coleta.vlr_total) || 0,
-    data: coleta.dat_coleta,
-    entidade: coleta.entidade?.nom_entidade || 'N/A',
-    ponto: coleta.ponto_coleta?.nom_ponto_coleta || 'N/A',
-    evento: coleta.evento?.nom_evento || 'N/A'
-  }));
+  const items: any[] = [];
 
   return {
     totalColetas,

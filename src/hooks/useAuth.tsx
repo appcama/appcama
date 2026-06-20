@@ -34,14 +34,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Configurar listener de mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('[Auth] Estado mudou:', event, 'Sessão:', !!session);
         setSession(session);
         setSupabaseUser(session?.user ?? null);
 
         // Não derrubar sessão customizada em reload (INITIAL_SESSION sem sessão)
         // Apenas limpar no SIGNED_OUT explícito
         if (event === 'SIGNED_OUT') {
-          console.log('[Auth] Usuário saiu, limpando sessão local');
           setUser(null);
           localStorage.removeItem('recicla_e_user');
           return;
@@ -51,7 +49,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.user) {
           const storedUser = localStorage.getItem('recicla_e_user');
           if (storedUser) {
-            console.log('[Auth] Recuperando dados do usuário do localStorage');
             setUser(JSON.parse(storedUser));
           }
           return;
@@ -60,7 +57,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Sem sessão Supabase: manter usuário custom-auth se existir no localStorage
         const storedUser = localStorage.getItem('recicla_e_user');
         if (storedUser) {
-          console.log('[Auth] Mantendo usuário custom-auth do localStorage');
           setUser(JSON.parse(storedUser));
         }
         // Caso não exista, loadSession fará a tentativa de recuperar depois
@@ -72,7 +68,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         // Verificar sessão existente ao iniciar
         const { data: { session } } = await supabase.auth.getSession();
-        console.log('[Auth] Verificando sessão existente:', !!session);
         setSession(session);
         setSupabaseUser(session?.user ?? null);
         
@@ -80,11 +75,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const storedUser = localStorage.getItem('recicla_e_user');
         
         if (storedUser) {
-          console.log('[Auth] Dados do usuário encontrados no localStorage');
           setUser(JSON.parse(storedUser));
         } else if (session?.user) {
           // Se não tiver no localStorage mas tiver sessão, tentar recuperar do Supabase
-          console.log('[Auth] Tentando recuperar dados do usuário do Supabase');
           
           // Recuperar metadados do usuário da sessão
           const userData = session.user.user_metadata;
@@ -113,7 +106,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               // Salvar no localStorage para futuras recuperações
               localStorage.setItem('recicla_e_user', JSON.stringify(authUser));
               setUser(authUser);
-              console.log('[Auth] Dados do usuário recuperados do Supabase');
             }
           }
         }
@@ -150,7 +142,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (cpfCnpj: string, password: string) => {
     try {
       setLoading(true);
-      console.log('[Auth] Iniciando login...');
       
       // Remover formatação do CPF/CNPJ (manter apenas números)
       const cpfCnpjLimpo = cpfCnpj.replace(/[^\d]/g, '');
@@ -168,7 +159,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (!data || data.length === 0) {
-        console.log('[Auth] Credenciais inválidas ou senha não validada');
         return { 
           success: false, 
           error: 'CPF/CNPJ ou senha inválidos. Se você ainda não validou sua senha, verifique seu e-mail.' 
@@ -176,11 +166,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const userData = data[0];
-      console.log('[Auth] Dados do usuário autenticado:', userData);
 
       // Verificar se precisa validar senha ANTES de criar sessão Supabase
       if (userData.password_validated === 'D') {
-        console.log('[Auth] Senha não validada - redirecionando para validação');
         
         const isAdmin = await checkIsAdmin(userData.profile_id);
         
@@ -219,7 +207,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Armazenar dados do usuário no localStorage para persistência
       localStorage.setItem('recicla_e_user', JSON.stringify(authUser));
-      console.log('[Auth] Dados do usuário salvos no localStorage');
 
       setUser(authUser);
 
@@ -228,7 +215,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const emailForAuth = userData.email || `${cpfCnpjLimpo}@recicla-e.local`;
       
       try {
-        console.log('[Auth] Criando sessão Supabase...');
         // Tentar fazer login com Supabase Auth
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email: emailForAuth,
@@ -237,7 +223,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Se o usuário não existe no Supabase Auth, criar
         if (signInError?.message?.includes('Invalid login credentials')) {
-          console.log('[Auth] Usuário não existe no Supabase Auth, criando...');
           const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
             email: emailForAuth,
             password: password,
@@ -251,10 +236,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
           
           if (signUpError) {
-            console.warn('[Auth] Erro ao criar usuário no Supabase Auth:', signUpError);
             // Continuar mesmo com erro - a autenticação customizada já funcionou
           } else {
-            console.log('[Auth] Usuário criado no Supabase Auth com sucesso');
             
             // Atualizar metadados do usuário para facilitar recuperação após F5
             if (signUpData?.user) {
@@ -271,10 +254,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           }
         } else if (signInError) {
-          console.warn('[Auth] Erro ao fazer login no Supabase Auth:', signInError);
           // Continuar mesmo com erro - a autenticação customizada já funcionou
         } else {
-          console.log('[Auth] Sessão Supabase criada com sucesso');
           
           // Atualizar metadados do usuário para facilitar recuperação após F5
           if (signInData?.user) {
@@ -291,11 +272,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
       } catch (authError) {
-        console.warn('[Auth] Erro ao gerenciar sessão Supabase:', authError);
         // Continuar mesmo com erro - a autenticação customizada já funcionou
       }
 
-      console.log('[Auth] Login bem-sucedido');
       return { success: true };
     } catch (error) {
       console.error('[Auth] Erro inesperado:', error);
@@ -307,7 +286,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const validatePassword = async (userId: number, newPassword: string) => {
     try {
-      console.log('[Auth] Validando senha para usuário:', userId);
       
       const { data, error } = await supabase
         .rpc('validate_user_password', {
@@ -321,7 +299,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (data) {
-        console.log('[Auth] Senha validada com sucesso');
         
         // Atualizar o usuário no estado com senha validada
         if (user) {
@@ -331,7 +308,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
           // Agora criar a sessão Supabase com o email do usuário
           if (user.email) {
-            console.log('[Auth] Criando sessão Supabase após validação');
             const emailForAuth = user.email;
             
             try {
@@ -343,7 +319,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
               // Se o usuário não existe no Supabase Auth, criar
               if (signInError?.message?.includes('Invalid login credentials')) {
-                console.log('[Auth] Usuário não existe no Supabase Auth, criando...');
                 const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
                   email: emailForAuth,
                   password: newPassword,
@@ -357,9 +332,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 });
                 
                 if (signUpError) {
-                  console.warn('[Auth] Erro ao criar usuário no Supabase Auth:', signUpError);
                 } else {
-                  console.log('[Auth] Usuário criado no Supabase Auth com sucesso');
                   
                   if (signUpData?.user) {
                     await supabase.auth.updateUser({
@@ -375,7 +348,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   }
                 }
               } else if (!signInError) {
-                console.log('[Auth] Sessão Supabase criada com sucesso');
                 
                 if (signInData?.user) {
                   await supabase.auth.updateUser({
@@ -391,7 +363,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }
               }
             } catch (authError) {
-              console.warn('[Auth] Erro ao gerenciar sessão Supabase:', authError);
             }
           }
         }
@@ -407,11 +378,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    console.log('[Auth] Fazendo logout...');
     await supabase.auth.signOut();
     localStorage.removeItem('recicla_e_user');
     setUser(null);
-    console.log('[Auth] Logout concluído');
   };
 
   return (

@@ -61,13 +61,9 @@ export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
 
   const fetchPontosColeta = async () => {
     try {
-      console.log('User data:', user);
-      console.log('User entityId:', user?.entityId);
-      console.log('User isAdmin:', user?.isAdmin);
       
       // Se não há usuário, não buscar dados
       if (!user) {
-        console.log('No user found, not loading points');
         setPontosColeta([]);
         setLoading(false);
         return;
@@ -79,12 +75,9 @@ export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
 
       // Se não é administrador, filtrar pela entidade do usuário
       if (!user.isAdmin && user.entityId) {
-        console.log('Non-admin user, filtering by entityId:', user.entityId);
         query = query.eq('id_entidade_gestora', user.entityId);
       } else if (user.isAdmin) {
-        console.log('Admin user, showing all points');
       } else {
-        console.log('No entityId found and not admin, not loading points');
         setPontosColeta([]);
         setLoading(false);
         return;
@@ -92,7 +85,6 @@ export function PontosColetaList({ onAddNew, onEdit }: PontosColetaListProps) {
 
       const { data, error } = await query.order('nom_ponto_coleta');
       
-      console.log('Points query result:', { data, error });
       
       if (error) throw error;
       setPontosColeta(data || []);

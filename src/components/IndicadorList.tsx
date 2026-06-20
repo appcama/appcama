@@ -37,13 +37,11 @@ export function IndicadorList({ onEdit, onNew }: IndicadorListProps) {
   const { toast } = useToast();
 
   useEffect(() => {
-    console.log("[IndicadorList] Component mounted, fetching indicadores...");
     fetchIndicadores();
   }, []);
 
   const fetchIndicadores = async () => {
     try {
-      console.log("[IndicadorList] Starting fetch...");
       const { data, error } = await supabase
         .from('indicador')
         .select(`
@@ -55,14 +53,12 @@ export function IndicadorList({ onEdit, onNew }: IndicadorListProps) {
         `)
         .order('nom_indicador');
 
-      console.log("[IndicadorList] Supabase response:", { data, error });
 
       if (error) {
         console.error("[IndicadorList] Supabase error:", error);
         throw error;
       }
 
-      console.log("[IndicadorList] Total itens na listagem:", (data || []).length);
       setIndicadores(data || []);
     } catch (error) {
       console.error('[IndicadorList] Error fetching indicadores:', error);

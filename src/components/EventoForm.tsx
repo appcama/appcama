@@ -507,7 +507,6 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
 
   const createMutation = useMutation({
     mutationFn: async (data: EventoFormData) => {
-      console.log("Criando evento:", data);
       
       const { data: insertedEvento, error } = await supabase.from("evento").insert({
         nom_evento: data.nom_evento,
@@ -575,7 +574,6 @@ export function EventoForm({ evento, onBack }: EventoFormProps) {
     mutationFn: async (data: EventoFormData) => {
       if (!evento) return;
       
-      console.log("Atualizando evento:", data);
 
       let logoUrl = existingLogoUrl;
       if (newLogoFile) {

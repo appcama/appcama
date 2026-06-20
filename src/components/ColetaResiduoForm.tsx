@@ -101,7 +101,6 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
   }, [editingResiduo, residuos]);
 
   useEffect(() => {
-    console.log('[ColetaResiduoForm] Filtering residuos. selectedTipoResiduo:', selectedTipoResiduo);
     filterResiduos();
   }, [residuos, selectedTipoResiduo, existingResiduos]);
 
@@ -120,7 +119,6 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
         .eq('des_status', 'A')
         .order('des_tipo_residuo');
 
-      console.log('[ColetaResiduoForm] Tipos de resíduo com indicadores:', tiposData);
 
       // Remover duplicatas (um tipo pode ter múltiplos indicadores)
       const tiposUnicos = tiposData?.reduce((acc: TipoResiduo[], current) => {
@@ -154,10 +152,8 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
           .in('id_tipo_residuo', tiposComIndicadoresIds)
           .order('nom_residuo');
 
-        console.log('[ColetaResiduoForm] Residuos de tipos com indicadores:', residuosData);
         setResiduos(residuosData || []);
       } else {
-        console.log('[ColetaResiduoForm] Nenhum tipo de resíduo com indicadores encontrado');
         setResiduos([]);
       }
     } catch (error) {
@@ -177,7 +173,6 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
     if (selectedTipoResiduo) {
       const selectedTipoId = parseInt(selectedTipoResiduo);
       filtered = filtered.filter(r => r.id_tipo_residuo === selectedTipoId);
-      console.log('[ColetaResiduoForm] Filtered by type:', selectedTipoId, filtered);
     }
 
     // Remover resíduos já adicionados (exceto se estiver editando)
@@ -193,12 +188,10 @@ export function ColetaResiduoForm({ onBack, onAdd, existingResiduos, editingResi
       );
     }
 
-    console.log('[ColetaResiduoForm] Final filtered residuos:', filtered);
     setFilteredResiduos(filtered);
   };
 
   const handleSelectTipoResiduo = (value: string) => {
-    console.log('[ColetaResiduoForm] Tipo residuo selected:', value);
     setSelectedTipoResiduo(value);
     setSelectedResiduo(null); // Limpar seleção de resíduo ao mudar tipo
   };
