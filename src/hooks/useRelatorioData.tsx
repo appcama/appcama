@@ -164,8 +164,16 @@ function processRelatorioData(
   
   // Se não há coletas ativas, usar todas para demonstração
   const coletasParaProcessar = coletasAtivas.length > 0 ? coletasAtivas : coletas;
-  
-);
+
+  const residuosPorTipo = processResiduosPorTipo(coletasParaProcessar);
+  const totalResiduos = residuosPorTipo.reduce((sum, tipo) => sum + tipo.quantidade, 0);
+  const valorTotal = residuosPorTipo.reduce((sum, tipo) => sum + tipo.valor, 0);
+  const totalColetas = coletasParaProcessar.length;
+  const entidadesMap = new Set(
+    coletasParaProcessar.map((c: any) => c.entidade?.nom_entidade).filter(Boolean)
+  );
+  const indicadores = processIndicadoresAmbientais(totalResiduos);
+  const items: any[] = [];
 
   return {
     totalColetas,
