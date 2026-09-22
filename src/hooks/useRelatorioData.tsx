@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { RelatorioFiltersType } from "@/components/RelatorioFilters";
 import { format } from "date-fns";
 
@@ -57,10 +58,14 @@ export interface RelatorioData {
 }
 
 export function useRelatorioData(reportType: string, category: string, filters: RelatorioFiltersType) {
+  const { user } = useAuth();
+  const isAdmin = !!user?.isAdmin;
+  const entityId = user?.entityId;
+
   const query = useQuery({
-    queryKey: ['relatorio', reportType, category, filters],
-    queryFn: () => fetchRelatorioData(reportType, category, filters),
-    enabled: !!reportType,
+    queryKey: ['relatorio', reportType, category, filters, isAdmin, entityId],
+    queryFn: () => fetchRelatorioData(reportType, category, filters, { isAdmin, entityId }),
+    enabled: !!reportType && !!user,
     refetchOnWindowFocus: false,
     staleTime: 5 * 60 * 1000, // 5 minutos
   });
@@ -68,10 +73,28 @@ export function useRelatorioData(reportType: string, category: string, filters: 
   return query;
 }
 
+interface RelatorioScope {
+  isAdmin: boolean;
+  entityId?: number;
+}
+
+function emptyRelatorioData(): RelatorioData {
+  return {
+    totalColetas: 0,
+    totalResiduos: 0,
+    valorTotal: 0,
+    entidadesAtivas: 0,
+    residuosPorTipo: [],
+    indicadores: [],
+    items: [],
+  };
+}
+
 async function fetchRelatorioData(
   reportType: string, 
   category: string, 
-  filters: RelatorioFiltersType
+  filters: RelatorioFiltersType,
+  scope: RelatorioScope = { isAdmin: true }
 ): Promise<RelatorioData> {
   try {
     // Base query comum para a maioria dos relatórios
@@ -134,6 +157,27 @@ async function fetchRelatorioData(
     }
     if (filters.dataFinal) {
       baseQuery = baseQuery.lte('dat_coleta', format(filters.dataFinal, 'yyyy-MM-dd'));
+    }
+
+    // Recorte por entidade: apenas administradores (CAMA) veem todas as entidades
+    if (!scope.isAdmin) {
+      if (!scope.entityId) {
+        return emptyRelatorioData();
+      }
+
+      const { data: usuariosDaEntidade } = await supabase
+        .from('usuario')
+        .select('id_usuario')
+        .eq('id_entidade', scope.entityId)
+        .eq('des_status', 'A');
+
+      const userIds = usuariosDaEntidade?.map(u => u.id_usuario) || [];
+
+      if (userIds.length === 0) {
+        return emptyRelatorioData();
+      }
+
+      baseQuery = baseQuery.in('id_usuario_criador', userIds);
     }
 
     const { data: coletas, error } = await baseQuery;
