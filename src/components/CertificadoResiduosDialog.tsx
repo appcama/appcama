@@ -176,8 +176,7 @@ export function CertificadoResiduosDialog({ certificadoId, onClose }: Certificad
                   <thead className="bg-muted">
                     <tr>
                       <th className="text-left p-3 font-semibold">Tipo de Resíduo</th>
-                      <th className="text-right p-3 font-semibold">Quantidade (kg)</th>
-                      <th className="text-right p-3 font-semibold">Valor (R$)</th>
+                      <th className="text-right p-3 font-semibold">Quantidade (Kg)</th>
                       <th className="text-right p-3 font-semibold">% do Total</th>
                     </tr>
                   </thead>
@@ -186,7 +185,6 @@ export function CertificadoResiduosDialog({ certificadoId, onClose }: Certificad
                       <tr key={index} className="border-t hover:bg-muted/50">
                         <td className="p-3">{residuo.nom_residuo}</td>
                         <td className="p-3 text-right">{formatQuantity(residuo.qtd_total)}</td>
-                        <td className="p-3 text-right">{formatCurrency(residuo.vlr_total)}</td>
                         <td className="p-3 text-right font-semibold text-primary">
                           {residuo.percentual.toFixed(1)}%
                         </td>
@@ -196,7 +194,6 @@ export function CertificadoResiduosDialog({ certificadoId, onClose }: Certificad
                       <tr className="border-t bg-muted font-semibold">
                         <td className="p-3">TOTAL</td>
                         <td className="p-3 text-right">{formatQuantity(certificado.qtd_total_certificado)}</td>
-                        <td className="p-3 text-right">{formatCurrency(certificado.vlr_total_certificado)}</td>
                         <td className="p-3 text-right">100%</td>
                       </tr>
                     )}
@@ -248,11 +245,8 @@ export function CertificadoResiduosDialog({ certificadoId, onClose }: Certificad
                               <div key={rIndex} className="flex justify-between text-sm border-t pt-2">
                                 <span>{residuo.nom_residuo}</span>
                                 <div className="flex gap-4">
-                                  <span className="text-muted-foreground">
-                                    {formatQuantity(residuo.qtd_total)} kg
-                                  </span>
                                   <span className="font-medium text-primary">
-                                    {formatCurrency(residuo.vlr_total)}
+                                    {formatQuantity(residuo.qtd_total)} Kg
                                   </span>
                                 </div>
                               </div>
