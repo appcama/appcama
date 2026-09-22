@@ -126,12 +126,6 @@ export function CertificadoResiduosDialog({ certificadoId, onClose }: Certificad
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
 
   const formatDate = (dateString: string) => {
     // Extrair apenas a parte da data (YYYY-MM-DD) sem conversão de timezone
