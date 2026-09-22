@@ -121,10 +121,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
     if (!date) return 'Formato inválido (DD/MM/AAAA)';
     const today0 = new Date();
     today0.setHours(0, 0, 0, 0);
-    const min = new Date(today0);
-    min.setDate(min.getDate() - 2);
     if (date > today0) return 'Data não pode ser futura';
-    if (date < min) return 'Data deve estar nos últimos 2 dias';
     return null;
   };
 
@@ -747,9 +744,7 @@ export function ColetaForm({ onBack, onSuccess, editingColeta }: ColetaFormProps
                         disabled={(date) => {
                           const today0 = new Date();
                           today0.setHours(0, 0, 0, 0);
-                          const min = new Date(today0);
-                          min.setDate(min.getDate() - 2);
-                          return date > today0 || date < min;
+                          return date > today0;
                         }}
                       />
                     </div>
