@@ -57,10 +57,14 @@ export interface RelatorioData {
 }
 
 export function useRelatorioData(reportType: string, category: string, filters: RelatorioFiltersType) {
+  const { user } = useAuth();
+  const isAdmin = !!user?.isAdmin;
+  const entityId = user?.entityId;
+
   const query = useQuery({
-    queryKey: ['relatorio', reportType, category, filters],
-    queryFn: () => fetchRelatorioData(reportType, category, filters),
-    enabled: !!reportType,
+    queryKey: ['relatorio', reportType, category, filters, isAdmin, entityId],
+    queryFn: () => fetchRelatorioData(reportType, category, filters, { isAdmin, entityId }),
+    enabled: !!reportType && !!user,
     refetchOnWindowFocus: false,
     staleTime: 5 * 60 * 1000, // 5 minutos
   });
@@ -68,10 +72,28 @@ export function useRelatorioData(reportType: string, category: string, filters: 
   return query;
 }
 
+interface RelatorioScope {
+  isAdmin: boolean;
+  entityId?: number;
+}
+
+function emptyRelatorioData(): RelatorioData {
+  return {
+    totalColetas: 0,
+    totalResiduos: 0,
+    valorTotal: 0,
+    entidadesAtivas: 0,
+    residuosPorTipo: [],
+    indicadores: [],
+    items: [],
+  };
+}
+
 async function fetchRelatorioData(
   reportType: string, 
   category: string, 
-  filters: RelatorioFiltersType
+  filters: RelatorioFiltersType,
+  scope: RelatorioScope = { isAdmin: true }
 ): Promise<RelatorioData> {
   try {
     // Base query comum para a maioria dos relatórios
