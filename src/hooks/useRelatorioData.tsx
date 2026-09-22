@@ -159,6 +159,27 @@ async function fetchRelatorioData(
       baseQuery = baseQuery.lte('dat_coleta', format(filters.dataFinal, 'yyyy-MM-dd'));
     }
 
+    // Recorte por entidade: apenas administradores (CAMA) veem todas as entidades
+    if (!scope.isAdmin) {
+      if (!scope.entityId) {
+        return emptyRelatorioData();
+      }
+
+      const { data: usuariosDaEntidade } = await supabase
+        .from('usuario')
+        .select('id_usuario')
+        .eq('id_entidade', scope.entityId)
+        .eq('des_status', 'A');
+
+      const userIds = usuariosDaEntidade?.map(u => u.id_usuario) || [];
+
+      if (userIds.length === 0) {
+        return emptyRelatorioData();
+      }
+
+      baseQuery = baseQuery.in('id_usuario_criador', userIds);
+    }
+
     const { data: coletas, error } = await baseQuery;
 
     if (error) {
