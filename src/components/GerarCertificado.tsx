@@ -297,12 +297,6 @@ export function GerarCertificado() {
     setCurrentPage(1);
   }, [searchTerm, dataInicio, dataFim, entidadeId, showOnlyAvailable]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
 
   // Usar declaração de função para garantir hoisting dentro do componente
   function formatDate(dateString: string) {
