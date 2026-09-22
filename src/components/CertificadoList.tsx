@@ -73,6 +73,7 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
         dat_periodo_inicio,
         dat_periodo_fim,
         qtd_total_certificado,
+        vlr_total_certificado,
         num_cpf_cnpj_gerador,
         id_entidade,
         id_usuario_criador,
@@ -214,6 +215,12 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
     setCurrentPage(1);
   }, [searchTerm]);
 
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value);
+  };
 
   const formatDate = (dateString: string) => {
     // Extrair apenas a parte da data (YYYY-MM-DD) sem conversão de timezone
@@ -353,6 +360,7 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
                     <th className="text-left p-4 font-semibold">Entidade</th>
                     <th className="text-left p-4 font-semibold">Coletas</th>
                     <th className="text-right p-4 font-semibold">Quantidade Total</th>
+                    <th className="text-right p-4 font-semibold">Valor Total</th>
                     <th className="text-center p-4 font-semibold">Ações</th>
                   </tr>
                 </thead>
@@ -388,6 +396,9 @@ export function CertificadoList({ onAddNew, onEdit }: CertificadoListProps) {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2
                         }).format(certificado.qtd_total_certificado)} kg
+                      </td>
+                      <td className="p-4 text-right font-semibold text-recycle-green">
+                        {formatCurrency(certificado.vlr_total_certificado)}
                       </td>
                       <td className="p-4">
                         <div className="flex justify-center gap-2">

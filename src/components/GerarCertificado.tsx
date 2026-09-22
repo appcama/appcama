@@ -31,6 +31,7 @@ interface Coleta {
   id_coleta: number;
   cod_coleta: string;
   dat_coleta: string;
+  vlr_total: number;
   id_entidade_geradora?: number;
   id_certificado?: number;
   id_usuario_criador?: number;
@@ -106,6 +107,7 @@ export function GerarCertificado() {
           id_coleta,
           cod_coleta,
           dat_coleta,
+          vlr_total,
           id_entidade_geradora,
           id_certificado,
           id_usuario_criador,
@@ -297,6 +299,12 @@ export function GerarCertificado() {
     setCurrentPage(1);
   }, [searchTerm, dataInicio, dataFim, entidadeId, showOnlyAvailable]);
 
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+  };
 
   // Usar declaração de função para garantir hoisting dentro do componente
   function formatDate(dateString: string) {
@@ -576,6 +584,7 @@ export function GerarCertificado() {
                       <th className="text-left p-4 font-semibold">CPF/CNPJ</th>
                       <th className="text-left p-4 font-semibold">Entidade Coletora</th>
                       <th className="text-left p-4 font-semibold">Ponto de Coleta</th>
+                      <th className="text-right p-4 font-semibold">Valor Total</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -618,6 +627,14 @@ export function GerarCertificado() {
                               <td className="p-4">{coleta.entidade?.num_cpf_cnpj || "-"}</td>
                               <td className="p-4">{coleta.entidade_coletora?.nom_entidade || "-"}</td>
                               <td className="p-4">{coleta.ponto_coleta?.nom_ponto_coleta || "-"}</td>
+                              <td
+                                className={cn(
+                                  "p-4 text-right font-semibold",
+                                  isSelectable ? "text-recycle-green" : "text-gray-400",
+                                )}
+                              >
+                                {formatCurrency(coleta.vlr_total)}
+                              </td>
                             </tr>
                           </TooltipTrigger>
                           {!isSelectable && (

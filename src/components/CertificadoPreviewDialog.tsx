@@ -12,6 +12,7 @@ interface Coleta {
   id_coleta: number;
   cod_coleta: string;
   dat_coleta: string;
+  vlr_total: number;
   id_entidade_geradora?: number;
   entidade?: {
     nom_entidade: string;
@@ -71,7 +72,7 @@ export function CertificadoPreviewDialog({
   
   // Calcular totais
   const qtdTotalCertificado = residuosConsolidados.reduce((sum, r) => sum + Number(r.qtd_total), 0);
-  const vlrTotalCertificado = residuosConsolidados.reduce((sum, r) => sum + Number(r.vlr_total), 0);
+  const vlrTotalCertificado = selectedColetas.reduce((sum, c) => sum + Number(c.vlr_total), 0);
 
   // Dados da entidade
   const entidade = selectedColetas[0]?.entidade;
@@ -335,6 +336,7 @@ export function CertificadoPreviewDialog({
                     <tr className="border-b">
                       <th className="text-left p-2">Resíduo</th>
                       <th className="text-right p-2">Quantidade</th>
+                      <th className="text-right p-2">Valor</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -342,6 +344,7 @@ export function CertificadoPreviewDialog({
                       <tr key={residuo.id_tipo_residuo} className="border-b">
                         <td className="p-2">{residuo.nom_residuo}</td>
                         <td className="p-2 text-right">{residuo.qtd_total.toFixed(2)} kg</td>
+                        <td className="p-2 text-right font-semibold">{formatCurrency(residuo.vlr_total)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -350,10 +353,16 @@ export function CertificadoPreviewDialog({
             )}
           </div>
 
-          {/* Total */}
-          <div className="bg-green-50 p-4 rounded-md">
-            <Label className="text-sm font-semibold text-gray-600">Quantidade Total</Label>
-            <p className="text-lg font-bold text-recycle-green">{qtdTotalCertificado.toFixed(2)} kg</p>
+          {/* Totais */}
+          <div className="grid grid-cols-2 gap-4 bg-green-50 p-4 rounded-md">
+            <div>
+              <Label className="text-sm font-semibold text-gray-600">Quantidade Total</Label>
+              <p className="text-lg font-bold text-recycle-green">{qtdTotalCertificado.toFixed(2)} kg</p>
+            </div>
+            <div>
+              <Label className="text-sm font-semibold text-gray-600">Valor Total</Label>
+              <p className="text-lg font-bold text-recycle-green">{formatCurrency(vlrTotalCertificado)}</p>
+            </div>
           </div>
 
           {/* Observações */}
