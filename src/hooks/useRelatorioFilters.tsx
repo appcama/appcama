@@ -1,8 +1,19 @@
 import { useState, useCallback } from "react";
 import { RelatorioFiltersType } from "@/components/RelatorioFilters";
 
+export const getDefaultRelatorioFilters = (): RelatorioFiltersType => {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - 30);
+  return {
+    dataInicial: start,
+    dataFinal: end,
+    statusColetas: 'A',
+  };
+};
+
 export function useRelatorioFilters() {
-  const [filters, setFilters] = useState<RelatorioFiltersType>({});
+  const [filters, setFilters] = useState<RelatorioFiltersType>(getDefaultRelatorioFilters());
 
   const updateFilters = useCallback((newFilters: RelatorioFiltersType) => {
     setFilters(newFilters);
@@ -24,7 +35,7 @@ export function useRelatorioFilters() {
   }, []);
 
   const resetFilters = useCallback(() => {
-    setFilters({});
+    setFilters(getDefaultRelatorioFilters());
   }, []);
 
   const hasActiveFilters = Object.keys(filters).length > 0;

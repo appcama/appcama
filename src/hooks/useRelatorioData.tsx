@@ -20,8 +20,11 @@ export interface RelatorioData {
     nome: string;
     valor: number;
     unidade: string;
+    meta?: number;
+    progresso?: number;
+    icone?: string;
   }>;
-  // Campos específicos para relatórios gerenciais
+  // Campos para KPIs
   kpis?: Array<{
     titulo: string;
     valor: number | string;
@@ -29,6 +32,7 @@ export interface RelatorioData {
     variacao?: number;
     meta?: number;
     icone?: string;
+    subtexto?: string;
   }>;
   metricas?: {
     receitas?: Array<{
@@ -40,6 +44,8 @@ export interface RelatorioData {
       entidade: string;
       eficiencia: number;
       ranking: number;
+      coletas?: number;
+      residuos?: number;
     }>;
     crescimento?: Array<{
       mes: string;
@@ -54,6 +60,31 @@ export interface RelatorioData {
       custosOperacionais: number;
       economiaTotal: number;
     };
+    reciclometro?: {
+      nivelSelo: string;
+      corSelo: string;
+      pontosSelo: number;
+      proximoNivel: string;
+      progressoNivel: number;
+      equivalencias: Array<{
+        titulo: string;
+        valor: string | number;
+        descricao: string;
+        icone: string;
+      }>;
+    };
+    sazonalidade?: {
+      diasSemana: Array<{ dia: string; coletas: number; volume: number }>;
+      meses?: Array<{ mes: string; coletas: number; volume: number }>;
+    };
+    benchmark?: Array<{
+      nome: string;
+      volume: number;
+      coletas: number;
+      mediaPorColeta: number;
+      percentualTotal: number;
+      ranking: number;
+    }>;
   };
 }
 
@@ -218,7 +249,7 @@ async function fetchRelatorioData(
     }
 
     // Processar dados baseado no tipo de relatório
-    return processRelatorioData(reportType, category, coletas, filters);
+    return processRelatorioData(reportType, category, coletas, filters, scope);
     
   } catch (error) {
     console.error('Erro na consulta do relatório:', error);
@@ -230,7 +261,8 @@ function processRelatorioData(
   reportType: string, 
   category: string, 
   coletas: any[], 
-  filters: RelatorioFiltersType
+  filters: RelatorioFiltersType,
+  scope: RelatorioScope = { isAdmin: true }
 ): RelatorioData {
   // Se não houver filtro explícito de status, focar nas ativas se existirem
   const coletasAtivas = coletas.filter(c => c.des_status === 'A');
@@ -239,18 +271,23 @@ function processRelatorioData(
     : coletas;
 
   switch (reportType) {
+    // Operacionais
+    case 'coletas-periodo':
+      return processColetasPeriodo(coletasParaProcessar, filters);
     case 'residuos-coletados':
       return processResiduosColetados(coletasParaProcessar, filters);
     case 'performance-pontos':
     case 'pontos-performance':
       return processPerformancePontos(coletasParaProcessar, filters);
+    case 'ranking-entidades-geradoras':
+      return processRankingEntidadesGeradoras(coletasParaProcessar, filters);
     case 'ranking-entidades':
     case 'entidades-ranking':
       return processRankingEntidades(coletasParaProcessar, filters);
-    case 'ranking-entidades-geradoras':
-      return processRankingEntidadesGeradoras(coletasParaProcessar, filters);
     case 'eventos-coleta':
       return processEventosColeta(coletasParaProcessar, filters);
+
+    // Gerenciais
     case 'dashboard-executivo':
       return processDashboardExecutivo(coletasParaProcessar, filters);
     case 'faturamento':
@@ -258,14 +295,29 @@ function processRelatorioData(
       return processAnaliseFaturamento(coletasParaProcessar, filters);
     case 'produtividade':
       return processProdutividade(coletasParaProcessar, filters);
-    case 'crescimento':
-    case 'analise-crescimento':
-      return processAnaliseCrescimento(coletasParaProcessar, filters);
     case 'rejeitos-coletados':
       return processRejeitosColetados(coletasParaProcessar, filters);
     case 'custos-beneficios':
       return processCustosBeneficios(coletasParaProcessar, filters);
-    case 'coletas-periodo':
+
+    // Ambientais
+    case 'indicadores-ambientais':
+      return processIndicadoresAmbientaisDetalhado(coletasParaProcessar, filters);
+    case 'reciclometro':
+      return processReciclometro(coletasParaProcessar, filters);
+
+    // Comparativos
+    case 'comparativo-temporal':
+    case 'crescimento':
+    case 'analise-crescimento':
+      return processComparativoTemporal(coletasParaProcessar, filters);
+    case 'benchmark-entidades':
+      return processBenchmarkEntidades(coletasParaProcessar, filters, scope);
+    case 'tipos-residuo':
+      return processComparativoTiposResiduo(coletasParaProcessar, filters);
+    case 'sazonalidade':
+      return processSazonalidade(coletasParaProcessar, filters);
+
     default:
       return processRelatorioGenerico(coletasParaProcessar, filters);
   }
@@ -323,7 +375,10 @@ function processPerformancePontos(coletas: any[], filters: RelatorioFiltersType)
     }
     if (!data.ultimaColeta || new Date(coleta.dat_coleta) > new Date(data.ultimaColeta)) {
       data.ultimaColeta = coleta.dat_coleta;
-     const pontosRanking = Array.from(pontosMap.values())
+    }
+  });
+
+  const pontosRanking = Array.from(pontosMap.values())
     .sort((a, b) => b.valor - a.valor)
     .map((ponto, index) => ({
       id: index + 1,
@@ -1152,5 +1207,650 @@ function processCustosBeneficios(coletas: any[], filters: RelatorioFiltersType):
         tipo: "ambiental"
       }
     ]
+  };
+}
+
+function processColetasPeriodo(coletas: any[], filters: RelatorioFiltersType): RelatorioData {
+  const totalColetas = coletas.length;
+  const valorTotal = coletas.reduce((sum, coleta) => sum + (Number(coleta.vlr_total) || 0), 0);
+  
+  const totalResiduos = coletas.reduce((sum, coleta) => {
+    if (coleta.coleta_residuo) {
+      return sum + coleta.coleta_residuo.reduce((subSum: number, residuo: any) => {
+        return subSum + (Number(residuo.qtd_total) || 0);
+      }, 0);
+    }
+    return sum;
+  }, 0);
+
+  const entidadesUnicas = new Set<string>();
+  coletas.forEach(coleta => {
+    if (coleta.entidade?.nom_entidade) entidadesUnicas.add(coleta.entidade.nom_entidade);
+    if (coleta.ponto_coleta?.entidade?.nom_entidade) entidadesUnicas.add(coleta.ponto_coleta.entidade.nom_entidade);
+  });
+
+  const mediaPorColeta = totalColetas > 0 ? totalResiduos / totalColetas : 0;
+
+  const items = coletas.map((coleta, index) => {
+    const qtdColeta = coleta.coleta_residuo?.reduce((sum: number, r: any) => sum + (Number(r.qtd_total) || 0), 0) || 0;
+    return {
+      id: coleta.id_coleta || index + 1,
+      nome: coleta.cod_coleta || `COL-${coleta.id_coleta || index + 1}`,
+      data: coleta.dat_coleta,
+      quantidade: Math.round(qtdColeta * 100) / 100,
+      valor: Number(coleta.vlr_total) || 0,
+      entidade: coleta.entidade?.nom_entidade || 'Não informada',
+      entidadeGeradora: coleta.entidade?.nom_entidade || 'Não informada',
+      entidadeColetora: coleta.usuario_criador?.entidade_coletora?.nom_entidade || 'Não informada',
+      ponto: coleta.ponto_coleta?.nom_ponto_coleta || 'N/A',
+      status: coleta.des_status === 'A' ? 'Ativa' : 'Desativada'
+    };
+  });
+
+  return {
+    totalColetas,
+    totalResiduos: Math.round(totalResiduos * 100) / 100,
+    valorTotal: Math.round(valorTotal * 100) / 100,
+    entidadesAtivas: entidadesUnicas.size,
+    residuosPorTipo: processResiduosPorTipo(coletas),
+    indicadores: processIndicadoresAmbientais(totalResiduos),
+    kpis: [
+      {
+        titulo: "Total de Coletas",
+        valor: totalColetas,
+        icone: "package"
+      },
+      {
+        titulo: "Volume Coletado",
+        valor: Math.round(totalResiduos * 100) / 100,
+        unidade: "kg",
+        icone: "scale"
+      },
+      {
+        titulo: "Valor Total",
+        valor: Math.round(valorTotal * 100) / 100,
+        unidade: "R$",
+        icone: "dollar-sign"
+      },
+      {
+        titulo: "Média por Coleta",
+        valor: Math.round(mediaPorColeta * 100) / 100,
+        unidade: "kg",
+        icone: "trending-up"
+      }
+    ],
+    items
+  };
+}
+
+function processIndicadoresAmbientaisDetalhado(coletas: any[], filters: RelatorioFiltersType): RelatorioData {
+  const totalColetas = coletas.length;
+  const valorTotal = coletas.reduce((sum, coleta) => sum + (Number(coleta.vlr_total) || 0), 0);
+  const totalResiduos = coletas.reduce((sum, coleta) => {
+    if (coleta.coleta_residuo) {
+      return sum + coleta.coleta_residuo.reduce((subSum: number, residuo: any) => {
+        return subSum + (Number(residuo.qtd_total) || 0);
+      }, 0);
+    }
+    return sum;
+  }, 0);
+
+  const co2EvitadoKg = totalResiduos * 2.1;
+  const aguaEconomizadaLitros = totalResiduos * 15;
+  const energiaPoupadaKwh = totalResiduos * 3.2;
+  const arvoresEquivalentes = totalResiduos > 0 ? Math.round(co2EvitadoKg / 22) : 0;
+  const aterroPoupadoM3 = totalResiduos * 0.0025;
+  const combustivelEvitadoLitros = totalResiduos * 0.45;
+
+  const indicadores = [
+    {
+      nome: "CO₂ Evitado",
+      valor: Math.round(co2EvitadoKg * 100) / 100,
+      unidade: "kg",
+      meta: 10000,
+      progresso: Math.min(100, Math.round((co2EvitadoKg / 10000) * 100)),
+      icone: "leaf"
+    },
+    {
+      nome: "Água Poupada",
+      valor: Math.round(aguaEconomizadaLitros),
+      unidade: "litros",
+      meta: 50000,
+      progresso: Math.min(100, Math.round((aguaEconomizadaLitros / 50000) * 100)),
+      icone: "zap"
+    },
+    {
+      nome: "Energia Poupada",
+      valor: Math.round(energiaPoupadaKwh),
+      unidade: "kWh",
+      meta: 15000,
+      progresso: Math.min(100, Math.round((energiaPoupadaKwh / 15000) * 100)),
+      icone: "activity"
+    },
+    {
+      nome: "Árvores Salvas",
+      valor: arvoresEquivalentes,
+      unidade: "unidades",
+      meta: 500,
+      progresso: Math.min(100, Math.round((arvoresEquivalentes / 500) * 100)),
+      icone: "target"
+    },
+    {
+      nome: "Aterro Sanitário Poupado",
+      valor: Math.round(aterroPoupadoM3 * 100) / 100,
+      unidade: "m³",
+      meta: 50,
+      progresso: Math.min(100, Math.round((aterroPoupadoM3 / 50) * 100)),
+      icone: "package"
+    },
+    {
+      nome: "Combustível Fóssil Evitado",
+      valor: Math.round(combustivelEvitadoLitros * 10) / 10,
+      unidade: "litros",
+      meta: 2000,
+      progresso: Math.min(100, Math.round((combustivelEvitadoLitros / 2000) * 100)),
+      icone: "trending-up"
+    }
+  ];
+
+  const items = indicadores.map((ind, idx) => ({
+    id: idx + 1,
+    nome: ind.nome,
+    quantidade: ind.valor,
+    unidade: ind.unidade,
+    meta: ind.meta,
+    progresso: ind.progresso,
+    valor: ind.valor,
+    entidade: `${ind.progresso}% da meta atingida`,
+    ponto: `Meta: ${ind.meta.toLocaleString('pt-BR')} ${ind.unidade}`
+  }));
+
+  return {
+    totalColetas,
+    totalResiduos: Math.round(totalResiduos * 100) / 100,
+    valorTotal: Math.round(valorTotal * 100) / 100,
+    entidadesAtivas: new Set(coletas.map(c => c.entidade?.nom_entidade).filter(Boolean)).size,
+    residuosPorTipo: processResiduosPorTipo(coletas),
+    indicadores,
+    kpis: [
+      {
+        titulo: "CO₂ Evitado",
+        valor: co2EvitadoKg >= 1000 ? `${(co2EvitadoKg / 1000).toFixed(2)} t` : `${Math.round(co2EvitadoKg)} kg`,
+        icone: "leaf",
+        subtexto: "Mitigação direta de gases estufa"
+      },
+      {
+        titulo: "Água Poupada",
+        valor: aguaEconomizadaLitros >= 1000 ? `${(aguaEconomizadaLitros / 1000).toFixed(1)} m³` : `${Math.round(aguaEconomizadaLitros)} L`,
+        icone: "zap",
+        subtexto: "Preservação hídrica industrial"
+      },
+      {
+        titulo: "Energia Poupada",
+        valor: energiaPoupadaKwh >= 1000 ? `${(energiaPoupadaKwh / 1000).toFixed(2)} MWh` : `${Math.round(energiaPoupadaKwh)} kWh`,
+        icone: "activity",
+        subtexto: "Economia na rede elétrica"
+      },
+      {
+        titulo: "Árvores Preservadas",
+        valor: arvoresEquivalentes,
+        icone: "target",
+        subtexto: "Equivalência fotossintética"
+      }
+    ],
+    items
+  };
+}
+
+function processReciclometro(coletas: any[], filters: RelatorioFiltersType): RelatorioData {
+  const totalColetas = coletas.length;
+  const totalResiduos = coletas.reduce((sum, coleta) => {
+    if (coleta.coleta_residuo) {
+      return sum + coleta.coleta_residuo.reduce((subSum: number, residuo: any) => {
+        return subSum + (Number(residuo.qtd_total) || 0);
+      }, 0);
+    }
+    return sum;
+  }, 0);
+  const valorTotal = coletas.reduce((sum, coleta) => sum + (Number(coleta.vlr_total) || 0), 0);
+
+  let nivelSelo = "Bronze";
+  let corSelo = "#cd7f32";
+  let pontosSelo = Math.round(totalResiduos * 10);
+  let proximoNivel = "Prata";
+  let metaNivel = 1000;
+  let progressoNivel = Math.min(100, Math.round((totalResiduos / 1000) * 100));
+
+  if (totalResiduos >= 20000) {
+    nivelSelo = "Diamante";
+    corSelo = "#00bcd4";
+    proximoNivel = "Lenda Sustentável";
+    metaNivel = 50000;
+    progressoNivel = Math.min(100, Math.round((totalResiduos / 50000) * 100));
+  } else if (totalResiduos >= 5000) {
+    nivelSelo = "Ouro";
+    corSelo = "#ffd700";
+    proximoNivel = "Diamante";
+    metaNivel = 20000;
+    progressoNivel = Math.min(100, Math.round(((totalResiduos - 5000) / 15000) * 100));
+  } else if (totalResiduos >= 1000) {
+    nivelSelo = "Prata";
+    corSelo = "#c0c0c0";
+    proximoNivel = "Ouro";
+    metaNivel = 5000;
+    progressoNivel = Math.min(100, Math.round(((totalResiduos - 1000) / 4000) * 100));
+  }
+
+  const banhos15min = Math.round((totalResiduos * 15) / 135);
+  const kmCarroGasolina = Math.round((totalResiduos * 2.1) / 0.12);
+  const lampadasLedDias = Math.round((totalResiduos * 3.2) / 0.24);
+  const sacosLixoDesviados = Math.round(totalResiduos / 6);
+
+  const equivalencias = [
+    {
+      titulo: "Banhos de 15 min Poupados",
+      valor: banhos15min.toLocaleString('pt-BR'),
+      descricao: "Água limpa preservada com o reprocessamento de insumos",
+      icone: "zap"
+    },
+    {
+      titulo: "Km Rodados Compensados",
+      valor: `${kmCarroGasolina.toLocaleString('pt-BR')} km`,
+      descricao: "Emissões de veículos a combustão neutralizadas",
+      icone: "trending-up"
+    },
+    {
+      titulo: "Dias de Lâmpada LED Acesa",
+      valor: `${lampadasLedDias.toLocaleString('pt-BR')} dias`,
+      descricao: "Energia elétrica economizada que abasteceria iluminação",
+      icone: "activity"
+    },
+    {
+      titulo: "Sacos de 100L Fora do Aterro",
+      valor: sacosLixoDesviados.toLocaleString('pt-BR'),
+      descricao: "Volume denso que deixou de sobrecarregar o meio ambiente",
+      icone: "package"
+    }
+  ];
+
+  return {
+    totalColetas,
+    totalResiduos: Math.round(totalResiduos * 100) / 100,
+    valorTotal: Math.round(valorTotal * 100) / 100,
+    entidadesAtivas: new Set(coletas.map(c => c.entidade?.nom_entidade).filter(Boolean)).size,
+    residuosPorTipo: processResiduosPorTipo(coletas),
+    indicadores: processIndicadoresAmbientais(totalResiduos),
+    kpis: [
+      {
+        titulo: "Selo de Sustentabilidade",
+        valor: nivelSelo,
+        icone: "award",
+        subtexto: `${pontosSelo.toLocaleString('pt-BR')} Eco-Pontos Gerados`
+      },
+      {
+        titulo: "Total Reciclado",
+        valor: Math.round(totalResiduos * 100) / 100,
+        unidade: "kg",
+        icone: "scale",
+        subtexto: `Meta atual: ${metaNivel.toLocaleString('pt-BR')} kg`
+      },
+      {
+        titulo: "CO₂ Evitado Acumulado",
+        valor: Math.round(totalResiduos * 2.1),
+        unidade: "kg",
+        icone: "leaf",
+        subtexto: "Gases de efeito estufa evitados"
+      },
+      {
+        titulo: "Progresso para Próximo Nível",
+        valor: `${progressoNivel}%`,
+        icone: "target",
+        subtexto: `Próximo marco: ${proximoNivel}`
+      }
+    ],
+    metricas: {
+      reciclometro: {
+        nivelSelo,
+        corSelo,
+        pontosSelo,
+        proximoNivel,
+        progressoNivel,
+        equivalencias
+      }
+    },
+    items: equivalencias.map((eq, i) => ({
+      id: i + 1,
+      nome: eq.titulo,
+      quantidade: eq.valor,
+      valor: 0,
+      entidade: eq.descricao,
+      ponto: "Impacto Real"
+    }))
+  };
+}
+
+function processComparativoTemporal(coletas: any[], filters: RelatorioFiltersType): RelatorioData {
+  const mesesMap = new Map<string, { mes: string; coletas: number; residuos: number; valor: number }>();
+
+  coletas.forEach(coleta => {
+    if (!coleta.dat_coleta) return;
+    const date = new Date(coleta.dat_coleta);
+    const anoMes = format(date, 'yyyy-MM');
+    const labelMes = format(date, "MMM/yy", { locale: ptBR });
+
+    if (!mesesMap.has(anoMes)) {
+      mesesMap.set(anoMes, { mes: labelMes, coletas: 0, residuos: 0, valor: 0 });
+    }
+    const registro = mesesMap.get(anoMes)!;
+    registro.coletas++;
+    registro.valor += Number(coleta.vlr_total) || 0;
+    if (coleta.coleta_residuo) {
+      registro.residuos += coleta.coleta_residuo.reduce((sum: number, r: any) => sum + (Number(r.qtd_total) || 0), 0);
+    }
+  });
+
+  const mesesOrdenados = Array.from(mesesMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, val]) => val);
+
+  const mesesComVariacao = mesesOrdenados.map((item, index) => {
+    if (index === 0) {
+      return { ...item, crescimentoColetas: 0, crescimentoResiduos: 0 };
+    }
+    const anterior = mesesOrdenados[index - 1];
+    const crescimentoColetas = anterior.coletas > 0 
+      ? Math.round(((item.coletas - anterior.coletas) / anterior.coletas) * 100) 
+      : 0;
+    const crescimentoResiduos = anterior.residuos > 0 
+      ? Math.round(((item.residuos - anterior.residuos) / anterior.residuos) * 100) 
+      : 0;
+    return {
+      ...item,
+      crescimentoColetas,
+      crescimentoResiduos
+    };
+  });
+
+  const totalResiduos = mesesOrdenados.reduce((sum, m) => sum + m.residuos, 0);
+  const totalValor = mesesOrdenados.reduce((sum, m) => sum + m.valor, 0);
+  const totalColetas = mesesOrdenados.reduce((sum, m) => sum + m.coletas, 0);
+
+  const mediaMensalResiduos = mesesOrdenados.length > 0 ? totalResiduos / mesesOrdenados.length : 0;
+  const mediaMensalColetas = mesesOrdenados.length > 0 ? totalColetas / mesesOrdenados.length : 0;
+
+  return {
+    totalColetas,
+    totalResiduos: Math.round(totalResiduos * 100) / 100,
+    valorTotal: Math.round(totalValor * 100) / 100,
+    entidadesAtivas: new Set(coletas.map(c => c.entidade?.nom_entidade).filter(Boolean)).size,
+    residuosPorTipo: processResiduosPorTipo(coletas),
+    kpis: [
+      {
+        titulo: "Períodos Mapeados",
+        valor: mesesOrdenados.length,
+        unidade: "meses",
+        icone: "calendar"
+      },
+      {
+        titulo: "Média Mensal Volume",
+        valor: Math.round(mediaMensalResiduos * 100) / 100,
+        unidade: "kg/mês",
+        icone: "scale"
+      },
+      {
+        titulo: "Média Mensal Coletas",
+        valor: Math.round(mediaMensalColetas),
+        unidade: "coletas/mês",
+        icone: "package"
+      },
+      {
+        titulo: "Volume Acumulado",
+        valor: Math.round(totalResiduos * 100) / 100,
+        unidade: "kg",
+        icone: "trending-up"
+      }
+    ],
+    metricas: {
+      crescimento: mesesComVariacao
+    },
+    items: mesesComVariacao.map((item, index) => ({
+      id: index + 1,
+      nome: item.mes,
+      quantidade: Math.round(item.residuos * 100) / 100,
+      valor: Math.round(item.valor * 100) / 100,
+      entidade: `${item.coletas} coletas`,
+      ponto: item.crescimentoResiduos !== undefined 
+        ? `${item.crescimentoResiduos >= 0 ? '+' : ''}${item.crescimentoResiduos}% vs anterior` 
+        : 'Período base'
+    }))
+  };
+}
+
+function processBenchmarkEntidades(
+  coletas: any[], 
+  filters: RelatorioFiltersType,
+  scope: RelatorioScope = { isAdmin: true }
+): RelatorioData {
+  const entidadesMap = new Map<string, { nome: string; coletas: number; residuos: number; valor: number }>();
+
+  coletas.forEach(coleta => {
+    const entidadeNome = coleta.entidade?.nom_entidade || 'Entidade Geradora Não Identificada';
+    if (!entidadesMap.has(entidadeNome)) {
+      entidadesMap.set(entidadeNome, { nome: entidadeNome, coletas: 0, residuos: 0, valor: 0 });
+    }
+    const reg = entidadesMap.get(entidadeNome)!;
+    reg.coletas++;
+    reg.valor += Number(coleta.vlr_total) || 0;
+    if (coleta.coleta_residuo) {
+      reg.residuos += coleta.coleta_residuo.reduce((sum: number, r: any) => sum + (Number(r.qtd_total) || 0), 0);
+    }
+  });
+
+  const totalResiduos = Array.from(entidadesMap.values()).reduce((sum, e) => sum + e.residuos, 0);
+  const totalColetas = coletas.length;
+  const valorTotal = Array.from(entidadesMap.values()).reduce((sum, e) => sum + e.valor, 0);
+
+  const benchmarkRanking = Array.from(entidadesMap.values())
+    .sort((a, b) => b.residuos - a.residuos)
+    .map((e, index) => {
+      const mediaPorColeta = e.coletas > 0 ? e.residuos / e.coletas : 0;
+      const percentualTotal = totalResiduos > 0 ? (e.residuos / totalResiduos) * 100 : 0;
+      return {
+        id: index + 1,
+        ranking: index + 1,
+        nome: e.nome,
+        volume: Math.round(e.residuos * 100) / 100,
+        quantidade: Math.round(e.residuos * 100) / 100,
+        valor: Math.round(e.valor * 100) / 100,
+        coletas: e.coletas,
+        mediaPorColeta: Math.round(mediaPorColeta * 100) / 100,
+        percentualTotal: Math.round(percentualTotal * 10) / 10,
+        entidade: `${e.coletas} coletas (${Math.round(percentualTotal)}% do volume)`,
+        ponto: `Média: ${Math.round(mediaPorColeta)} kg/coleta`
+      };
+    });
+
+  const liderVolume = benchmarkRanking[0]?.nome || 'N/A';
+  const maiorMedia = [...benchmarkRanking].sort((a, b) => b.mediaPorColeta - a.mediaPorColeta)[0]?.nome || 'N/A';
+
+  return {
+    totalColetas,
+    totalResiduos: Math.round(totalResiduos * 100) / 100,
+    valorTotal: Math.round(valorTotal * 100) / 100,
+    entidadesAtivas: entidadesMap.size,
+    residuosPorTipo: processResiduosPorTipo(coletas),
+    kpis: [
+      {
+        titulo: scope.isAdmin ? "Entidades no Benchmark (Global)" : "Suas Geradoras no Benchmark",
+        valor: entidadesMap.size,
+        icone: "users",
+        subtexto: scope.isAdmin ? "Visão Global CAMA" : "Entidades vinculadas à sua operação"
+      },
+      {
+        titulo: "Líder em Volume",
+        valor: liderVolume,
+        icone: "award",
+        subtexto: `${benchmarkRanking[0]?.quantidade.toLocaleString('pt-BR') || 0} kg gerados`
+      },
+      {
+        titulo: "Maior Eficiência",
+        valor: maiorMedia,
+        icone: "trending-up",
+        subtexto: "Maior volume médio por coleta"
+      },
+      {
+        titulo: "Volume Benchmark",
+        valor: Math.round(totalResiduos * 100) / 100,
+        unidade: "kg",
+        icone: "scale"
+      }
+    ],
+    metricas: {
+      benchmark: benchmarkRanking
+    },
+    items: benchmarkRanking
+  };
+}
+
+function processComparativoTiposResiduo(coletas: any[], filters: RelatorioFiltersType): RelatorioData {
+  const residuosPorTipo = processResiduosPorTipo(coletas);
+  const totalResiduos = residuosPorTipo.reduce((sum, t) => sum + t.quantidade, 0);
+  const valorTotal = residuosPorTipo.reduce((sum, t) => sum + t.valor, 0);
+
+  const items = residuosPorTipo.map((tipo, index) => {
+    const precoMedioKg = tipo.quantidade > 0 ? tipo.valor / tipo.quantidade : 0;
+    const percentualReceita = valorTotal > 0 ? (tipo.valor / valorTotal) * 100 : 0;
+    return {
+      id: index + 1,
+      nome: tipo.nome,
+      quantidade: Math.round(tipo.quantidade * 100) / 100,
+      valor: Math.round(tipo.valor * 100) / 100,
+      precoMedio: Math.round(precoMedioKg * 100) / 100,
+      percentualVolume: tipo.percentual,
+      percentualReceita: Math.round(percentualReceita * 10) / 10,
+      entidade: `${tipo.percentual}% do volume total`,
+      ponto: `Preço médio: R$ ${precoMedioKg.toFixed(2)}/kg`
+    };
+  });
+
+  const tipoMaisRentavel = [...items].sort((a, b) => b.precoMedio - a.precoMedio)[0]?.nome || 'N/A';
+  const tipoMaisVolumoso = residuosPorTipo[0]?.nome || 'N/A';
+
+  return {
+    totalColetas: coletas.length,
+    totalResiduos: Math.round(totalResiduos * 100) / 100,
+    valorTotal: Math.round(valorTotal * 100) / 100,
+    entidadesAtivas: new Set(coletas.map(c => c.entidade?.nom_entidade).filter(Boolean)).size,
+    residuosPorTipo,
+    kpis: [
+      {
+        titulo: "Materiais Distintos",
+        valor: residuosPorTipo.length,
+        icone: "layers",
+        subtexto: "Tipos de resíduos processados"
+      },
+      {
+        titulo: "Material Mais Volumoso",
+        valor: tipoMaisVolumoso,
+        icone: "scale",
+        subtexto: `${residuosPorTipo[0]?.percentual || 0}% do volume total`
+      },
+      {
+        titulo: "Material Mais Valorizado",
+        valor: tipoMaisRentavel,
+        icone: "dollar-sign",
+        subtexto: "Maior cotação média por kg"
+      },
+      {
+        titulo: "Preço Médio Global",
+        valor: totalResiduos > 0 ? (valorTotal / totalResiduos).toFixed(2) : '0,00',
+        unidade: "R$/kg",
+        icone: "trending-up"
+      }
+    ],
+    items
+  };
+}
+
+function processSazonalidade(coletas: any[], filters: RelatorioFiltersType): RelatorioData {
+  const diasNomes = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+  const diasSemanaMap = diasNomes.map(dia => ({ dia, coletas: 0, volume: 0, valor: 0 }));
+
+  coletas.forEach(coleta => {
+    if (!coleta.dat_coleta) return;
+    const date = new Date(coleta.dat_coleta);
+    const diaIndex = date.getDay();
+    if (diaIndex >= 0 && diaIndex < 7) {
+      diasSemanaMap[diaIndex].coletas++;
+      diasSemanaMap[diaIndex].valor += Number(coleta.vlr_total) || 0;
+      if (coleta.coleta_residuo) {
+        diasSemanaMap[diaIndex].volume += coleta.coleta_residuo.reduce((sum: number, r: any) => sum + (Number(r.qtd_total) || 0), 0);
+      }
+    }
+  });
+
+  const totalResiduos = diasSemanaMap.reduce((sum, d) => sum + d.volume, 0);
+  const totalColetas = coletas.length;
+  const valorTotal = diasSemanaMap.reduce((sum, d) => sum + d.valor, 0);
+
+  const diaMaisMovimentado = [...diasSemanaMap].sort((a, b) => b.coletas - a.coletas)[0];
+  const diaMaisVolume = [...diasSemanaMap].sort((a, b) => b.volume - a.volume)[0];
+
+  const items = diasSemanaMap.map((d, index) => {
+    const mediaPorColeta = d.coletas > 0 ? d.volume / d.coletas : 0;
+    const percTotal = totalResiduos > 0 ? (d.volume / totalResiduos) * 100 : 0;
+    return {
+      id: index + 1,
+      nome: d.dia,
+      quantidade: Math.round(d.volume * 100) / 100,
+      valor: Math.round(d.valor * 100) / 100,
+      coletas: d.coletas,
+      entidade: `${d.coletas} coletas (${Math.round(percTotal)}% do volume)`,
+      ponto: `Média: ${Math.round(mediaPorColeta)} kg/coleta`
+    };
+  });
+
+  return {
+    totalColetas,
+    totalResiduos: Math.round(totalResiduos * 100) / 100,
+    valorTotal: Math.round(valorTotal * 100) / 100,
+    entidadesAtivas: new Set(coletas.map(c => c.entidade?.nom_entidade).filter(Boolean)).size,
+    residuosPorTipo: processResiduosPorTipo(coletas),
+    kpis: [
+      {
+        titulo: "Dia de Pico em Coletas",
+        valor: diaMaisMovimentado?.dia || 'N/A',
+        icone: "calendar",
+        subtexto: `${diaMaisMovimentado?.coletas || 0} coletas realizadas`
+      },
+      {
+        titulo: "Dia de Maior Volume",
+        valor: diaMaisVolume?.dia || 'N/A',
+        icone: "scale",
+        subtexto: `${Math.round(diaMaisVolume?.volume || 0).toLocaleString('pt-BR')} kg coletados`
+      },
+      {
+        titulo: "Média Diária Operacional",
+        valor: Math.round(totalColetas / 7),
+        unidade: "coletas/dia",
+        icone: "activity"
+      },
+      {
+        titulo: "Volume Médio Diário",
+        valor: Math.round((totalResiduos / 7) * 100) / 100,
+        unidade: "kg/dia",
+        icone: "trending-up"
+      }
+    ],
+    metricas: {
+      sazonalidade: {
+        diasSemana: diasSemanaMap.map(d => ({
+          dia: d.dia,
+          coletas: d.coletas,
+          volume: Math.round(d.volume * 100) / 100
+        }))
+      }
+    },
+    items
   };
 }
