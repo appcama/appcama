@@ -11,6 +11,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PWAPrompt } from "@/components/PWAPrompt";
 import { PWAUpdateBanner } from "@/components/PWAUpdateBanner";
 import { googleMapsLoader } from "@/lib/google-maps-loader";
+import { FinancialPrivacyProvider } from "@/hooks/useFinancialPrivacy";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import ValidatePassword from "./pages/ValidatePassword";
@@ -35,24 +36,26 @@ const App = () => {
       >
         <AuthProvider>
           <PermissionsProvider>
-            <Toaster />
-            <Sonner />
-            <div className="relative">
-              <PWAPrompt />
-              <PWAUpdateBanner />
-              <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/validate-password" element={<ValidatePassword />} />
-              <Route path="/validar-certificado/:codigo" element={<ValidarCertificado />} />
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <Index />
-                </ProtectedRoute>
-              } />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-              </Routes>
-            </div>
+            <FinancialPrivacyProvider>
+              <Toaster />
+              <Sonner />
+              <div className="relative">
+                <PWAPrompt />
+                <PWAUpdateBanner />
+                <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/validate-password" element={<ValidatePassword />} />
+                <Route path="/validar-certificado/:codigo" element={<ValidarCertificado />} />
+                <Route path="/" element={
+                  <ProtectedRoute>
+                    <Index />
+                  </ProtectedRoute>
+                } />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+                </Routes>
+              </div>
+            </FinancialPrivacyProvider>
           </PermissionsProvider>
         </AuthProvider>
       </BrowserRouter>

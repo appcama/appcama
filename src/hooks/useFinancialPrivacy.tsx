@@ -33,7 +33,10 @@ export function FinancialPrivacyProvider({ children }: { children: ReactNode }) 
 export function useFinancialPrivacy() {
   const context = useContext(FinancialPrivacyContext);
   if (context === undefined) {
-    throw new Error('useFinancialPrivacy must be used within a FinancialPrivacyProvider');
+    return {
+      showFinancialValues: true,
+      toggleFinancialValues: () => {}
+    };
   }
   return context;
 }

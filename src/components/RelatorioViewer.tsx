@@ -28,12 +28,16 @@ export function RelatorioViewer({ reportType, category, filters }: RelatorioView
     "coletas-periodo": "Coletas por Período",
     "residuos-coletados": "Resíduos Coletados",
     "pontos-performance": "Performance dos Pontos de Coleta",
+    "performance-pontos": "Performance dos Pontos de Coleta",
     "entidades-ranking": "Ranking de Entidades Coletoras",
+    "ranking-entidades": "Ranking de Entidades Coletoras",
     "eventos-coleta": "Relatório de Eventos",
     "dashboard-executivo": "Dashboard Executivo",
     "analise-faturamento": "Análise de Faturamento",
+    "faturamento": "Análise de Faturamento",
     "produtividade": "Relatório de Produtividade",
     "analise-crescimento": "Análise de Crescimento",
+    "crescimento": "Análise de Crescimento",
     "ranking-entidades-geradoras": "Ranking de Entidades Geradoras",
     "custos-beneficios": "Análise de Custos vs Benefícios",
     "rejeitos-coletados": "Rejeitos Coletados por Entidade Geradora",
@@ -370,10 +374,10 @@ function RelatorioTabela({ data, reportType }: { data: any; reportType: string }
                 <tr key={index} className="border-b border-border hover:bg-muted/20">
                   {columns.map(column => (
                     <td key={column.key} className="p-4">
-                      {column.key === 'valor' && item[column.key] ? 
-                        `R$ ${Number(item[column.key]).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` :
-                       column.key === 'quantidade' && item[column.key] ?
-                        `${Number(item[column.key]).toLocaleString('pt-BR')} kg` :
+                      {column.key === 'valor' && item[column.key] !== undefined && item[column.key] !== null ? 
+                        `R$ ${Number(item[column.key]).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` :
+                       column.key === 'quantidade' && item[column.key] !== undefined && item[column.key] !== null ?
+                        `${Number(item[column.key]).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg` :
                        column.key === 'data' && item[column.key] ?
                         format(new Date(item[column.key]), "dd/MM/yyyy") :
                         item[column.key] || '-'

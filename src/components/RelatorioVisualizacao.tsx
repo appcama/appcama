@@ -169,7 +169,11 @@ export function RelatorioVisualizacao({ data, reportType }: RelatorioVisualizaca
           <Scale className="h-4 w-4 text-primary" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{data.totalResiduos?.toLocaleString('pt-BR') || 0} kg</div>
+          <div className="text-2xl font-bold">
+            {typeof data.totalResiduos === 'number'
+              ? data.totalResiduos.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              : '0,00'} kg
+          </div>
         </CardContent>
       </Card>
 
@@ -182,7 +186,9 @@ export function RelatorioVisualizacao({ data, reportType }: RelatorioVisualizaca
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            R$ {data.valorTotal?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+            R$ {typeof data.valorTotal === 'number'
+              ? data.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              : '0,00'}
           </div>
         </CardContent>
       </Card>

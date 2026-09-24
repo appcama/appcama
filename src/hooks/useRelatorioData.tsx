@@ -97,69 +97,9 @@ async function fetchRelatorioData(
   scope: RelatorioScope = { isAdmin: true }
 ): Promise<RelatorioData> {
   try {
-    // Base query comum para a maioria dos relatórios
-    let baseQuery = supabase
-      .from('coleta')
-      .select(`
-        id_coleta,
-        cod_coleta,
-        dat_coleta,
-        vlr_total,
-        des_status,
-        id_usuario_criador,
-        usuario_criador:usuario!coleta_id_usuario_criador_fkey (
-          id_usuario,
-          id_entidade,
-          entidade_coletora:entidade!usuario_id_entidade_fkey (
-            nom_entidade,
-            des_status
-          )
-        ),
-        coleta_residuo (
-          id_coleta_residuo,
-          qtd_total,
-          vlr_total,
-          residuo (
-            nom_residuo,
-            tipo_residuo (
-              des_tipo_residuo
-            )
-          )
-        ),
-        ponto_coleta (
-          nom_ponto_coleta,
-          entidade:entidade!ponto_coleta_id_entidade_gestora_fkey (
-            nom_entidade,
-            des_status
-          )
-        ),
-        entidade:entidade!coleta_id_entidade_geradora_fkey (
-          nom_entidade,
-          des_status
-        ),
-        evento (
-          nom_evento
-        )
-      `);
+    let allowedUserIds: number[] | null = null;
 
-    // Aplicar filtros de status
-    if (filters.statusColetas) {
-      const statusColetas = filters.statusColetas.split(',');
-      baseQuery = baseQuery.in('des_status', statusColetas);
-    } else {
-      // Padrão: incluir tanto A quanto D se não especificado
-      baseQuery = baseQuery.in('des_status', ['A', 'D']);
-    }
-
-    // Aplicar filtros de data
-    if (filters.dataInicial) {
-      baseQuery = baseQuery.gte('dat_coleta', format(filters.dataInicial, 'yyyy-MM-dd'));
-    }
-    if (filters.dataFinal) {
-      baseQuery = baseQuery.lte('dat_coleta', format(filters.dataFinal, 'yyyy-MM-dd'));
-    }
-
-    // Recorte por entidade: apenas administradores (CAMA) veem todas as entidades
+    // Recorte por entidade: usuários comuns só veem a sua entidade
     if (!scope.isAdmin) {
       if (!scope.entityId) {
         return emptyRelatorioData();
@@ -177,18 +117,108 @@ async function fetchRelatorioData(
         return emptyRelatorioData();
       }
 
-      baseQuery = baseQuery.in('id_usuario_criador', userIds);
+      allowedUserIds = userIds;
+    } else if (filters.entidade && filters.entidade !== 'all') {
+      // Se administrador filtrou por uma entidade específica
+      const { data: usuariosDaEntidade } = await supabase
+        .from('usuario')
+        .select('id_usuario')
+        .eq('id_entidade', Number(filters.entidade))
+        .eq('des_status', 'A');
+
+      allowedUserIds = usuariosDaEntidade?.map(u => u.id_usuario) || [];
     }
 
-    const { data: coletas, error } = await baseQuery;
+    const buildQuery = () => {
+      let q = supabase
+        .from('coleta')
+        .select(`
+          id_coleta,
+          cod_coleta,
+          dat_coleta,
+          vlr_total,
+          des_status,
+          id_usuario_criador,
+          usuario_criador:usuario!coleta_id_usuario_criador_fkey (
+            id_usuario,
+            id_entidade,
+            entidade_coletora:entidade!usuario_id_entidade_fkey (
+              nom_entidade,
+              des_status
+            )
+          ),
+          coleta_residuo (
+            id_coleta_residuo,
+            qtd_total,
+            vlr_total,
+            residuo (
+              nom_residuo,
+              tipo_residuo (
+                des_tipo_residuo
+              )
+            )
+          ),
+          ponto_coleta (
+            nom_ponto_coleta,
+            entidade:entidade!ponto_coleta_id_entidade_gestora_fkey (
+              nom_entidade,
+              des_status
+            )
+          ),
+          entidade:entidade!coleta_id_entidade_geradora_fkey (
+            nom_entidade,
+            des_status
+          ),
+          evento (
+            nom_evento
+          )
+        `);
 
-    if (error) {
-      console.error('Erro ao buscar dados:', error);
-      throw error;
+      // Aplicar filtros de status
+      if (filters.statusColetas && filters.statusColetas !== 'all') {
+        const statusColetas = filters.statusColetas.split(',');
+        q = q.in('des_status', statusColetas);
+      } else if (!filters.statusColetas) {
+        // Padrão: coletas ativas (A)
+        q = q.eq('des_status', 'A');
+      }
+
+      // Aplicar filtros de data
+      if (filters.dataInicial) {
+        q = q.gte('dat_coleta', format(filters.dataInicial, 'yyyy-MM-dd'));
+      }
+      if (filters.dataFinal) {
+        q = q.lte('dat_coleta', format(filters.dataFinal, 'yyyy-MM-dd'));
+      }
+
+      if (allowedUserIds && allowedUserIds.length > 0) {
+        q = q.in('id_usuario_criador', allowedUserIds);
+      }
+
+      return q;
+    };
+
+    // Paginação para evitar que o PostgREST limite a resposta em 1000 registros
+    const PAGE_SIZE = 1000;
+    let coletas: any[] = [];
+    let from = 0;
+
+    while (true) {
+      const { data, error } = await buildQuery().range(from, from + PAGE_SIZE - 1);
+
+      if (error) {
+        console.error('Erro ao buscar dados:', error);
+        throw error;
+      }
+
+      if (!data || data.length === 0) break;
+      coletas.push(...data);
+      if (data.length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
     }
 
     // Processar dados baseado no tipo de relatório
-    return processRelatorioData(reportType, category, coletas || [], filters);
+    return processRelatorioData(reportType, category, coletas, filters);
     
   } catch (error) {
     console.error('Erro na consulta do relatório:', error);
@@ -202,32 +232,43 @@ function processRelatorioData(
   coletas: any[], 
   filters: RelatorioFiltersType
 ): RelatorioData {
-  
-  // Filtrar apenas coletas ativas se especificado
+  // Se não houver filtro explícito de status, focar nas ativas se existirem
   const coletasAtivas = coletas.filter(c => c.des_status === 'A');
-  
-  // Se não há coletas ativas, usar todas para demonstração
-  const coletasParaProcessar = coletasAtivas.length > 0 ? coletasAtivas : coletas;
+  const coletasParaProcessar = (!filters.statusColetas || filters.statusColetas === 'A')
+    ? (coletasAtivas.length > 0 ? coletasAtivas : coletas)
+    : coletas;
 
-  const residuosPorTipo = processResiduosPorTipo(coletasParaProcessar);
-  const totalResiduos = residuosPorTipo.reduce((sum, tipo) => sum + tipo.quantidade, 0);
-  const valorTotal = residuosPorTipo.reduce((sum, tipo) => sum + tipo.valor, 0);
-  const totalColetas = coletasParaProcessar.length;
-  const entidadesMap = new Set(
-    coletasParaProcessar.map((c: any) => c.entidade?.nom_entidade).filter(Boolean)
-  );
-  const indicadores = processIndicadoresAmbientais(totalResiduos);
-  const items: any[] = [];
-
-  return {
-    totalColetas,
-    totalResiduos: Math.round(totalResiduos),
-    valorTotal: Math.round(valorTotal * 100) / 100,
-    entidadesAtivas: entidadesMap.size,
-    residuosPorTipo,
-    indicadores,
-    items
-  };
+  switch (reportType) {
+    case 'residuos-coletados':
+      return processResiduosColetados(coletasParaProcessar, filters);
+    case 'performance-pontos':
+    case 'pontos-performance':
+      return processPerformancePontos(coletasParaProcessar, filters);
+    case 'ranking-entidades':
+    case 'entidades-ranking':
+      return processRankingEntidades(coletasParaProcessar, filters);
+    case 'ranking-entidades-geradoras':
+      return processRankingEntidadesGeradoras(coletasParaProcessar, filters);
+    case 'eventos-coleta':
+      return processEventosColeta(coletasParaProcessar, filters);
+    case 'dashboard-executivo':
+      return processDashboardExecutivo(coletasParaProcessar, filters);
+    case 'faturamento':
+    case 'analise-faturamento':
+      return processAnaliseFaturamento(coletasParaProcessar, filters);
+    case 'produtividade':
+      return processProdutividade(coletasParaProcessar, filters);
+    case 'crescimento':
+    case 'analise-crescimento':
+      return processAnaliseCrescimento(coletasParaProcessar, filters);
+    case 'rejeitos-coletados':
+      return processRejeitosColetados(coletasParaProcessar, filters);
+    case 'custos-beneficios':
+      return processCustosBeneficios(coletasParaProcessar, filters);
+    case 'coletas-periodo':
+    default:
+      return processRelatorioGenerico(coletasParaProcessar, filters);
+  }
 }
 
 function processResiduosColetados(coletas: any[], filters: RelatorioFiltersType): RelatorioData {
@@ -240,16 +281,17 @@ function processResiduosColetados(coletas: any[], filters: RelatorioFiltersType)
   const items = residuosPorTipo.map((tipo, index) => ({
     id: index + 1,
     nome: tipo.nome,
-    quantidade: tipo.quantidade,
-    valor: tipo.valor,
+    quantidade: Math.round(tipo.quantidade * 100) / 100,
+    valor: Math.round(tipo.valor * 100) / 100,
+    percentual: tipo.percentual,
     data: new Date().toISOString(),
-    entidade: 'Todas',
-    ponto: 'Todos'
+    entidade: `${tipo.percentual}% do total`,
+    ponto: 'Ativo'
   }));
 
   return {
     totalColetas: coletas.length,
-    totalResiduos: Math.round(totalResiduos),
+    totalResiduos: Math.round(totalResiduos * 100) / 100,
     valorTotal: Math.round(valorTotal * 100) / 100,
     entidadesAtivas: new Set(coletas.map(c => c.entidade?.nom_entidade).filter(Boolean)).size,
     residuosPorTipo,
@@ -281,15 +323,12 @@ function processPerformancePontos(coletas: any[], filters: RelatorioFiltersType)
     }
     if (!data.ultimaColeta || new Date(coleta.dat_coleta) > new Date(data.ultimaColeta)) {
       data.ultimaColeta = coleta.dat_coleta;
-    }
-  });
-
-  const pontosRanking = Array.from(pontosMap.values())
+     const pontosRanking = Array.from(pontosMap.values())
     .sort((a, b) => b.valor - a.valor)
     .map((ponto, index) => ({
       id: index + 1,
       nome: ponto.nome,
-      quantidade: Math.round(ponto.residuos),
+      quantidade: Math.round(ponto.residuos * 100) / 100,
       valor: Math.round(ponto.valor * 100) / 100,
       data: ponto.ultimaColeta,
       entidade: ponto.entidade,
@@ -301,7 +340,7 @@ function processPerformancePontos(coletas: any[], filters: RelatorioFiltersType)
 
   return {
     totalColetas: coletas.length,
-    totalResiduos: Math.round(totalResiduos),
+    totalResiduos: Math.round(totalResiduos * 100) / 100,
     valorTotal: Math.round(valorTotal * 100) / 100,
     entidadesAtivas: pontosMap.size,
     residuosPorTipo: processResiduosPorTipo(coletas),
@@ -318,10 +357,10 @@ function processRankingEntidades(coletas: any[], filters: RelatorioFiltersType):
     const entidade = coleta.usuario_criador?.entidade_coletora?.nom_entidade || 'Entidade coletora não informada';
     if (!entidadesMap.has(entidade)) {
       entidadesMap.set(entidade, { 
-        nome: entidade,
+        nome: entidade, 
         coletas: 0, 
         valor: 0, 
-        residuos: 0,
+        residuos: 0, 
         ultimaColeta: null
       });
     }
@@ -341,7 +380,7 @@ function processRankingEntidades(coletas: any[], filters: RelatorioFiltersType):
     .map((entidade, index) => ({
       id: index + 1,
       nome: entidade.nome,
-      quantidade: Math.round(entidade.residuos),
+      quantidade: Math.round(entidade.residuos * 100) / 100,
       valor: Math.round(entidade.valor * 100) / 100,
       data: entidade.ultimaColeta,
       entidade: `${entidade.coletas} coletas`,
@@ -353,7 +392,7 @@ function processRankingEntidades(coletas: any[], filters: RelatorioFiltersType):
 
   return {
     totalColetas: coletas.length,
-    totalResiduos: Math.round(totalResiduos),
+    totalResiduos: Math.round(totalResiduos * 100) / 100,
     valorTotal: Math.round(valorTotal * 100) / 100,
     entidadesAtivas: entidadesMap.size,
     residuosPorTipo: processResiduosPorTipo(coletas),
@@ -370,10 +409,10 @@ function processRankingEntidadesGeradoras(coletas: any[], filters: RelatorioFilt
     const entidade = coleta.entidade?.nom_entidade || 'Entidade geradora não informada';
     if (!entidadesMap.has(entidade)) {
       entidadesMap.set(entidade, { 
-        nome: entidade,
+        nome: entidade, 
         coletas: 0, 
         valor: 0, 
-        residuos: 0,
+        residuos: 0, 
         ultimaColeta: null
       });
     }
@@ -393,7 +432,7 @@ function processRankingEntidadesGeradoras(coletas: any[], filters: RelatorioFilt
     .map((entidade, index) => ({
       id: index + 1,
       nome: entidade.nome,
-      quantidade: Math.round(entidade.residuos),
+      quantidade: Math.round(entidade.residuos * 100) / 100,
       valor: Math.round(entidade.valor * 100) / 100,
       data: entidade.ultimaColeta,
       entidade: `${entidade.coletas} coletas`,
@@ -405,7 +444,7 @@ function processRankingEntidadesGeradoras(coletas: any[], filters: RelatorioFilt
 
   return {
     totalColetas: coletas.length,
-    totalResiduos: Math.round(totalResiduos),
+    totalResiduos: Math.round(totalResiduos * 100) / 100,
     valorTotal: Math.round(valorTotal * 100) / 100,
     entidadesAtivas: entidadesMap.size,
     residuosPorTipo: processResiduosPorTipo(coletas),
@@ -472,7 +511,7 @@ function processRejeitosColetados(coletas: any[], filters: RelatorioFiltersType)
     .map((entidade, index) => ({
       id: index + 1,
       nome: entidade.nome,
-      quantidade: Math.round(entidade.quantidade),
+      quantidade: Math.round(entidade.quantidade * 100) / 100,
       valor: 0, // Rejeito não tem valor comercial
       data: entidade.ultimaColeta,
       entidade: `${entidade.coletas} coletas`,
@@ -487,7 +526,7 @@ function processRejeitosColetados(coletas: any[], filters: RelatorioFiltersType)
     .map(item => ({
       id: item.id,
       nome: item.codigo,
-      quantidade: Math.round(item.quantidade),
+      quantidade: Math.round(item.quantidade * 100) / 100,
       valor: 0,
       data: item.data,
       entidade: item.entidadeGeradora,
@@ -498,13 +537,13 @@ function processRejeitosColetados(coletas: any[], filters: RelatorioFiltersType)
 
   return {
     totalColetas: coletasComRejeito.length,
-    totalResiduos: Math.round(totalRejeitos),
+    totalResiduos: Math.round(totalRejeitos * 100) / 100,
     valorTotal: 0, // Rejeito não possui valor comercial
     entidadesAtivas: entidadesMap.size,
     residuosPorTipo: [
       {
         nome: 'Rejeito',
-        quantidade: Math.round(totalRejeitos),
+        quantidade: Math.round(totalRejeitos * 100) / 100,
         valor: 0,
         percentual: 100
       }
@@ -513,7 +552,7 @@ function processRejeitosColetados(coletas: any[], filters: RelatorioFiltersType)
     kpis: [
       {
         titulo: 'Total de Rejeitos',
-        valor: Math.round(totalRejeitos),
+        valor: Math.round(totalRejeitos * 100) / 100,
         unidade: 'kg',
         icone: 'scale'
       },
@@ -553,10 +592,10 @@ function processEventosColeta(coletas: any[], filters: RelatorioFiltersType): Re
     const evento = coleta.evento?.nom_evento || 'Coleta regular';
     if (!eventosMap.has(evento)) {
       eventosMap.set(evento, { 
-        nome: evento,
+        nome: evento, 
         coletas: 0, 
         valor: 0, 
-        residuos: 0,
+        residuos: 0, 
         participantes: new Set()
       });
     }
@@ -576,7 +615,7 @@ function processEventosColeta(coletas: any[], filters: RelatorioFiltersType): Re
     .map((evento, index) => ({
       id: index + 1,
       nome: evento.nome,
-      quantidade: Math.round(evento.residuos),
+      quantidade: Math.round(evento.residuos * 100) / 100,
       valor: Math.round(evento.valor * 100) / 100,
       data: new Date().toISOString(),
       entidade: `${evento.participantes.size} participantes`,
@@ -588,7 +627,7 @@ function processEventosColeta(coletas: any[], filters: RelatorioFiltersType): Re
 
   return {
     totalColetas: coletas.length,
-    totalResiduos: Math.round(totalResiduos),
+    totalResiduos: Math.round(totalResiduos * 100) / 100,
     valorTotal: Math.round(valorTotal * 100) / 100,
     entidadesAtivas: eventosMap.size,
     residuosPorTipo: processResiduosPorTipo(coletas),
@@ -626,7 +665,7 @@ function processRelatorioGenerico(coletas: any[], filters: RelatorioFiltersType)
   const items = coletas.slice(0, 50).map(coleta => ({
     id: coleta.id_coleta,
     nome: coleta.cod_coleta || `Coleta ${coleta.id_coleta}`,
-    quantidade: coleta.coleta_residuo?.reduce((sum: number, r: any) => sum + (Number(r.qtd_total) || 0), 0) || 0,
+    quantidade: Math.round((coleta.coleta_residuo?.reduce((sum: number, r: any) => sum + (Number(r.qtd_total) || 0), 0) || 0) * 100) / 100,
     valor: Number(coleta.vlr_total) || 0,
     data: coleta.dat_coleta,
     entidade: coleta.entidade?.nom_entidade || coleta.ponto_coleta?.entidade?.nom_entidade || 'N/A',
@@ -635,7 +674,7 @@ function processRelatorioGenerico(coletas: any[], filters: RelatorioFiltersType)
 
   return {
     totalColetas,
-    totalResiduos: Math.round(totalResiduos),
+    totalResiduos: Math.round(totalResiduos * 100) / 100,
     valorTotal: Math.round(valorTotal * 100) / 100,
     entidadesAtivas: entidadesUnicas.size,
     residuosPorTipo,
@@ -675,7 +714,7 @@ function processResiduosPorTipo(coletas: any[]) {
 
   return Array.from(tiposMap.entries()).map(([nome, data]) => ({
     nome,
-    quantidade: Math.round(data.quantidade),
+    quantidade: Math.round(data.quantidade * 100) / 100,
     valor: Math.round(data.valor * 100) / 100,
     percentual: totalQuantidade > 0 ? Math.round((data.quantidade / totalQuantidade) * 100) : 0
   })).sort((a, b) => b.quantidade - a.quantidade);
@@ -749,7 +788,7 @@ function processDashboardExecutivo(coletas: any[], filters: RelatorioFiltersType
 
   return {
     totalColetas,
-    totalResiduos: Math.round(totalResiduos),
+    totalResiduos: Math.round(totalResiduos * 100) / 100,
     valorTotal: Math.round(valorTotal * 100) / 100,
     entidadesAtivas: entidadesMap.size,
     residuosPorTipo: processResiduosPorTipo(coletas),
@@ -770,7 +809,7 @@ function processDashboardExecutivo(coletas: any[], filters: RelatorioFiltersType
       },
       {
         titulo: "Volume Coletado",
-        valor: Math.round(totalResiduos),
+        valor: Math.round(totalResiduos * 100) / 100,
         unidade: "kg",
         variacao: Math.floor(Math.random() * 30) - 5,
         icone: "scale"
@@ -785,7 +824,7 @@ function processDashboardExecutivo(coletas: any[], filters: RelatorioFiltersType
     items: topEntidades.map((entidade, index) => ({
       id: index + 1,
       nome: entidade.nome,
-      quantidade: Math.round(entidade.residuos),
+      quantidade: Math.round(entidade.residuos * 100) / 100,
       valor: Math.round(entidade.valor * 100) / 100,
       ranking: index + 1
     }))
@@ -817,7 +856,7 @@ function processAnaliseFaturamento(coletas: any[], filters: RelatorioFiltersType
 
   return {
     totalColetas: coletas.length,
-    totalResiduos: Math.round(totalResiduos),
+    totalResiduos: Math.round(totalResiduos * 100) / 100,
     valorTotal: Math.round(valorTotal * 100) / 100,
     residuosPorTipo,
     kpis: [
@@ -851,8 +890,8 @@ function processAnaliseFaturamento(coletas: any[], filters: RelatorioFiltersType
     items: residuosPorTipo.map((tipo, index) => ({
       id: index + 1,
       nome: tipo.nome,
-      quantidade: tipo.quantidade,
-      valor: tipo.valor,
+      quantidade: Math.round(tipo.quantidade * 100) / 100,
+      valor: Math.round(tipo.valor * 100) / 100,
       percentualReceita: valorTotal > 0 ? ((tipo.valor / valorTotal) * 100).toFixed(1) : 0
     }))
   };
@@ -895,7 +934,7 @@ function processProdutividade(coletas: any[], filters: RelatorioFiltersType): Re
 
   return {
     totalColetas: coletas.length,
-    totalResiduos: Math.round(totalResiduos),
+    totalResiduos: Math.round(totalResiduos * 100) / 100,
     valorTotal: entidadesComEficiencia.reduce((sum, e) => sum + e.valor, 0),
     entidadesAtivas: entidadesComEficiencia.length,
     kpis: [
@@ -933,7 +972,7 @@ function processProdutividade(coletas: any[], filters: RelatorioFiltersType): Re
     items: entidadesComEficiencia.map((entidade, index) => ({
       id: index + 1,
       nome: entidade.nome,
-      quantidade: Math.round(entidade.residuos),
+      quantidade: Math.round(entidade.residuos * 100) / 100,
       valor: Math.round(entidade.valor * 100) / 100,
       eficiencia: Math.round(entidade.eficiencia * 100) / 100,
       coletas: entidade.coletas,
@@ -954,10 +993,10 @@ function processAnaliseCrescimento(coletas: any[], filters: RelatorioFiltersType
 
   // Agrupar por mês (simulação - seria melhor agrupar por dados reais)
   const crescimentoPorMes = [
-    { mes: "Jan", coletas: Math.floor(coletas.length * 0.7), residuos: Math.floor(totalResiduos * 0.7) },
-    { mes: "Fev", coletas: Math.floor(coletas.length * 0.8), residuos: Math.floor(totalResiduos * 0.8) },
-    { mes: "Mar", coletas: Math.floor(coletas.length * 0.9), residuos: Math.floor(totalResiduos * 0.9) },
-    { mes: "Atual", coletas: coletas.length, residuos: Math.floor(totalResiduos) }
+    { mes: "Jan", coletas: Math.floor(coletas.length * 0.7), residuos: Math.round(totalResiduos * 0.7 * 100) / 100 },
+    { mes: "Fev", coletas: Math.floor(coletas.length * 0.8), residuos: Math.round(totalResiduos * 0.8 * 100) / 100 },
+    { mes: "Mar", coletas: Math.floor(coletas.length * 0.9), residuos: Math.round(totalResiduos * 0.9 * 100) / 100 },
+    { mes: "Atual", coletas: coletas.length, residuos: Math.round(totalResiduos * 100) / 100 }
   ];
 
   // Calcular crescimento mês a mês
@@ -987,7 +1026,7 @@ function processAnaliseCrescimento(coletas: any[], filters: RelatorioFiltersType
 
   return {
     totalColetas: coletas.length,
-    totalResiduos: Math.round(totalResiduos),
+    totalResiduos: Math.round(totalResiduos * 100) / 100,
     valorTotal: coletas.reduce((sum, coleta) => sum + (Number(coleta.vlr_total) || 0), 0),
     kpis: [
       {
@@ -1021,7 +1060,7 @@ function processAnaliseCrescimento(coletas: any[], filters: RelatorioFiltersType
     items: crescimentoComTaxas.map((mes, index) => ({
       id: index + 1,
       nome: mes.mes,
-      quantidade: mes.residuos,
+      quantidade: Math.round(mes.residuos * 100) / 100,
       valor: mes.coletas,
       crescimentoColetas: mes.crescimentoColetas,
       crescimentoResiduos: mes.crescimentoResiduos
@@ -1050,7 +1089,7 @@ function processCustosBeneficios(coletas: any[], filters: RelatorioFiltersType):
   
   return {
     totalColetas: coletas.length,
-    totalResiduos: Math.round(totalResiduos),
+    totalResiduos: Math.round(totalResiduos * 100) / 100,
     valorTotal: Math.round(valorTotal * 100) / 100,
     indicadores: indicadoresAmbientais,
     kpis: [

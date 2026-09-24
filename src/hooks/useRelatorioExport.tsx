@@ -151,9 +151,11 @@ export function useRelatorioExport() {
         yPosition = await generateResiduosColetadosPDF(doc, data, yPosition);
         break;
       case 'pontos-performance':
+      case 'performance-pontos':
         yPosition = await generatePontosPerformancePDF(doc, data, yPosition);
         break;
       case 'entidades-ranking':
+      case 'ranking-entidades':
         yPosition = await generateEntidadesRankingPDF(doc, data, yPosition);
         break;
       case 'eventos-coleta':
