@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { RelatorioFiltersType } from "@/components/RelatorioFilters";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export interface RelatorioData {
   totalColetas?: number;
