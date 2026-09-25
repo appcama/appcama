@@ -94,12 +94,23 @@ export function useRelatorioData(reportType: string, category: string, filters: 
   const isAdmin = !!user?.isAdmin;
   const entityId = user?.entityId;
 
+  // Chave determinística de cache baseada nos valores normalizados
+  const filterKey = {
+    dataInicial: filters.dataInicial ? format(filters.dataInicial, 'yyyy-MM-dd') : null,
+    dataFinal: filters.dataFinal ? format(filters.dataFinal, 'yyyy-MM-dd') : null,
+    entidade: filters.entidade || 'all',
+    tipoResiduo: filters.tipoResiduo || 'all',
+    statusColetas: filters.statusColetas || 'A',
+    pontoColeta: filters.pontoColeta || 'all',
+    evento: filters.evento || 'all',
+  };
+
   const query = useQuery({
-    queryKey: ['relatorio', reportType, category, filters, isAdmin, entityId],
+    queryKey: ['relatorio', reportType, category, filterKey, isAdmin, entityId],
     queryFn: () => fetchRelatorioData(reportType, category, filters, { isAdmin, entityId }),
     enabled: !!reportType && !!user,
     refetchOnWindowFocus: false,
-    staleTime: 5 * 60 * 1000, // 5 minutos
+    staleTime: 60 * 1000,
   });
 
   return query;
@@ -215,12 +226,27 @@ async function fetchRelatorioData(
         q = q.eq('des_status', 'A');
       }
 
-      // Aplicar filtros de data
+      // Aplicar filtros de data com limites de início e fim de dia
       if (filters.dataInicial) {
-        q = q.gte('dat_coleta', format(filters.dataInicial, 'yyyy-MM-dd'));
+        q = q.gte('dat_coleta', `${format(filters.dataInicial, 'yyyy-MM-dd')}T00:00:00`);
       }
       if (filters.dataFinal) {
-        q = q.lte('dat_coleta', format(filters.dataFinal, 'yyyy-MM-dd'));
+        q = q.lte('dat_coleta', `${format(filters.dataFinal, 'yyyy-MM-dd')}T23:59:59`);
+      }
+
+      // Aplicar filtro de entidade geradora
+      if (filters.entidade && filters.entidade !== 'all') {
+        q = q.eq('id_entidade_geradora', Number(filters.entidade));
+      }
+
+      // Aplicar filtro de ponto de coleta
+      if (filters.pontoColeta && filters.pontoColeta !== 'all') {
+        q = q.eq('id_ponto_coleta', Number(filters.pontoColeta));
+      }
+
+      // Aplicar filtro de evento
+      if (filters.evento && filters.evento !== 'all') {
+        q = q.eq('id_evento', Number(filters.evento));
       }
 
       if (allowedUserIds && allowedUserIds.length > 0) {
@@ -1531,18 +1557,29 @@ function processReciclometro(coletas: any[], filters: RelatorioFiltersType): Rel
 }
 
 function processComparativoTemporal(coletas: any[], filters: RelatorioFiltersType): RelatorioData {
-  const mesesMap = new Map<string, { mes: string; coletas: number; residuos: number; valor: number }>();
+  // Se o período filtrado for de até 35 dias, agrupar por dia para dar granularidade visual
+  let isDaily = false;
+  if (filters.dataInicial && filters.dataFinal) {
+    const diffDays = Math.abs(filters.dataFinal.getTime() - filters.dataInicial.getTime()) / (1000 * 60 * 60 * 24);
+    if (diffDays <= 35) {
+      isDaily = true;
+    }
+  }
+
+  const periodosMap = new Map<string, { key: string; mes: string; coletas: number; residuos: number; valor: number }>();
 
   coletas.forEach(coleta => {
     if (!coleta.dat_coleta) return;
     const date = new Date(coleta.dat_coleta);
-    const anoMes = format(date, 'yyyy-MM');
-    const labelMes = format(date, "MMM/yy", { locale: ptBR });
+    const sortKey = isDaily ? format(date, 'yyyy-MM-dd') : format(date, 'yyyy-MM');
+    const label = isDaily 
+      ? format(date, "dd/MM", { locale: ptBR }) 
+      : format(date, "MMM/yy", { locale: ptBR });
 
-    if (!mesesMap.has(anoMes)) {
-      mesesMap.set(anoMes, { mes: labelMes, coletas: 0, residuos: 0, valor: 0 });
+    if (!periodosMap.has(sortKey)) {
+      periodosMap.set(sortKey, { key: sortKey, mes: label, coletas: 0, residuos: 0, valor: 0 });
     }
-    const registro = mesesMap.get(anoMes)!;
+    const registro = periodosMap.get(sortKey)!;
     registro.coletas++;
     registro.valor += Number(coleta.vlr_total) || 0;
     if (coleta.coleta_residuo) {
@@ -1550,15 +1587,15 @@ function processComparativoTemporal(coletas: any[], filters: RelatorioFiltersTyp
     }
   });
 
-  const mesesOrdenados = Array.from(mesesMap.entries())
+  const periodosOrdenados = Array.from(periodosMap.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([, val]) => val);
 
-  const mesesComVariacao = mesesOrdenados.map((item, index) => {
+  const periodosComVariacao = periodosOrdenados.map((item, index) => {
     if (index === 0) {
       return { ...item, crescimentoColetas: 0, crescimentoResiduos: 0 };
     }
-    const anterior = mesesOrdenados[index - 1];
+    const anterior = periodosOrdenados[index - 1];
     const crescimentoColetas = anterior.coletas > 0 
       ? Math.round(((item.coletas - anterior.coletas) / anterior.coletas) * 100) 
       : 0;
@@ -1572,12 +1609,12 @@ function processComparativoTemporal(coletas: any[], filters: RelatorioFiltersTyp
     };
   });
 
-  const totalResiduos = mesesOrdenados.reduce((sum, m) => sum + m.residuos, 0);
-  const totalValor = mesesOrdenados.reduce((sum, m) => sum + m.valor, 0);
-  const totalColetas = mesesOrdenados.reduce((sum, m) => sum + m.coletas, 0);
+  const totalResiduos = periodosOrdenados.reduce((sum, m) => sum + m.residuos, 0);
+  const totalValor = periodosOrdenados.reduce((sum, m) => sum + m.valor, 0);
+  const totalColetas = periodosOrdenados.reduce((sum, m) => sum + m.coletas, 0);
 
-  const mediaMensalResiduos = mesesOrdenados.length > 0 ? totalResiduos / mesesOrdenados.length : 0;
-  const mediaMensalColetas = mesesOrdenados.length > 0 ? totalColetas / mesesOrdenados.length : 0;
+  const mediaPeriodoResiduos = periodosOrdenados.length > 0 ? totalResiduos / periodosOrdenados.length : 0;
+  const mediaPeriodoColetas = periodosOrdenados.length > 0 ? totalColetas / periodosOrdenados.length : 0;
 
   return {
     totalColetas,
@@ -1587,21 +1624,21 @@ function processComparativoTemporal(coletas: any[], filters: RelatorioFiltersTyp
     residuosPorTipo: processResiduosPorTipo(coletas),
     kpis: [
       {
-        titulo: "Períodos Mapeados",
-        valor: mesesOrdenados.length,
-        unidade: "meses",
+        titulo: isDaily ? "Dias com Coleta" : "Períodos Mapeados",
+        valor: periodosOrdenados.length,
+        unidade: isDaily ? "dias" : "meses",
         icone: "calendar"
       },
       {
-        titulo: "Média Mensal Volume",
-        valor: Math.round(mediaMensalResiduos * 100) / 100,
-        unidade: "kg/mês",
+        titulo: isDaily ? "Média Diária Volume" : "Média Mensal Volume",
+        valor: Math.round(mediaPeriodoResiduos * 100) / 100,
+        unidade: isDaily ? "kg/dia" : "kg/mês",
         icone: "scale"
       },
       {
-        titulo: "Média Mensal Coletas",
-        valor: Math.round(mediaMensalColetas),
-        unidade: "coletas/mês",
+        titulo: isDaily ? "Média Diária Coletas" : "Média Mensal Coletas",
+        valor: Math.round(mediaPeriodoColetas),
+        unidade: isDaily ? "coletas/dia" : "coletas/mês",
         icone: "package"
       },
       {
@@ -1612,9 +1649,9 @@ function processComparativoTemporal(coletas: any[], filters: RelatorioFiltersTyp
       }
     ],
     metricas: {
-      crescimento: mesesComVariacao
+      crescimento: periodosComVariacao
     },
-    items: mesesComVariacao.map((item, index) => ({
+    items: periodosComVariacao.map((item, index) => ({
       id: index + 1,
       nome: item.mes,
       quantidade: Math.round(item.residuos * 100) / 100,

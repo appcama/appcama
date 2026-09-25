@@ -85,13 +85,24 @@ export function RelatorioFilters({ filters, onFiltersChange, onReset }: Relatori
     { label: "7D", days: 7, title: "Últimos 7 dias" },
     { label: "30D", days: 30, title: "Últimos 30 dias" },
     { label: "90D", days: 90, title: "Últimos 90 dias" },
-    { label: "Este Ano", days: 365, title: "Último ano" }
+    { label: "Este Ano", days: 365, title: "Último ano" },
+    { label: "Tudo", days: -1, title: "Todo o histórico disponível" }
   ];
 
   const setQuickDateRange = (days: number) => {
+    if (days === -1) {
+      onFiltersChange({
+        ...filters,
+        dataInicial: undefined,
+        dataFinal: undefined
+      });
+      return;
+    }
     const end = new Date();
+    end.setHours(23, 59, 59, 999);
     const start = new Date();
     start.setDate(start.getDate() - days);
+    start.setHours(0, 0, 0, 0);
     
     onFiltersChange({
       ...filters,
@@ -102,11 +113,12 @@ export function RelatorioFilters({ filters, onFiltersChange, onReset }: Relatori
 
   // Identificar se período bate com um range rápido
   const getActiveQuickRange = () => {
+    if (!filters.dataInicial && !filters.dataFinal) return -1;
     if (!filters.dataInicial || !filters.dataFinal) return null;
     const diffDays = Math.round(
       Math.abs(filters.dataFinal.getTime() - filters.dataInicial.getTime()) / (1000 * 60 * 60 * 24)
     );
-    return quickDateRanges.find(r => Math.abs(r.days - diffDays) <= 1)?.days || null;
+    return quickDateRanges.find(r => r.days !== -1 && Math.abs(r.days - diffDays) <= 1)?.days ?? null;
   };
 
   const activeQuick = getActiveQuickRange();
@@ -169,13 +181,25 @@ export function RelatorioFilters({ filters, onFiltersChange, onReset }: Relatori
                     mode="single"
                     selected={filters.dataInicial}
                     onSelect={(date) => {
-                      updateFilter('dataInicial', date);
+                      if (date) {
+                        const d = new Date(date);
+                        d.setHours(0, 0, 0, 0);
+                        updateFilter('dataInicial', d);
+                      }
                       setOpenInicial(false);
                     }}
                     locale={ptBR}
-                    disabled={(date) =>
-                      date > new Date() || (filters.dataFinal ? date > filters.dataFinal : false)
-                    }
+                    disabled={(date) => {
+                      const today = new Date();
+                      today.setHours(23, 59, 59, 999);
+                      if (date > today) return true;
+                      if (filters.dataFinal) {
+                        const end = new Date(filters.dataFinal);
+                        end.setHours(23, 59, 59, 999);
+                        return date > end;
+                      }
+                      return false;
+                    }}
                   />
                 </PopoverContent>
               </Popover>
@@ -201,16 +225,45 @@ export function RelatorioFilters({ filters, onFiltersChange, onReset }: Relatori
                     mode="single"
                     selected={filters.dataFinal}
                     onSelect={(date) => {
-                      updateFilter('dataFinal', date);
+                      if (date) {
+                        const d = new Date(date);
+                        d.setHours(23, 59, 59, 999);
+                        updateFilter('dataFinal', d);
+                      }
                       setOpenFinal(false);
                     }}
                     locale={ptBR}
-                    disabled={(date) =>
-                      date > new Date() || (filters.dataInicial ? date < filters.dataInicial : false)
-                    }
+                    disabled={(date) => {
+                      const today = new Date();
+                      today.setHours(23, 59, 59, 999);
+                      if (date > today) return true;
+                      if (filters.dataInicial) {
+                        const start = new Date(filters.dataInicial);
+                        start.setHours(0, 0, 0, 0);
+                        return date < start;
+                      }
+                      return false;
+                    }}
                   />
                 </PopoverContent>
               </Popover>
+
+              {(filters.dataInicial || filters.dataFinal) && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                  title="Limpar período de datas"
+                  onClick={() => {
+                    const newFilters = { ...filters };
+                    delete newFilters.dataInicial;
+                    delete newFilters.dataFinal;
+                    onFiltersChange(newFilters);
+                  }}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              )}
             </div>
           </div>
 
